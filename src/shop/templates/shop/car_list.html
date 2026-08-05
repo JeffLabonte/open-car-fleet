@@ -1,0 +1,17 @@
+{% extends 'shop/index.html' %}
+
+{% block content %}
+  <h1>Cars</h1>
+  <p><a href="{% url 'shop-car-create' %}">Add a new car</a></p>
+  <ul>
+    {% for car in cars %}
+      <li>
+        <a href="{% url 'shop-car-detail' car.pk %}">
+          {{ car.usual_name|default:car.make }} — {{ car.license_plate|default:car.vin }}
+        </a>
+      </li>
+    {% empty %}
+      <li>No cars yet.</li>
+    {% endfor %}
+  </ul>
+{% endblock %}

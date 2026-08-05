@@ -1,0 +1,23 @@
+{% extends 'shop/index.html' %}
+
+{% block content %}
+  <h1>{% if is_create %}Add Car{% else %}Edit Car{% endif %}</h1>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <table>
+      {% for field in form.visible_fields %}
+        <tr>
+          <th>{{ field.label_tag }}</th>
+          <td>
+            {{ field }}
+            {% if field.help_text %}<div class="help">{{ field.help_text }}</div>{% endif %}
+            {{ field.errors }}
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+    <button type="submit">{% if is_create %}Create{% else %}Update{% endif %}</button>
+    <a href="{% if is_create %}{% url 'shop-car-list' %}{% else %}{% url 'shop-car-detail' car.pk %}{% endif %}">Cancel</a>
+  </form>
+{% endblock %}
