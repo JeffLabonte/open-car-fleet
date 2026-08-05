@@ -1,7 +1,10 @@
+import os
+
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
 
 from .models.car import Car
 from .models.job import WorkJob
@@ -9,11 +12,12 @@ from .models.report import Report
 from .forms import CarCreateForm, CarUpdateForm, WorkJobForm, ReportForm
 
 
+@csrf_exempt
 def login_view(request):
     return render(request, 'shop/login.html', {
         'title': 'Login',
         'subtitle': 'Authenticate with Hanko to continue',
-        'hanko_api_url': request.environ.get('HANKO_API_URL', ''),
+        'hanko_api_url': os.environ.get('HANKO_API_URL', ''),
         'next_url': request.GET.get('next', '/'),
     })
 

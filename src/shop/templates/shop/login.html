@@ -11,16 +11,39 @@
   </div>
 
   <script type="module">
+    import { Hanko } from 'https://esm.run/@teamhanko/hanko-frontend-sdk';
     import { register } from 'https://esm.run/@teamhanko/hanko-elements';
 
     const apiUrl = '{{ hanko_api_url }}';
+    const nextUrl = '{{ next_url|default:'/' }}';
+    const authContainer = document.getElementById('hanko-auth-container');
+
     if (!apiUrl) {
-      console.error('Missing HANKO_API_URL. Set it in .env and restart the server.');
+      const message = 'Missing HANKO_API_URL. Set it in .env and restart the server.';
+      console.error(message);
+      authContainer.textContent = message;
+      throw new Error(message);
     }
 
-    const { hanko } = await register(apiUrl);
-    hanko.onSessionCreated(() => {
-      window.location.href = '{{ next_url|default:'/' }}';
-    });
+    const hanko = new Hanko(apiUrl);
+
+    async function validateRedirectToken() {
+      try {
+        await hanko.token.validate();
+        window.location.href = nextUrl;
+        return true;
+      } catch (error) {
+        console.debug('No Hanko redirect token to validate or validation failed.', error);
+        return false;
+      }
+    }
+
+    const redirectValidated = await validateRedirectToken();
+    if (!redirectValidated) {
+      const { hanko: elementsHanko } = await register(apiUrl);
+      elementsHanko.onSessionCreated(() => {
+        window.location.href = nextUrl;
+      });
+    }
   </script>
 {% endblock %}
