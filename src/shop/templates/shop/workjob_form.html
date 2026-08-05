@@ -2,7 +2,7 @@
 
 {% block content %}
   <div class="box">
-    <h1 class="title">{% if is_create %}Add Car{% else %}Edit Car{% endif %}</h1>
+    <h1 class="title">{% if is_create %}Add Planned Work{% else %}Edit Planned Work{% endif %}</h1>
 
     <form method="post" novalidate>
       {% csrf_token %}
@@ -32,7 +32,7 @@
           <button class="button is-primary" type="submit">{% if is_create %}Create{% else %}Update{% endif %}</button>
         </div>
         <div class="control">
-          <a class="button is-light" href="{% if is_create %}{% url 'shop-car-list' %}{% else %}{% url 'shop-car-detail' car.pk %}{% endif %}">Cancel</a>
+          <a class="button is-light" href="{% url 'shop-car-detail' car.pk %}">Cancel</a>
         </div>
       </div>
     </form>

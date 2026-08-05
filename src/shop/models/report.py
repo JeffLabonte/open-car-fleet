@@ -13,6 +13,7 @@ class Report(models.Model):
     """
 
     car = models.ForeignKey(Car, related_name="reports", on_delete=models.CASCADE)
+    mileage = models.PositiveIntegerField(null=True, blank=True) 
     job_name = models.CharField(max_length=200)
     date_done = models.DateField()
     documents = models.JSONField(default=list, blank=True)

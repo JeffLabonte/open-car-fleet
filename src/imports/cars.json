@@ -1,0 +1,34 @@
+[
+    {
+        "usual_name": "Yaris Saule",
+        "vin": "VNKKTUD36FA023546",
+        "license_plate": "FMG3809",
+        "make": "Toyota",
+        "model": "Yaris",
+        "year": 2015
+    },
+    {
+        "usual_name": "Yaris Noir Duberger",
+        "vin": "VNKKTUD38GA057599",
+        "license_plate": "FNW2948",
+        "make": "Toyota",
+        "model": "Yaris",
+        "year": 2016
+    },
+    {
+        "usual_name": "Yaris Blanche",
+        "vin": "VNKJTUD35EA014606",
+        "license_plate": "FNR4428",
+        "make": "Toyota",
+        "model": "Yaris",
+        "year": 2014
+    },
+    {
+        "usual_name": "Honda Civic Luc",
+        "vin": "2HGFB2F43DH027660",
+        "license_plate": "FXXXXX",
+        "make": "Honda",
+        "model": "Civic LX",
+        "year": 2013
+    }
+]

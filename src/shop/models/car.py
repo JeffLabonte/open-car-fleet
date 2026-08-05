@@ -15,8 +15,10 @@ class Car(models.Model):
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    mileage = models.PositiveIntegerField(null=True, blank=True)
     usual_name = models.CharField(max_length=200, blank=True)
     make = models.CharField(max_length=100)
+    model = models.CharField(max_length=100)
     year = models.PositiveSmallIntegerField(null=True, blank=True)
     vin = models.CharField(max_length=50, unique=True, null=True, blank=True)
     license_plate = models.CharField(max_length=20, blank=True)

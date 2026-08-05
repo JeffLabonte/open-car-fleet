@@ -10,30 +10,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
-import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-
-def load_dotenv(path: Path) -> None:
-    if not path.exists():
-        return
-
-    for raw_line in path.read_text().splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith('#') or '=' not in line:
-            continue
-
-        name, value = line.split('=', 1)
-        name = name.strip()
-        value = value.strip().strip('"').strip("'")
-
-        if name and name not in os.environ:
-            os.environ[name] = value
-
-load_dotenv(BASE_DIR / '.env')
 
 
 # Quick-start development settings - unsuitable for production
@@ -71,10 +51,6 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'settings.urls'
-
-LOGIN_URL = '/login/'
-LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/login/'
 
 TEMPLATES = [
     {

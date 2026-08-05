@@ -8,6 +8,7 @@ __pycache__/
 env/
 venv/
 ENV/
+.env
 *.env
 *.venv
 pip-log.txt
@@ -33,6 +34,8 @@ db.sqlite3-journal
 media/
 staticfiles/
 static/
+import/*
+!important/.gitkeep
 
 # IDEs and editors
 .vscode/

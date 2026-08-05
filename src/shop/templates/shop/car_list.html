@@ -1,17 +1,47 @@
 {% extends 'shop/index.html' %}
 
 {% block content %}
-  <h1>Cars</h1>
-  <p><a href="{% url 'shop-car-create' %}">Add a new car</a></p>
-  <ul>
-    {% for car in cars %}
-      <li>
-        <a href="{% url 'shop-car-detail' car.pk %}">
-          {{ car.usual_name|default:car.make }} — {{ car.license_plate|default:car.vin }}
-        </a>
-      </li>
-    {% empty %}
-      <li>No cars yet.</li>
-    {% endfor %}
-  </ul>
+  <div class="level">
+    <div class="level-left">
+      <div class="level-item">
+        <h1 class="title">Cars</h1>
+      </div>
+    </div>
+    <div class="level-right">
+      <div class="level-item">
+        <a class="button is-primary" href="{% url 'shop-car-create' %}">Add a new car</a>
+      </div>
+    </div>
+  </div>
+
+  {% if cars %}
+    <div class="table-container">
+      <table class="table is-fullwidth is-striped is-hoverable is-bordered">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Make</th>
+            <th>Year</th>
+            <th>VIN</th>
+            <th>License</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for car in cars %}
+            <tr>
+              <td><a href="{% url 'shop-car-detail' car.pk %}">{{ car.usual_name|default:car.make }}</a></td>
+              <td>{{ car.make }}</td>
+              <td>{{ car.year|default:"—" }}</td>
+              <td>{{ car.vin|default:"—" }}</td>
+              <td>{{ car.license_plate|default:"—" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="notification is-warning">
+      No cars yet.
+    </div>
+  {% endif %}
 {% endblock %}

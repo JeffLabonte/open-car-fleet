@@ -1,0 +1,26 @@
+{% extends 'shop/index.html' %}
+
+{% block content %}
+  <div class="box">
+    <h1 class="title">Sign in</h1>
+    <p class="subtitle">You must be signed in to view the shop.</p>
+
+    <div id="hanko-auth-container">
+      <hanko-auth></hanko-auth>
+    </div>
+  </div>
+
+  <script type="module">
+    import { register } from 'https://esm.run/@teamhanko/hanko-elements';
+
+    const apiUrl = '{{ hanko_api_url }}';
+    if (!apiUrl) {
+      console.error('Missing HANKO_API_URL. Set it in .env and restart the server.');
+    }
+
+    const { hanko } = await register(apiUrl);
+    hanko.onSessionCreated(() => {
+      window.location.href = '{{ next_url|default:'/' }}';
+    });
+  </script>
+{% endblock %}

@@ -1,13 +1,144 @@
 {% extends 'shop/index.html' %}
 
 {% block content %}
-  <h1>{{ car.usual_name|default:car.make }}</h1>
-  <p><strong>Make:</strong> {{ car.make }}</p>
-  <p><strong>Year:</strong> {{ car.year }}</p>
-  <p><strong>VIN:</strong> {{ car.vin }}</p>
-  <p><strong>License plate:</strong> {{ car.license_plate }}</p>
-  <p>
-    <a href="{% url 'shop-car-update' car.pk %}">Edit</a> |
-    <a href="{% url 'shop-car-list' %}">Back to list</a>
-  </p>
+  <div class="box">
+    <div class="content">
+      <h1 class="title">{{ car.usual_name|default:car.make }}</h1>
+      <div class="columns is-multiline">
+        <div class="column is-half">
+          <p><strong>Make:</strong> {{ car.make }}</p>
+          <p><strong>Model:</strong> {{ car.model }}</p>
+          <p><strong>Year:</strong> {{ car.year|default:"—" }}</p>
+        </div>
+        <div class="column is-half">
+          <p><strong>VIN:</strong> {{ car.vin|default:"—" }}</p>
+          <p><strong>License plate:</strong> {{ car.license_plate|default:"—" }}</p>
+          <p><strong>Last updated:</strong> {{ car.updated_at|date:'F j, Y, g:i a' }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="buttons">
+      <a class="button is-link" href="{% url 'shop-car-update' car.pk %}">Edit</a>
+      <a class="button is-primary" href="{% url 'shop-workjob-create' car.pk %}">Add planned work</a>
+      <a class="button is-light" href="{% url 'shop-car-list' %}">Back to list</a>
+    </div>
+  </div>
+
+  <div class="box">
+    <div class="level">
+      <div class="level-left">
+        <div class="level-item">
+          <h2 class="title is-4">Planned work and assignments</h2>
+        </div>
+      </div>
+      <div class="level-right">
+        <div class="level-item">
+          <a class="button is-primary" href="{% url 'shop-workjob-create' car.pk %}">Add planned work</a>
+        </div>
+      </div>
+    </div>
+    {% if work_jobs %}
+      <div class="table-container">
+        <table class="table is-fullwidth is-striped is-hoverable is-bordered">
+          <thead>
+            <tr>
+              <th>Work</th>
+              <th>Type</th>
+              <th>Assigned to</th>
+              <th>Planned</th>
+              <th>Status</th>
+              <th>Done</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for job in work_jobs %}
+              <tr>
+                <td>{{ job.title }}</td>
+                <td>{{ job.maintenance_type|default:'—' }}</td>
+                <td>{{ job.assigned_to|default:'Unassigned' }}</td>
+                <td>{{ job.planned_date|date:'M j, Y'|default:'—' }}</td>
+                <td>{{ job.get_status_display }}</td>
+                <td>{{ job.done_date|date:'M j, Y'|default:'—' }}</td>
+                <td>
+                  <a class="button is-small is-link" href="{% url 'shop-workjob-update' car.pk job.pk %}">Edit</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="notification is-warning">
+        No planned jobs or assignments for this car.
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="box">
+    <div class="level">
+      <div class="level-left">
+        <div class="level-item">
+          <h2 class="title is-4">Maintenance history</h2>
+        </div>
+      </div>
+      <div class="level-right">
+        <div class="level-item">
+          <a class="button is-primary" href="{% url 'shop-report-create' car.pk %}">Add maintenance report</a>
+        </div>
+      </div>
+    </div>
+    {% if reports %}
+      <div class="content">
+        {% for report in reports %}
+          <article class="message is-info">
+            <div class="message-header">
+              <p>{{ report.job_name }} — {{ report.date_done|date:'F j, Y' }}</p>
+              <a class="button is-small is-link" href="{% url 'shop-report-update' car.pk report.pk %}">Edit</a>
+            </div>
+            <div class="message-body">
+              <p>{{ report.note|default:'No additional notes.' }}</p>
+              <p><strong>Documents:</strong> {{ report.documents|length }}</p>
+              <p><strong>Photos:</strong> {{ report.photos|length }}</p>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="notification is-warning">
+        No completed maintenance reports found for this car.
+      </div>
+    {% endif %}
+  </div>
+
+    <div class="box">
+      <h2 class="title is-4">Related cars</h2>
+      {% if related_cars %}
+        <div class="table-container">
+          <table class="table is-fullwidth is-striped is-hoverable is-bordered">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Year</th>
+                <th>VIN</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for related_car in related_cars %}
+                  <tr>
+                  <td><a href="{% url 'shop-car-detail' related_car.pk %}">{{ related_car.usual_name|default:related_car.make }}</a></td>
+                  <td>{{ related_car.year|default:'—' }}</td>
+                  <td>{{ related_car.vin|default:'—' }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="notification is-info">
+          No related cars with the same make and model.
+        </div>
+      {% endif %}
+    </div>
 {% endblock %}
