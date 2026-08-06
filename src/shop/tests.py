@@ -1,4 +1,5 @@
 import json
+from datetime import timedelta
 from typing import cast
 from unittest.mock import patch
 
@@ -9,10 +10,12 @@ from django.http import HttpRequest, HttpResponse
 from django.test import RequestFactory, TestCase
 from django.test.utils import override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from . import views
 from .middleware import HankoAuthenticationMiddleware
 
+from .models.garage import Garage, GarageInvitation, GarageMembership
 from .models.user import ShopUser
 
 
@@ -142,3 +145,154 @@ class HankoAuthenticationIntegrationTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'Cars', response.content)
+
+
+class GarageSharingTests(TestCase):
+    def setUp(self) -> None:
+        self.owner = ShopUser.objects.create_user(
+            username='owner',
+            email='owner@example.com',
+            password='pass1234',
+        )
+        self.member = ShopUser.objects.create_user(
+            username='member',
+            email='member@example.com',
+            password='pass1234',
+        )
+        self.stranger = ShopUser.objects.create_user(
+            username='stranger',
+            email='stranger@example.com',
+            password='pass1234',
+        )
+        self.garage = Garage.objects.create(name='Alpha Garage', created_by=self.owner)
+        GarageMembership.objects.create(
+            garage=self.garage,
+            user=self.owner,
+            role=GarageMembership.ROLE_OWNER,
+        )
+
+    def test_create_garage_adds_owner_membership(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            reverse('shop-garage-create'),
+            data={'name': 'Second Garage', 'description': 'Family vehicles'},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        created = Garage.objects.get(name='Second Garage')
+        self.assertTrue(
+            GarageMembership.objects.filter(
+                garage=created,
+                user=self.owner,
+                role=GarageMembership.ROLE_OWNER,
+            ).exists()
+        )
+
+    @patch('shop.models.garage.send_mail', return_value=1)
+    def test_share_garage_creates_pending_invitation(self, _mock_send_mail: object):
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            reverse('shop-garage-share', args=[self.garage.pk]),
+            data={
+                'invited_email': 'member@example.com',
+                'message': 'Join this garage.',
+                'expires_in_days': 14,
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        invitation = GarageInvitation.objects.get(garage=self.garage, invited_email='member@example.com')
+        self.assertEqual(invitation.status, GarageInvitation.STATUS_PENDING)
+        self.assertEqual(invitation.invited_by, self.owner)
+        self.assertIsNotNone(invitation.expires_at)
+
+    @patch('shop.models.garage.send_mail', return_value=1)
+    def test_duplicate_pending_invitation_is_not_created(self, _mock_send_mail: object):
+        self.client.force_login(self.owner)
+        GarageInvitation.objects.create(
+            garage=self.garage,
+            invited_email='member@example.com',
+            invited_by=self.owner,
+            status=GarageInvitation.STATUS_PENDING,
+            expires_at=timezone.now() + timedelta(days=14),
+        )
+
+        response = self.client.post(
+            reverse('shop-garage-share', args=[self.garage.pk]),
+            data={
+                'invited_email': 'member@example.com',
+                'message': 'Second invite',
+                'expires_in_days': 14,
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            GarageInvitation.objects.filter(
+                garage=self.garage,
+                invited_email='member@example.com',
+                status=GarageInvitation.STATUS_PENDING,
+            ).count(),
+            1,
+        )
+
+    @patch('shop.models.garage.send_mail', return_value=1)
+    def test_accept_invitation_adds_membership(self, _mock_send_mail: object):
+        invitation = GarageInvitation.objects.create(
+            garage=self.garage,
+            invited_email='member@example.com',
+            invited_by=self.owner,
+            status=GarageInvitation.STATUS_PENDING,
+            expires_at=timezone.now() + timedelta(days=14),
+        )
+        self.client.force_login(self.member)
+
+        response = self.client.get(reverse('shop-garage-invitation-accept', args=[invitation.token]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            GarageMembership.objects.filter(
+                garage=self.garage,
+                user=self.member,
+            ).exists()
+        )
+        invitation.refresh_from_db()
+        self.assertEqual(invitation.status, GarageInvitation.STATUS_ACCEPTED)
+        self.assertEqual(invitation.accepted_by, self.member)
+
+    def test_accept_invitation_requires_matching_email(self):
+        invitation = GarageInvitation.objects.create(
+            garage=self.garage,
+            invited_email='member@example.com',
+            invited_by=self.owner,
+            status=GarageInvitation.STATUS_PENDING,
+            expires_at=timezone.now() + timedelta(days=14),
+        )
+        self.client.force_login(self.stranger)
+
+        response = self.client.get(reverse('shop-garage-invitation-accept', args=[invitation.token]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(
+            GarageMembership.objects.filter(
+                garage=self.garage,
+                user=self.stranger,
+            ).exists()
+        )
+        invitation.refresh_from_db()
+        self.assertEqual(invitation.status, GarageInvitation.STATUS_PENDING)
+
+    def test_non_manager_cannot_share_garage(self):
+        GarageMembership.objects.create(
+            garage=self.garage,
+            user=self.member,
+            role=GarageMembership.ROLE_MEMBER,
+        )
+        self.client.force_login(self.member)
+
+        response = self.client.get(reverse('shop-garage-share', args=[self.garage.pk]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], reverse('shop-garage-detail', args=[self.garage.pk]))
