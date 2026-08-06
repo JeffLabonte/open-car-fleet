@@ -1,6 +1,8 @@
 import uuid
 from django.db import models
 
+from .garage import Garage
+
 
 class Car(models.Model):
     """A vehicle tracked by the shop.
@@ -15,6 +17,11 @@ class Car(models.Model):
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    garage = models.ForeignKey(
+        Garage,
+        on_delete=models.CASCADE,
+        related_name="cars",
+    )
     mileage = models.PositiveIntegerField(null=True, blank=True)
     usual_name = models.CharField(max_length=200, blank=True)
     make = models.CharField(max_length=100)

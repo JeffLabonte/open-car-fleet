@@ -1,0 +1,56 @@
+{% extends 'shop/index.html' %}
+
+{% block content %}
+  <div class="level">
+    <div class="level-left">
+      <div class="level-item">
+        <h1 class="title">{{ garage.name }}</h1>
+      </div>
+    </div>
+    <div class="level-right">
+      <div class="level-item">
+        <a class="button is-light" href="{% url 'shop-index' %}">Back to my garages</a>
+      </div>
+      <div class="level-item">
+        <a class="button is-primary" href="{% url 'shop-car-create' %}">Add car</a>
+      </div>
+    </div>
+  </div>
+
+  {% if garage.description %}
+    <div class="box">
+      <p>{{ garage.description }}</p>
+    </div>
+  {% endif %}
+
+  {% if cars %}
+    <div class="table-container">
+      <table class="table is-fullwidth is-striped is-hoverable is-bordered">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Make</th>
+            <th>Model</th>
+            <th>Year</th>
+            <th>VIN</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for car in cars %}
+            <tr>
+              <td><a href="{% url 'shop-car-detail' car.pk %}">{{ car.usual_name|default:car.make }}</a></td>
+              <td>{{ car.make }}</td>
+              <td>{{ car.model }}</td>
+              <td>{{ car.year|default:'—' }}</td>
+              <td>{{ car.vin|default:'—' }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="notification is-info">
+      No cars in this garage yet.
+    </div>
+  {% endif %}
+{% endblock %}

@@ -13,11 +13,23 @@ from django.utils.deprecation import MiddlewareMixin
 from .auth import complete_hanko_login
 
 
+PUBLIC_PATHS = {
+    '/login',
+    '/login/',
+    '/auth/hanko/callback/',
+}
+
+PUBLIC_PREFIXES = (
+    '/static/',
+    '/admin/',
+)
+
+
 class HankoAuthenticationMiddleware(MiddlewareMixin):
     """Bridge Hanko's frontend session to Django's authenticated user state."""
 
-    def process_request(self, request: HttpRequest) -> Optional[HttpRequest]:
-        if request.path.startswith('/admin/') or request.path.startswith('/static/'):
+    def process_request(self, request: HttpRequest) -> Optional[HttpResponse]:
+        if request.path in PUBLIC_PATHS or request.path.startswith(PUBLIC_PREFIXES):
             return None
 
         if request.user.is_authenticated:
@@ -25,12 +37,12 @@ class HankoAuthenticationMiddleware(MiddlewareMixin):
 
         hanko_session_token: str | None = request.session.get('hanko_session_token')
         if not hanko_session_token:
-            return None
+            return cast(HttpResponse, redirect_to_login(request.get_full_path()))
 
 
         api_url = os.environ.get('HANKO_API_URL', '') or getattr(settings, 'HANKO_API_URL', '')
         if not api_url:
-            return None
+            return cast(HttpResponse, redirect_to_login(request.get_full_path()))
 
         userinfo_url = f"{api_url.rstrip('/')}/userinfo"
         try:
@@ -42,7 +54,7 @@ class HankoAuthenticationMiddleware(MiddlewareMixin):
             response.raise_for_status()
             raw_user_info = response.json()
             if not isinstance(raw_user_info, dict):
-                return None
+                return cast(HttpResponse, redirect_to_login(request.get_full_path()))
 
             user_info: dict[str, object] = cast(dict[str, object], raw_user_info)
             if not user_info.get('email') and isinstance(user_info.get('emails'), list):
@@ -53,7 +65,7 @@ class HankoAuthenticationMiddleware(MiddlewareMixin):
                     user_info['email'] = first_email_dict.get('address', '')
         except (requests.RequestException, ValueError, TypeError):
             logout(request)
-            return None
+            return cast(HttpResponse, redirect_to_login(request.get_full_path()))
 
         complete_hanko_login(request, user_info)
         return None

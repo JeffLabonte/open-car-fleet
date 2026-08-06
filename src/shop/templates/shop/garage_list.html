@@ -1,0 +1,34 @@
+{% extends 'shop/index.html' %}
+
+{% block content %}
+  <div class="level">
+    <div class="level-left">
+      <div class="level-item">
+        <h1 class="title">My Garages</h1>
+      </div>
+    </div>
+  </div>
+
+  {% if garages %}
+    <div class="columns is-multiline">
+      {% for garage in garages %}
+        <div class="column is-half">
+          <div class="box">
+            <h2 class="title is-4">
+              <a href="{% url 'shop-garage-detail' garage.pk %}">{{ garage.name }}</a>
+            </h2>
+            {% if garage.description %}
+              <p class="mb-3">{{ garage.description }}</p>
+            {% endif %}
+            <p><strong>Cars:</strong> {{ garage.cars.count }}</p>
+            <p><strong>Created:</strong> {{ garage.created_at|date:'F j, Y' }}</p>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="notification is-warning">
+      You are not a member of any garage yet.
+    </div>
+  {% endif %}
+{% endblock %}

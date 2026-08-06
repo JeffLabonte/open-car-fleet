@@ -3,11 +3,11 @@ from datetime import date
 from typing import Any
 
 from django import forms
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 
 from .models.car import Car
+from .models.garage import KnownShop
 from .models.job import WorkJob
 from .models.report import Report
 
@@ -18,14 +18,30 @@ VIN_BAD_CHARS = set('IOQ')
 class CarBaseForm(forms.ModelForm):
     class Meta:
         model = Car
-        fields = ['usual_name', 'make', 'year', 'vin', 'license_plate']
+        fields = ['garage', 'usual_name', 'make', 'year', 'vin', 'license_plate']
         widgets = {
+            'garage': forms.Select(attrs={'class': 'input'}),
             'usual_name': forms.TextInput(attrs={'class': 'input', 'placeholder': 'Optional nickname'}),
             'make': forms.TextInput(attrs={'class': 'input', 'placeholder': 'Make'}),
             'year': forms.NumberInput(attrs={'class': 'input', 'placeholder': 'Year'}),
             'vin': forms.TextInput(attrs={'class': 'input', 'placeholder': 'VIN'}),
             'license_plate': forms.TextInput(attrs={'class': 'input', 'placeholder': 'License plate'}),
         }
+
+    def __init__(self, *args: Any, user: Any = None, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self._user = user
+        if user is not None:
+            self.fields['garage'].queryset = user.garages.order_by('name')
+
+    def clean_garage(self):
+        garage = self.cleaned_data.get('garage')
+        if garage is None:
+            return garage
+
+        if self._user is not None and not self._user.garages.filter(pk=garage.pk).exists():
+            raise ValidationError('You can only select a garage you are a member of.')
+        return garage
 
     def clean_year(self) -> int | None:
         year = self.cleaned_data.get('year')
@@ -85,6 +101,7 @@ class WorkJobForm(forms.ModelForm):
             'title',
             'maintenance_type',
             'assigned_to',
+            'assigned_shop',
             'planned_date',
             'status',
             'is_done',
@@ -97,6 +114,7 @@ class WorkJobForm(forms.ModelForm):
             'title': forms.TextInput(attrs={'class': 'input', 'placeholder': 'Work title'}),
             'maintenance_type': forms.TextInput(attrs={'class': 'input', 'placeholder': 'Maintenance type'}),
             'assigned_to': forms.Select(attrs={'class': 'input'}),
+            'assigned_shop': forms.Select(attrs={'class': 'input'}),
             'planned_date': forms.DateInput(attrs={'class': 'input', 'type': 'date'}),
             'done_date': forms.DateInput(attrs={'class': 'input', 'type': 'date'}),
             'status': forms.Select(attrs={'class': 'input'}),
@@ -106,7 +124,10 @@ class WorkJobForm(forms.ModelForm):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self.fields['assigned_to'].queryset = get_user_model().objects.all()
+        self.fields['assigned_to'].queryset = get_user_model().objects.filter(is_mechanic=True)
+        self.fields['assigned_to'].help_text = 'Only users converted to mechanics can be selected.'
+        self.fields['assigned_shop'].queryset = KnownShop.objects.order_by('name')
+        self.fields['assigned_shop'].help_text = 'Assign to a known shop instead of a mechanic user.'
         if self.instance and self.instance.pk:
             self.fields['required_items'].initial = '\n'.join(self.instance.required_items or [])
 
@@ -114,6 +135,12 @@ class WorkJobForm(forms.ModelForm):
         raw = self.cleaned_data.get('required_items', '')
         items = [item.strip() for item in raw.splitlines() if item.strip()]
         return items
+
+    def clean(self) -> dict[str, Any]:
+        cleaned_data = super().clean()
+        if cleaned_data.get('assigned_to') and cleaned_data.get('assigned_shop'):
+            raise ValidationError('Assign either a mechanic user or a known shop, not both.')
+        return cleaned_data
 
 class ReportForm(forms.ModelForm):
     documents = forms.CharField(
@@ -132,6 +159,8 @@ class ReportForm(forms.ModelForm):
         fields = [
             'mileage',
             'job_name',
+            'assigned_to',
+            'assigned_shop',
             'date_done',
             'documents',
             'photos',
@@ -140,12 +169,18 @@ class ReportForm(forms.ModelForm):
         widgets = {
             'mileage': forms.NumberInput(attrs={'class': 'input', 'placeholder': 'Mileage at completion'}),
             'job_name': forms.TextInput(attrs={'class': 'input', 'placeholder': 'Work performed'}),
+            'assigned_to': forms.Select(attrs={'class': 'input'}),
+            'assigned_shop': forms.Select(attrs={'class': 'input'}),
             'date_done': forms.DateInput(attrs={'class': 'input', 'type': 'date'}),
             'note': forms.Textarea(attrs={'class': 'textarea', 'rows': 4, 'placeholder': 'Notes about the work done'}),
         }
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
+        self.fields['assigned_to'].queryset = get_user_model().objects.filter(is_mechanic=True)
+        self.fields['assigned_to'].help_text = 'Only users converted to mechanics can be selected.'
+        self.fields['assigned_shop'].queryset = KnownShop.objects.order_by('name')
+        self.fields['assigned_shop'].help_text = 'Assign to a known shop instead of a mechanic user.'
         if self.instance and self.instance.pk:
             self.fields['documents'].initial = '\n'.join(self.instance.documents or [])
             self.fields['photos'].initial = '\n'.join(self.instance.photos or [])
@@ -157,3 +192,9 @@ class ReportForm(forms.ModelForm):
     def clean_photos(self) -> list[str]:
         raw = self.cleaned_data.get('photos', '')
         return [item.strip() for item in raw.splitlines() if item.strip()]
+
+    def clean(self) -> dict[str, Any]:
+        cleaned_data = super().clean()
+        if cleaned_data.get('assigned_to') and cleaned_data.get('assigned_shop'):
+            raise ValidationError('Assign either a mechanic user or a known shop, not both.')
+        return cleaned_data

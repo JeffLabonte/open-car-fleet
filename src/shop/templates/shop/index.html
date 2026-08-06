@@ -15,27 +15,25 @@
       </div>
     </section>
 
-    <nav class="navbar" role="navigation" aria-label="main navigation">
-      <div class="container">
-        <div class="navbar-brand">
-          <a class="navbar-item" href="{% url 'shop-index' %}">
-            {{ brand_name|default:'App' }}
-          </a>
-          <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navbarMenu">
-            <span aria-hidden="true"></span>
-            <span aria-hidden="true"></span>
-            <span aria-hidden="true"></span>
-          </a>
-        </div>
-
-        <div id="navbarMenu" class="navbar-menu">
-          <div class="navbar-start">
-            <a class="navbar-item" href="{% url 'shop-index' %}">Home</a>
-            <a class="navbar-item" href="{% url 'shop-car-list' %}">Cars</a>
-            <a class="navbar-item" href="{% url 'shop-car-create' %}">Add Car</a>
+    {% if request.user.is_authenticated %}
+      <nav class="navbar" role="navigation" aria-label="main navigation">
+        <div class="container">
+          <div class="navbar-brand">
+            <a class="navbar-item" href="{% url 'shop-index' %}">
+              {{ brand_name|default:'App' }}
+            </a>
+            <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navbarMenu">
+              <span aria-hidden="true"></span>
+              <span aria-hidden="true"></span>
+              <span aria-hidden="true"></span>
+            </a>
           </div>
-          <div class="navbar-end">
-            {% if request.user.is_authenticated %}
+
+          <div id="navbarMenu" class="navbar-menu">
+            <div class="navbar-start">
+              <a class="navbar-item" href="{% url 'shop-index' %}">My Garages</a>
+            </div>
+            <div class="navbar-end">
               <div class="navbar-item">
                 <span>Hello, {{ request.user.display_name|default:request.user.username }}</span>
               </div>
@@ -45,13 +43,11 @@
                   <button class="button is-light" type="submit">Logout</button>
                 </form>
               </div>
-            {% else %}
-              <a class="navbar-item" href="{% url 'shop-login' %}">Login</a>
-            {% endif %}
+            </div>
           </div>
         </div>
-      </div>
-    </nav>
+      </nav>
+    {% endif %}
 
     <section class="section">
       <div class="container">

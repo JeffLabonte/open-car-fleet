@@ -57,7 +57,15 @@
               <tr>
                 <td>{{ job.title }}</td>
                 <td>{{ job.maintenance_type|default:'—' }}</td>
-                <td>{{ job.assigned_to|default:'Unassigned' }}</td>
+                <td>
+                  {% if job.assigned_to %}
+                    Mechanic: {{ job.assigned_to }}
+                  {% elif job.assigned_shop %}
+                    Shop: {{ job.assigned_shop }}
+                  {% else %}
+                    Unassigned
+                  {% endif %}
+                </td>
                 <td>{{ job.planned_date|date:'M j, Y'|default:'—' }}</td>
                 <td>{{ job.get_status_display }}</td>
                 <td>{{ job.done_date|date:'M j, Y'|default:'—' }}</td>
@@ -99,6 +107,11 @@
             </div>
             <div class="message-body">
               <p>{{ report.note|default:'No additional notes.' }}</p>
+              {% if report.assigned_to %}
+                <p><strong>Mechanic:</strong> {{ report.assigned_to }}</p>
+              {% elif report.assigned_shop %}
+                <p><strong>Shop:</strong> {{ report.assigned_shop }}</p>
+              {% endif %}
               <p><strong>Documents:</strong> {{ report.documents|length }}</p>
               <p><strong>Photos:</strong> {{ report.photos|length }}</p>
             </div>

@@ -17,6 +17,15 @@ from .models.user import ShopUser
 
 
 class HankoAuthenticationIntegrationTests(TestCase):
+    def test_logged_off_users_are_redirected_to_login_from_app_routes(self):
+        response = self.client.get(reverse('shop-index'))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response['Location'].startswith(f"{reverse('shop-login')}?next="))
+
+        login_response = self.client.get(reverse('shop-login'))
+        self.assertEqual(login_response.status_code, 200)
+
     def test_hanko_callback_and_middleware_rehydrate_django_user(self):
         payload = {
             "user": {

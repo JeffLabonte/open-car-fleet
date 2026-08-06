@@ -8,6 +8,25 @@ from django.utils import timezone
 from .models.user import ShopUser
 
 
+def ensure_default_garage(user: ShopUser) -> None:
+    """Create a personal garage for users who do not have one yet."""
+    if user.garages.exists():
+        return
+
+    from .models.garage import Garage, GarageMembership
+
+    display = user.display_name or user.username or user.email.split('@')[0] if user.email else 'User'
+    garage = Garage.objects.create(
+        name=f"{display}'s Garage",
+        created_by=user,
+    )
+    GarageMembership.objects.create(
+        garage=garage,
+        user=user,
+        role=GarageMembership.ROLE_OWNER,
+    )
+
+
 def _build_username(base_name: str, hanko_id: str | None = None) -> str:
     candidate = re.sub(r'[^\w.@+-]', '-', (base_name or '').strip()) or f"hanko-{hanko_id or 'user'}"
     candidate = candidate[:150]
@@ -97,6 +116,7 @@ def complete_hanko_login(request: HttpRequest, user_data: dict[str, Any]) -> Sho
         avatar_url=user_data.get('avatar_url') or user_data.get('avatar') or '',
         provider=user_data.get('provider') or 'hanko',
     )
+    ensure_default_garage(user)
     login(request, user, backend='django.contrib.auth.backends.ModelBackend')
     request.user = user
     request._cached_user = user
