@@ -16,6 +16,7 @@
 
     const apiUrl = '{{ hanko_api_url }}';
     const nextUrl = '{{ next_url|default:'/' }}';
+    const loggedOut = {{ logged_out|yesno:'true,false' }};
     const authContainer = document.getElementById('hanko-auth-container');
 
     if (!apiUrl) {
@@ -27,23 +28,60 @@
 
     const hanko = new Hanko(apiUrl);
 
-    async function validateRedirectToken() {
+    // If the user explicitly logged out, terminate the frontend Hanko session
+    // before any auto-login checks run.
+    if (loggedOut) {
       try {
-        await hanko.token.validate();
+        await hanko.logout();
+      } catch (error) {
+        console.warn('Unable to fully terminate Hanko session on logout.', error);
+      }
+    }
+
+    async function finishLogin() {
+      try {
+        const session = await hanko.validateSession();
+        if (!session?.is_valid) {
+          return false;
+        }
+
+        const user = await hanko.getCurrentUser();
+        const payload = {
+          id: user?.user_id || user?.id || '',
+          email: user?.emails?.[0]?.address || user?.email || '',
+          name: user?.name || user?.display_name || user?.emails?.[0]?.address || '',
+          display_name: user?.display_name || user?.name || user?.emails?.[0]?.address || '',
+          avatar_url: user?.avatar_url || user?.avatar || '',
+          provider: 'hanko',
+          session_token: session?.jwt || session?.access_token || session?.token || '',
+        };
+
+        const response = await fetch('/auth/hanko/callback/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Login callback failed with status ${response.status}`);
+        }
+
         window.location.href = nextUrl;
         return true;
       } catch (error) {
-        console.debug('No Hanko redirect token to validate or validation failed.', error);
+        console.error('Hanko login callback failed.', error);
         return false;
       }
     }
 
-    const redirectValidated = await validateRedirectToken();
-    if (!redirectValidated) {
-      const { hanko: elementsHanko } = await register(apiUrl);
-      elementsHanko.onSessionCreated(() => {
-        window.location.href = nextUrl;
-      });
+    const { hanko: elementsHanko } = await register(apiUrl);
+    elementsHanko.onSessionCreated(async () => {
+      await finishLogin();
+    });
+
+    const existingSession = await hanko.validateSession();
+    if (existingSession?.is_valid && !loggedOut) {
+      await finishLogin();
     }
   </script>
 {% endblock %}

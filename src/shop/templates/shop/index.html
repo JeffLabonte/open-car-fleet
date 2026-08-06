@@ -34,6 +34,21 @@
             <a class="navbar-item" href="{% url 'shop-car-list' %}">Cars</a>
             <a class="navbar-item" href="{% url 'shop-car-create' %}">Add Car</a>
           </div>
+          <div class="navbar-end">
+            {% if request.user.is_authenticated %}
+              <div class="navbar-item">
+                <span>Hello, {{ request.user.display_name|default:request.user.username }}</span>
+              </div>
+              <div class="navbar-item">
+                <form method="post" action="{% url 'shop-logout' %}">
+                  {% csrf_token %}
+                  <button class="button is-light" type="submit">Logout</button>
+                </form>
+              </div>
+            {% else %}
+              <a class="navbar-item" href="{% url 'shop-login' %}">Login</a>
+            {% endif %}
+          </div>
         </div>
       </div>
     </nav>
