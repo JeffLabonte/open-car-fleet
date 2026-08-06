@@ -26,5 +26,5 @@ class Car(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.usual_name or self.make} ({self.license_plate or self.vin or self.id})"

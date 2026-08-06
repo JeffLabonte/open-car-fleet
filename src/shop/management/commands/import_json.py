@@ -1,6 +1,7 @@
 import json
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 from django.apps import apps
 from django.conf import settings
@@ -14,7 +15,7 @@ class Command(BaseCommand):
         "Provide the model name and the JSON file path."
     )
 
-    def add_arguments(self, parser):
+    def add_arguments(self, parser: Any) -> None:
         parser.add_argument(
             "model_name",
             help="Model name to import into, e.g. Car",
@@ -40,7 +41,7 @@ class Command(BaseCommand):
             help="Validate the JSON data without saving any objects.",
         )
 
-    def parse_date_value(self, value):
+    def parse_date_value(self, value: Any) -> date | None:
         if value is None:
             return None
 
@@ -60,7 +61,7 @@ class Command(BaseCommand):
 
         raise CommandError(f"Unsupported date format: {value!r}")
 
-    def resolve_car(self, car_value):
+    def resolve_car(self, car_value: Any):
         if not car_value:
             raise CommandError("Car reference cannot be empty.")
 
@@ -78,7 +79,7 @@ class Command(BaseCommand):
             f"Car not found for reference '{car_value}'. Use Car usual_name or license_plate."
         )
 
-    def prepare_workjob_record(self, record):
+    def prepare_workjob_record(self, record: dict[str, Any]) -> tuple[dict[str, Any], set[str]]:
         data = {}
         notes = []
         used_keys = set()
@@ -106,7 +107,7 @@ class Command(BaseCommand):
 
         return data, used_keys
 
-    def handle(self, *args, **options):
+    def handle(self, *args: Any, **options: Any) -> None:
         app_label = options["app"]
         model_name = options["model_name"]
         json_file = Path(options["json_file"])

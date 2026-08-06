@@ -1,5 +1,6 @@
 import re
 from datetime import date
+from typing import Any
 
 from django import forms
 from django.conf import settings
@@ -26,7 +27,7 @@ class CarBaseForm(forms.ModelForm):
             'license_plate': forms.TextInput(attrs={'class': 'input', 'placeholder': 'License plate'}),
         }
 
-    def clean_year(self):
+    def clean_year(self) -> int | None:
         year = self.cleaned_data.get('year')
         if year is None:
             return year
@@ -35,7 +36,7 @@ class CarBaseForm(forms.ModelForm):
             raise ValidationError('Enter a realistic year between 1886 and %(max)d.', params={'max': current + 1})
         return year
 
-    def clean_vin(self):
+    def clean_vin(self) -> str | None:
         vin = self.cleaned_data.get('vin')
         if not vin:
             return vin
@@ -52,7 +53,7 @@ class CarBaseForm(forms.ModelForm):
             raise ValidationError('A car with this VIN already exists.')
         return vin
 
-    def clean_license_plate(self):
+    def clean_license_plate(self) -> str:
         plate = self.cleaned_data.get('license_plate', '')
         plate = plate.strip().upper()
         if plate == '':
@@ -103,13 +104,13 @@ class WorkJobForm(forms.ModelForm):
             'notes': forms.Textarea(attrs={'class': 'textarea', 'rows': 4, 'placeholder': 'Additional notes'}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.fields['assigned_to'].queryset = get_user_model().objects.all()
         if self.instance and self.instance.pk:
             self.fields['required_items'].initial = '\n'.join(self.instance.required_items or [])
 
-    def clean_required_items(self):
+    def clean_required_items(self) -> list[str]:
         raw = self.cleaned_data.get('required_items', '')
         items = [item.strip() for item in raw.splitlines() if item.strip()]
         return items
@@ -143,16 +144,16 @@ class ReportForm(forms.ModelForm):
             'note': forms.Textarea(attrs={'class': 'textarea', 'rows': 4, 'placeholder': 'Notes about the work done'}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         if self.instance and self.instance.pk:
             self.fields['documents'].initial = '\n'.join(self.instance.documents or [])
             self.fields['photos'].initial = '\n'.join(self.instance.photos or [])
 
-    def clean_documents(self):
+    def clean_documents(self) -> list[str]:
         raw = self.cleaned_data.get('documents', '')
         return [item.strip() for item in raw.splitlines() if item.strip()]
 
-    def clean_photos(self):
+    def clean_photos(self) -> list[str]:
         raw = self.cleaned_data.get('photos', '')
         return [item.strip() for item in raw.splitlines() if item.strip()]

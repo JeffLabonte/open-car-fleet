@@ -1,5 +1,8 @@
 from django.contrib import admin
-from .models import Car, Report, WorkJob
+
+from .models.car import Car
+from .models.job import WorkJob
+from .models.report import Report
 
 
 @admin.register(Car)

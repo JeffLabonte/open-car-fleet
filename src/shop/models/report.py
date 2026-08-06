@@ -22,5 +22,5 @@ class Report(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.job_name} on {self.date_done} for {self.car}"

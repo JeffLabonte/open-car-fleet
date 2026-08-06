@@ -35,7 +35,7 @@ class WorkJob(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def mark_done(self):
+    def mark_done(self) -> None:
         """Convenience helper to mark job done and set done_date/status."""
         if not self.is_done:
             self.is_done = True
@@ -45,5 +45,5 @@ class WorkJob(models.Model):
             self.status = "done"
             self.save()
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.title} [{self.get_urgency_display()}] for {self.car}"
