@@ -12,6 +12,9 @@
         <a class="button is-light" href="{% url 'shop-index' %}">Back to my garages</a>
       </div>
       <div class="level-item">
+        <a class="button is-link is-light" href="{% url 'shop-garage-share' garage.pk %}">Share garage</a>
+      </div>
+      <div class="level-item">
         <a class="button is-primary" href="{% url 'shop-car-create' %}">Add car</a>
       </div>
     </div>
