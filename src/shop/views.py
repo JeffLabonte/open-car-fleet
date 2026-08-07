@@ -80,7 +80,6 @@ def hanko_callback(request: HttpRequest) -> JsonResponse:
     user = complete_hanko_login(request, user_data)
     if session_token:
         request.session['hanko_session_token'] = session_token
-    request.session['hanko_authenticated'] = True
     request.session['hanko_user_payload'] = user_data
     request.session.save()
 

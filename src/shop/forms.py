@@ -18,12 +18,14 @@ VIN_BAD_CHARS = set('IOQ')
 class CarBaseForm(forms.ModelForm):
     class Meta:
         model = Car
-        fields = ['garage', 'usual_name', 'make', 'year', 'vin', 'license_plate']
+        fields = ['garage', 'usual_name', 'make', 'model', 'year', 'mileage', 'vin', 'license_plate']
         widgets = {
             'garage': forms.Select(attrs={'class': 'input'}),
             'usual_name': forms.TextInput(attrs={'class': 'input', 'placeholder': 'Optional nickname'}),
             'make': forms.TextInput(attrs={'class': 'input', 'placeholder': 'Make'}),
+            'model': forms.TextInput(attrs={'class': 'input', 'placeholder': 'Model'}),
             'year': forms.NumberInput(attrs={'class': 'input', 'placeholder': 'Year'}),
+            'mileage': forms.NumberInput(attrs={'class': 'input', 'placeholder': 'Mileage'}),
             'vin': forms.TextInput(attrs={'class': 'input', 'placeholder': 'VIN'}),
             'license_plate': forms.TextInput(attrs={'class': 'input', 'placeholder': 'License plate'}),
         }

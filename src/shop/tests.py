@@ -6,6 +6,7 @@ from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.contrib.auth.middleware import AuthenticationMiddleware
 from django.contrib.sessions.middleware import SessionMiddleware
+from django.db import models
 from django.http import HttpRequest, HttpResponse
 from django.test import RequestFactory, TestCase
 from django.test.utils import override_settings
@@ -13,9 +14,13 @@ from django.urls import reverse
 from django.utils import timezone
 
 from . import views
+from .forms import CarCreateForm, CarUpdateForm, GarageCreateForm, ReportForm, WorkJobForm
 from .middleware import HankoAuthenticationMiddleware
 
+from .models.car import Car
 from .models.garage import Garage, GarageInvitation, GarageMembership
+from .models.job import WorkJob
+from .models.report import Report
 from .models.user import ShopUser
 
 
@@ -296,3 +301,33 @@ class GarageSharingTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response['Location'], reverse('shop-garage-detail', args=[self.garage.pk]))
+
+
+class FormEditableFieldsCoverageTests(TestCase):
+    def _editable_model_field_names(self, model: type[models.Model], *, exclude: set[str] | None = None) -> set[str]:
+        excluded = exclude or set()
+        return {
+            field.name
+            for field in model._meta.fields
+            if field.editable and not field.auto_created and field.name not in excluded
+        }
+
+    def test_car_create_form_covers_editable_car_fields(self):
+        expected = self._editable_model_field_names(Car)
+        self.assertSetEqual(set(CarCreateForm.base_fields.keys()), expected)
+
+    def test_car_update_form_covers_editable_car_fields(self):
+        expected = self._editable_model_field_names(Car)
+        self.assertSetEqual(set(CarUpdateForm.base_fields.keys()), expected)
+
+    def test_garage_create_form_covers_user_editable_garage_fields(self):
+        expected = self._editable_model_field_names(Garage, exclude={'created_by'})
+        self.assertSetEqual(set(GarageCreateForm.base_fields.keys()), expected)
+
+    def test_workjob_form_covers_user_editable_workjob_fields(self):
+        expected = self._editable_model_field_names(WorkJob, exclude={'car'})
+        self.assertSetEqual(set(WorkJobForm.base_fields.keys()), expected)
+
+    def test_report_form_covers_user_editable_report_fields(self):
+        expected = self._editable_model_field_names(Report, exclude={'car'})
+        self.assertSetEqual(set(ReportForm.base_fields.keys()), expected)
