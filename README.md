@@ -17,3 +17,13 @@ Import reports by license plate JSON:
 ```bash
 poetry run python ./src/manage.py import_json Report src/imports/reports_FMG3809.json --app shop
 ```
+
+## Makefile targets
+
+Use the Makefile to install dependencies and run tests:
+
+```bash
+make install
+make test
+make test-fast
+```
