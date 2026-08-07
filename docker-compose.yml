@@ -1,0 +1,34 @@
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-open_garage}
+      POSTGRES_USER: ${POSTGRES_USER:-open_garage_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    networks:
+      - open-garage-network
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: gunicorn settings.wsgi:application --bind 0.0.0.0:8000 --workers 3
+    env_file:
+      - ./src/.env
+    depends_on:
+      - db
+    ports:
+      - '8000:8000'
+    volumes:
+      - .:/app:cached
+    networks:
+      - open-garage-network
+
+volumes:
+  postgres_data:
+
+networks:
+  open-garage-network:
+    driver: bridge
