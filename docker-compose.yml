@@ -14,7 +14,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: gunicorn settings.wsgi:application --bind 0.0.0.0:8000 --workers 3
+    working_dir: /app/src
+    command: gunicorn --chdir /app/src settings.wsgi:application --bind 0.0.0.0:8000 --workers 3
+    environment:
+      - PYTHONPATH=/app/src
+      - DJANGO_STATIC_ROOT=/staticfiles
     env_file:
       - ./src/.env
     depends_on:
@@ -22,7 +26,7 @@ services:
     ports:
       - '8000:8000'
     volumes:
-      - .:/app:cached
+      - .:/app:Z
     networks:
       - open-garage-network
 
