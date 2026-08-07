@@ -2,7 +2,8 @@
 FROM python:3.14-slim as base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    DJANGO_STATIC_ROOT=/staticfiles
 
 # Install runtime dependencies and tools.
 RUN apt-get update \
@@ -28,16 +29,19 @@ RUN python src/manage.py collectstatic --noinput
 # Use a lean runtime image.
 FROM python:3.14-slim as final
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app/src \
+    DJANGO_STATIC_ROOT=/staticfiles
 
-WORKDIR /app
+WORKDIR /app/src
 
 COPY --from=base /usr/local/bin /usr/local/bin
 COPY --from=base /usr/local/lib/python3.14/site-packages /usr/local/lib/python3.14/site-packages
 COPY --from=base /app /app
+COPY --from=base /staticfiles /staticfiles
 
 RUN addgroup --system django && adduser --system --ingroup django django
 USER django
 
 EXPOSE 8000
-CMD ["gunicorn", "settings.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]
+CMD ["gunicorn", "--chdir", "/app/src", "settings.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]
