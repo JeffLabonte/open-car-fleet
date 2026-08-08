@@ -25,25 +25,10 @@ from shop.forms import (
 )
 from shop.importers import ImportContext, ImportValidationError, JSONImporter
 from shop.middleware import hanko_login_required
-from shop.models.car import Car
 from shop.models.garage import Garage, GarageInvitation, GarageMembership
 from shop.models.job import WorkJob
 from shop.models.report import Report
-
-
-def _user_cars_queryset(request: HttpRequest):
-    return Car.objects.filter(garage__members=request.user).distinct()
-
-
-def _user_garages_queryset(request: HttpRequest):
-    return Garage.objects.filter(members=request.user).distinct()
-
-
-def _user_can_manage_garage(request: HttpRequest, garage: Garage) -> bool:
-    return garage.memberships.filter(
-        user=request.user,
-        role__in=[GarageMembership.ROLE_OWNER, GarageMembership.ROLE_MANAGER],
-    ).exists()
+from shop.view_helpers import user_can_manage_garage, user_cars_queryset, user_garages_queryset
 
 
 @csrf_exempt
@@ -100,7 +85,7 @@ def hanko_callback(request: HttpRequest) -> JsonResponse:
 @hanko_login_required
 def index(request: HttpRequest) -> HttpResponse:
     """Authenticated homepage showing only garages the user belongs to."""
-    garages = _user_garages_queryset(request).prefetch_related('cars').order_by('name')
+    garages = user_garages_queryset(request.user).prefetch_related('cars').order_by('name')
     return render(
         request,
         'shop/garage_list.html',
@@ -115,7 +100,7 @@ def index(request: HttpRequest) -> HttpResponse:
 @hanko_login_required
 def garage_detail(request: HttpRequest, pk: str) -> HttpResponse:
     """Show one garage and its cars for a member."""
-    garage = get_object_or_404(_user_garages_queryset(request).prefetch_related('cars'), pk=pk)
+    garage = get_object_or_404(user_garages_queryset(request.user).prefetch_related('cars'), pk=pk)
     cars = garage.cars.order_by('-created_at')
     return render(
         request,
@@ -161,8 +146,8 @@ def garage_create(request: HttpRequest) -> HttpResponse:
 
 @hanko_login_required
 def garage_share(request: HttpRequest, pk: str) -> HttpResponse:
-    garage = get_object_or_404(_user_garages_queryset(request), pk=pk)
-    if not _user_can_manage_garage(request, garage):
+    garage = get_object_or_404(user_garages_queryset(request.user), pk=pk)
+    if not user_can_manage_garage(request.user, garage):
         messages.error(request, 'You do not have permission to share this garage.')
         return redirect(reverse('shop-garage-detail', args=[garage.pk]))
 
@@ -230,8 +215,8 @@ def garage_share(request: HttpRequest, pk: str) -> HttpResponse:
 
 @hanko_login_required
 def garage_import(request: HttpRequest, pk: str) -> HttpResponse:
-    garage = get_object_or_404(_user_garages_queryset(request), pk=pk)
-    if not _user_can_manage_garage(request, garage):
+    garage = get_object_or_404(user_garages_queryset(request.user), pk=pk)
+    if not user_can_manage_garage(request.user, garage):
         messages.error(request, 'You do not have permission to import data into this garage.')
         return redirect(reverse('shop-garage-detail', args=[garage.pk]))
 
@@ -288,8 +273,8 @@ def garage_import(request: HttpRequest, pk: str) -> HttpResponse:
 
 @hanko_login_required
 def car_import(request: HttpRequest, pk: str) -> HttpResponse:
-    car = get_object_or_404(_user_cars_queryset(request).select_related('garage'), pk=pk)
-    if not _user_can_manage_garage(request, car.garage):
+    car = get_object_or_404(user_cars_queryset(request.user).select_related('garage'), pk=pk)
+    if not user_can_manage_garage(request.user, car.garage):
         messages.error(request, 'You do not have permission to import data into this car.')
         return redirect(reverse('shop-car-detail', args=[car.pk]))
 
@@ -394,7 +379,7 @@ def garage_invitation_accept(request: HttpRequest, token: str) -> HttpResponse:
 @hanko_login_required
 def car_list(request: HttpRequest) -> HttpResponse:
     """Display list of cars with basic info."""
-    cars = _user_cars_queryset(request).order_by('-created_at')
+    cars = user_cars_queryset(request.user).order_by('-created_at')
     return render(request, 'shop/car_list.html', {'cars': cars})
 
 
@@ -402,13 +387,13 @@ def car_list(request: HttpRequest) -> HttpResponse:
 def car_detail(request: HttpRequest, pk: str) -> HttpResponse:
     """Show a single car's full details, maintenance plan and history."""
     car = get_object_or_404(
-        _user_cars_queryset(request).prefetch_related('work_jobs', 'reports'),
+        user_cars_queryset(request.user).prefetch_related('work_jobs', 'reports'),
         pk=pk,
     )
     work_jobs = car.work_jobs.order_by('status', 'planned_date', 'created_at')
     reports = car.reports.order_by('-date_done', '-created_at')
     related_cars = (
-        _user_cars_queryset(request).filter(make=car.make, model=car.model)
+        user_cars_queryset(request.user).filter(make=car.make, model=car.model)
         .exclude(pk=car.pk)
         .order_by('year', 'usual_name')
     )
@@ -441,7 +426,7 @@ def car_create(request: HttpRequest) -> HttpResponse:
 @hanko_login_required
 def car_update(request: HttpRequest, pk: str) -> HttpResponse:
     """Update an existing Car. Preserves CSRF protection via template token."""
-    car = get_object_or_404(_user_cars_queryset(request), pk=pk)
+    car = get_object_or_404(user_cars_queryset(request.user), pk=pk)
     if request.method == 'POST':
         form = CarUpdateForm(request.POST, instance=car, user=request.user)
         if form.is_valid():
@@ -455,7 +440,7 @@ def car_update(request: HttpRequest, pk: str) -> HttpResponse:
 
 @hanko_login_required
 def workjob_create(request: HttpRequest, car_pk: str) -> HttpResponse:
-    car = get_object_or_404(_user_cars_queryset(request), pk=car_pk)
+    car = get_object_or_404(user_cars_queryset(request.user), pk=car_pk)
     if request.method == 'POST':
         form = WorkJobForm(request.POST)
         if form.is_valid():
@@ -471,7 +456,7 @@ def workjob_create(request: HttpRequest, car_pk: str) -> HttpResponse:
 
 @hanko_login_required
 def workjob_update(request: HttpRequest, car_pk: str, pk: str) -> HttpResponse:
-    car = get_object_or_404(_user_cars_queryset(request), pk=car_pk)
+    car = get_object_or_404(user_cars_queryset(request.user), pk=car_pk)
     work_job = get_object_or_404(WorkJob, pk=pk, car=car)
     if request.method == 'POST':
         form = WorkJobForm(request.POST, instance=work_job)
@@ -486,7 +471,7 @@ def workjob_update(request: HttpRequest, car_pk: str, pk: str) -> HttpResponse:
 
 @hanko_login_required
 def report_create(request: HttpRequest, car_pk: str) -> HttpResponse:
-    car = get_object_or_404(_user_cars_queryset(request), pk=car_pk)
+    car = get_object_or_404(user_cars_queryset(request.user), pk=car_pk)
     if request.method == 'POST':
         form = ReportForm(request.POST)
         if form.is_valid():
@@ -502,7 +487,7 @@ def report_create(request: HttpRequest, car_pk: str) -> HttpResponse:
 
 @hanko_login_required
 def report_update(request: HttpRequest, car_pk: str, pk: str) -> HttpResponse:
-    car = get_object_or_404(_user_cars_queryset(request), pk=car_pk)
+    car = get_object_or_404(user_cars_queryset(request.user), pk=car_pk)
     report = get_object_or_404(Report, pk=pk, car=car)
     if request.method == 'POST':
         form = ReportForm(request.POST, instance=report)

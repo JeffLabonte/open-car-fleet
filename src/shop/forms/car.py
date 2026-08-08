@@ -78,9 +78,5 @@ class CarBaseForm(forms.ModelForm):
         return plate
 
 
-class CarCreateForm(CarBaseForm):
-    pass
-
-
-class CarUpdateForm(CarBaseForm):
-    pass
+CarCreateForm = CarBaseForm
+CarUpdateForm = CarBaseForm
