@@ -1,8 +1,8 @@
 from django.db import models
 from django.conf import settings
 
-from .car import Car
-from .garage import KnownShop
+from shop.models.car import Car
+from shop.models.garage import KnownShop
 
 
 class Report(models.Model):

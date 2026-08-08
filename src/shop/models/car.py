@@ -1,7 +1,7 @@
 import uuid
 from django.db import models
 
-from .garage import Garage
+from shop.models.garage import Garage
 
 
 class Car(models.Model):

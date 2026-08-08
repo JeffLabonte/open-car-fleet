@@ -1,7 +1,7 @@
-from .car import CarCreateForm, CarUpdateForm
-from .garage import GarageCreateForm, GarageInviteForm
-from .job import WorkJobForm
-from .report import ReportForm
+from shop.forms.car import CarCreateForm, CarUpdateForm
+from shop.forms.garage import GarageCreateForm, GarageInviteForm
+from shop.forms.job import WorkJobForm
+from shop.forms.report import ReportForm
 
 __all__ = [
     'CarCreateForm',

@@ -1,6 +1,6 @@
 from django import forms
 
-from ..models.garage import Garage
+from shop.models.garage import Garage
 
 
 class GarageCreateForm(forms.ModelForm):

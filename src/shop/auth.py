@@ -5,7 +5,7 @@ from django.contrib.auth import login
 from django.http import HttpRequest
 from django.utils import timezone
 
-from .models.user import ShopUser
+from shop.models.user import ShopUser
 
 
 def ensure_default_garage(user: ShopUser) -> None:
@@ -13,7 +13,7 @@ def ensure_default_garage(user: ShopUser) -> None:
     if user.garages.exists():
         return
 
-    from .models.garage import Garage, GarageMembership
+    from shop.models.garage import Garage, GarageMembership
 
     display = user.display_name or user.username or user.email.split('@')[0] if user.email else 'User'
     garage = Garage.objects.create(

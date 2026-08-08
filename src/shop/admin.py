@@ -1,10 +1,10 @@
 from django.contrib import admin
 
-from .models.car import Car
-from .models.garage import Garage, GarageInvitation, GarageMembership, KnownShop
-from .models.job import WorkJob
-from .models.report import Report
-from .models.user import ShopUser
+from shop.models.car import Car
+from shop.models.garage import Garage, GarageInvitation, GarageMembership, KnownShop
+from shop.models.job import WorkJob
+from shop.models.report import Report
+from shop.models.user import ShopUser
 
 
 @admin.register(Car)

@@ -5,7 +5,7 @@ from typing import Any
 from django import forms
 from django.core.exceptions import ValidationError
 
-from ..models.car import Car
+from shop.models.car import Car
 
 
 VIN_BAD_CHARS = set('IOQ')

@@ -1,8 +1,8 @@
-from .car import Car
-from .garage import Garage, GarageInvitation, GarageMembership, KnownShop
-from .job import WorkJob
-from .report import Report
-from .user import ShopUser
+from shop.models.car import Car
+from shop.models.garage import Garage, GarageInvitation, GarageMembership, KnownShop
+from shop.models.job import WorkJob
+from shop.models.report import Report
+from shop.models.user import ShopUser
 
 __all__ = [
 	"Car",

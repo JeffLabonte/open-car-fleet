@@ -2,8 +2,8 @@ from typing import Any
 
 from django import forms
 
-from ..models.report import Report
-from .base import AssignedToShopFormMixin, LineListFieldMixin
+from shop.forms.base import AssignedToShopFormMixin, LineListFieldMixin
+from shop.models.report import Report
 
 
 class ReportForm(LineListFieldMixin, AssignedToShopFormMixin, forms.ModelForm):

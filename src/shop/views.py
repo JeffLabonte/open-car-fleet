@@ -12,13 +12,8 @@ from django.contrib.auth import logout
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 
-from .auth import complete_hanko_login
-from .middleware import hanko_login_required
-from .models.car import Car
-from .models.garage import Garage, GarageInvitation, GarageMembership
-from .models.job import WorkJob
-from .models.report import Report
-from .forms import (
+from shop.auth import complete_hanko_login
+from shop.forms import (
     CarCreateForm,
     CarUpdateForm,
     GarageCreateForm,
@@ -26,6 +21,11 @@ from .forms import (
     ReportForm,
     WorkJobForm,
 )
+from shop.middleware import hanko_login_required
+from shop.models.car import Car
+from shop.models.garage import Garage, GarageInvitation, GarageMembership
+from shop.models.job import WorkJob
+from shop.models.report import Report
 
 
 def _user_cars_queryset(request: HttpRequest):

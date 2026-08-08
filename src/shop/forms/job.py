@@ -2,8 +2,8 @@ from typing import Any
 
 from django import forms
 
-from ..models.job import WorkJob
-from .base import AssignedToShopFormMixin, LineListFieldMixin
+from shop.forms.base import AssignedToShopFormMixin, LineListFieldMixin
+from shop.models.job import WorkJob
 
 
 class WorkJobForm(LineListFieldMixin, AssignedToShopFormMixin, forms.ModelForm):

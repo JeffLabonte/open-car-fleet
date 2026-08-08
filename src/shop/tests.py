@@ -13,15 +13,14 @@ from django.test.utils import override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from . import views
-from .forms import CarCreateForm, CarUpdateForm, GarageCreateForm, ReportForm, WorkJobForm
-from .middleware import HankoAuthenticationMiddleware
-
-from .models.car import Car
-from .models.garage import Garage, GarageInvitation, GarageMembership
-from .models.job import WorkJob
-from .models.report import Report
-from .models.user import ShopUser
+from shop import views
+from shop.forms import CarCreateForm, CarUpdateForm, GarageCreateForm, ReportForm, WorkJobForm
+from shop.middleware import HankoAuthenticationMiddleware
+from shop.models.car import Car
+from shop.models.garage import Garage, GarageInvitation, GarageMembership
+from shop.models.job import WorkJob
+from shop.models.report import Report
+from shop.models.user import ShopUser
 
 
 class HankoAuthenticationIntegrationTests(TestCase):

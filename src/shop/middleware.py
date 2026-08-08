@@ -10,7 +10,7 @@ from django.http import HttpResponse
 from django.contrib.auth.views import redirect_to_login
 from django.utils.deprecation import MiddlewareMixin
 
-from .auth import complete_hanko_login
+from shop.auth import complete_hanko_login
 
 
 PUBLIC_PATHS = {
