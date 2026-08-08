@@ -182,10 +182,31 @@ Notes:
 
 ## Makefile targets
 
-Use the Makefile to install dependencies and run tests:
+Use the Makefile to install dependencies, run migrations, start the app, and run tests:
 
 ```bash
 make install
+make migrate
+make run
+make db-stop
+make db-reset
 make test
 make test-fast
 ```
+
+`make run` starts Django on `127.0.0.1:8000` after applying migrations. Override the host or port if needed:
+
+```bash
+make run HOST=0.0.0.0 PORT=8080
+```
+
+### Local Postgres lifecycle via docker-compose
+
+- `make run` automatically starts `db` with `docker compose up -d db`, waits for readiness, runs migrations, then starts Django.
+- `make db-stop` gracefully stops the Postgres container.
+- `make db-reset` is destructive: it removes containers and volumes, recreates `db`, and waits for readiness.
+
+Troubleshooting:
+- If `db` fails to become ready, run `docker compose ps` and `docker compose logs db`.
+- If port `5432` is busy on the host, change `POSTGRES_PORT` and adjust the compose port mapping.
+- If migrations fail with authentication errors, verify `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_HOST` in `src/.env`.

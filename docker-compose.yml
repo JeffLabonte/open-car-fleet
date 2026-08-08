@@ -5,6 +5,14 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-open_garage}
       POSTGRES_USER: ${POSTGRES_USER:-open_garage_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    ports:
+      - '5432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-open_garage_user} -d ${POSTGRES_DB:-open_garage}']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     networks:
