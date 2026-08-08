@@ -14,13 +14,16 @@ from django.utils import timezone
 
 from shop.auth import complete_hanko_login
 from shop.forms import (
+    CarImportForm,
     CarCreateForm,
     CarUpdateForm,
     GarageCreateForm,
+    GarageImportForm,
     GarageInviteForm,
     ReportForm,
     WorkJobForm,
 )
+from shop.importers import ImportContext, ImportValidationError, JSONImporter
 from shop.middleware import hanko_login_required
 from shop.models.car import Car
 from shop.models.garage import Garage, GarageInvitation, GarageMembership
@@ -221,6 +224,126 @@ def garage_share(request: HttpRequest, pk: str) -> HttpResponse:
             'pending_invitations': pending_invitations,
             'title': f'Share {garage.name}',
             'subtitle': 'Invite people to collaborate in this garage',
+        },
+    )
+
+
+@hanko_login_required
+def garage_import(request: HttpRequest, pk: str) -> HttpResponse:
+    garage = get_object_or_404(_user_garages_queryset(request), pk=pk)
+    if not _user_can_manage_garage(request, garage):
+        messages.error(request, 'You do not have permission to import data into this garage.')
+        return redirect(reverse('shop-garage-detail', args=[garage.pk]))
+
+    if request.method == 'POST':
+        form = GarageImportForm(request.POST, request.FILES)
+        if form.is_valid():
+            importer = JSONImporter()
+            uploaded_file = form.cleaned_data['import_file']
+            dry_run = form.cleaned_data['dry_run']
+            try:
+                records = importer.parse_json_bytes(uploaded_file.read(), source_name=uploaded_file.name)
+                result = importer.import_records(
+                    importer.resolve_model('car'),
+                    records,
+                    context=ImportContext(garage=garage),
+                    dry_run=dry_run,
+                )
+            except ImportValidationError as exc:
+                form.add_error('import_file', str(exc))
+            else:
+                for warning in result.warnings:
+                    messages.warning(request, f"Record {warning.record_number}: {warning.message}")
+
+                if result.has_errors:
+                    for error in result.errors:
+                        messages.error(request, f"Record {error.record_number}: {error.message}")
+                    form.add_error('import_file', 'Import validation failed. Fix the file and try again.')
+                else:
+                    if dry_run:
+                        messages.success(
+                            request,
+                            f"Dry run complete for {result.model_label}: {result.created_count} records validated.",
+                        )
+                    else:
+                        messages.success(
+                            request,
+                            f"Imported {result.created_count} records into {garage.name}.",
+                        )
+                        return redirect(reverse('shop-garage-detail', args=[garage.pk]))
+    else:
+        form = GarageImportForm()
+
+    return render(
+        request,
+        'shop/garage_import.html',
+        {
+            'form': form,
+            'garage': garage,
+            'title': f'Import cars into {garage.name}',
+            'subtitle': 'Upload normalized JSON for cars assigned to this garage',
+        },
+    )
+
+
+@hanko_login_required
+def car_import(request: HttpRequest, pk: str) -> HttpResponse:
+    car = get_object_or_404(_user_cars_queryset(request).select_related('garage'), pk=pk)
+    if not _user_can_manage_garage(request, car.garage):
+        messages.error(request, 'You do not have permission to import data into this car.')
+        return redirect(reverse('shop-car-detail', args=[car.pk]))
+
+    if request.method == 'POST':
+        form = CarImportForm(request.POST, request.FILES)
+        if form.is_valid():
+            importer = JSONImporter()
+            uploaded_file = form.cleaned_data['import_file']
+            dry_run = form.cleaned_data['dry_run']
+            try:
+                model = importer.resolve_model(form.cleaned_data['import_type'])
+                records = importer.parse_json_bytes(uploaded_file.read(), source_name=uploaded_file.name)
+                result = importer.import_records(
+                    model,
+                    records,
+                    context=ImportContext(garage=car.garage, car=car),
+                    dry_run=dry_run,
+                )
+            except ImportValidationError as exc:
+                form.add_error('import_file', str(exc))
+            else:
+                for warning in result.warnings:
+                    messages.warning(request, f"Record {warning.record_number}: {warning.message}")
+
+                if result.has_errors:
+                    for error in result.errors:
+                        messages.error(request, f"Record {error.record_number}: {error.message}")
+                    form.add_error('import_file', 'Import validation failed. Fix the file and try again.')
+                else:
+                    if dry_run:
+                        messages.success(
+                            request,
+                            f"Dry run complete for {result.model_label}: {result.created_count} records validated.",
+                        )
+                    else:
+                        messages.success(
+                            request,
+                            f"Imported {result.created_count} records for {car.usual_name or car.make}.",
+                        )
+                        return redirect(reverse('shop-car-detail', args=[car.pk]))
+    else:
+        initial_import_type = request.GET.get('type')
+        if initial_import_type not in {'workjob', 'report'}:
+            initial_import_type = None
+        form = CarImportForm(initial={'import_type': initial_import_type} if initial_import_type else None)
+
+    return render(
+        request,
+        'shop/car_import.html',
+        {
+            'form': form,
+            'car': car,
+            'title': f'Import records for {car.usual_name or car.make}',
+            'subtitle': 'Upload normalized JSON for work jobs or reports tied to this car',
         },
     )
 

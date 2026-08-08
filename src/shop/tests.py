@@ -1,13 +1,18 @@
 import json
+import tempfile
 from datetime import timedelta
+from io import StringIO
+from pathlib import Path
 from typing import cast
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.middleware import AuthenticationMiddleware
+from django.core.management import call_command
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.db import models
 from django.http import HttpRequest, HttpResponse
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import RequestFactory, TestCase
 from django.test.utils import override_settings
 from django.urls import reverse
@@ -15,6 +20,7 @@ from django.utils import timezone
 
 from shop import views
 from shop.forms import CarCreateForm, CarUpdateForm, GarageCreateForm, ReportForm, WorkJobForm
+from shop.importers import ImportContext, JSONImporter
 from shop.middleware import HankoAuthenticationMiddleware
 from shop.models.car import Car
 from shop.models.garage import Garage, GarageInvitation, GarageMembership
@@ -330,3 +336,261 @@ class FormEditableFieldsCoverageTests(TestCase):
     def test_report_form_covers_user_editable_report_fields(self):
         expected = self._editable_model_field_names(Report, exclude={'car'})
         self.assertSetEqual(set(ReportForm.base_fields.keys()), expected)
+
+
+class JSONImporterTests(TestCase):
+    def setUp(self) -> None:
+        self.user = ShopUser.objects.create_user(
+            username='import-owner',
+            email='import-owner@example.com',
+            password='pass1234',
+        )
+        self.garage = Garage.objects.create(name='Import Garage', created_by=self.user)
+        GarageMembership.objects.create(
+            garage=self.garage,
+            user=self.user,
+            role=GarageMembership.ROLE_OWNER,
+        )
+        self.importer = JSONImporter()
+
+    def test_car_dry_run_requires_target_garage_and_does_not_persist(self):
+        result = self.importer.import_records(
+            Car,
+            [{'make': 'Toyota', 'model': 'Yaris', 'vin': 'JTDKB20U793512345'}],
+            context=ImportContext(garage=self.garage),
+            dry_run=True,
+        )
+
+        self.assertFalse(result.has_errors)
+        self.assertEqual(result.created_count, 1)
+        self.assertEqual(Car.objects.count(), 0)
+
+    def test_report_import_parses_lists_and_persists(self):
+        car = Car.objects.create(garage=self.garage, make='Honda', model='Civic', vin='2HGFG12698H512345')
+
+        result = self.importer.import_records(
+            Report,
+            [{
+                'car': str(car.pk),
+                'job_name': 'Brake service',
+                'date_done': '2026-08-01',
+                'documents': 'invoice.pdf\nchecklist.pdf',
+                'photos': ['before.jpg', 'after.jpg'],
+                'mileage': '12345',
+            }],
+            context=ImportContext(garage=self.garage),
+        )
+
+        self.assertFalse(result.has_errors)
+        self.assertEqual(result.created_count, 1)
+        report_data = Report.objects.filter(job_name='Brake service').values('documents', 'photos', 'mileage').get()
+        self.assertEqual(report_data['documents'], ['invoice.pdf', 'checklist.pdf'])
+        self.assertEqual(report_data['photos'], ['before.jpg', 'after.jpg'])
+        self.assertEqual(report_data['mileage'], 12345)
+
+    def test_workjob_import_rejects_unknown_car(self):
+        result = self.importer.import_records(
+            WorkJob,
+            [{'car': 'missing-car', 'title': 'Oil change'}],
+            context=ImportContext(garage=self.garage),
+            dry_run=True,
+        )
+
+        self.assertTrue(result.has_errors)
+        self.assertIn('Car not found', result.errors[0].message)
+
+
+class ImportJsonCommandTests(TestCase):
+    def setUp(self) -> None:
+        self.user = ShopUser.objects.create_user(
+            username='command-owner',
+            email='command-owner@example.com',
+            password='pass1234',
+        )
+        self.garage = Garage.objects.create(name='Command Garage', created_by=self.user)
+        GarageMembership.objects.create(
+            garage=self.garage,
+            user=self.user,
+            role=GarageMembership.ROLE_OWNER,
+        )
+
+    def test_car_import_command_dry_run_validates_without_persisting(self):
+        with tempfile.NamedTemporaryFile('w', suffix='.json', delete=False) as handle:
+            json.dump([{'make': 'Mazda', 'model': '3', 'vin': 'JM1BK323171512345'}], handle)
+            temp_path = handle.name
+
+        output = StringIO()
+        try:
+            call_command(
+                'import_json',
+                'Car',
+                temp_path,
+                '--garage',
+                str(self.garage.pk),
+                '--dry-run',
+                stdout=output,
+            )
+        finally:
+            Path(temp_path).unlink(missing_ok=True)
+
+        self.assertIn('Dry run complete', output.getvalue())
+        self.assertEqual(Car.objects.count(), 0)
+
+
+class GarageImportViewTests(TestCase):
+    def setUp(self) -> None:
+        self.owner = ShopUser.objects.create_user(
+            username='garage-owner',
+            email='garage-owner@example.com',
+            password='pass1234',
+        )
+        self.member = ShopUser.objects.create_user(
+            username='garage-member',
+            email='garage-member@example.com',
+            password='pass1234',
+        )
+        self.garage = Garage.objects.create(name='Upload Garage', created_by=self.owner)
+        GarageMembership.objects.create(
+            garage=self.garage,
+            user=self.owner,
+            role=GarageMembership.ROLE_OWNER,
+        )
+        GarageMembership.objects.create(
+            garage=self.garage,
+            user=self.member,
+            role=GarageMembership.ROLE_MEMBER,
+        )
+
+    def test_non_manager_is_redirected_from_garage_import(self):
+        self.client.force_login(self.member)
+
+        response = self.client.get(reverse('shop-garage-import', args=[self.garage.pk]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], reverse('shop-garage-detail', args=[self.garage.pk]))
+
+    def test_manager_can_dry_run_car_import_from_upload(self):
+        self.client.force_login(self.owner)
+        upload = SimpleUploadedFile(
+            'cars.json',
+            json.dumps([{'make': 'Subaru', 'model': 'Outback', 'vin': '4S4BSENC0J3351234'}]).encode('utf-8'),
+            content_type='application/json',
+        )
+
+        response = self.client.post(
+            reverse('shop-garage-import', args=[self.garage.pk]),
+            data={
+                'import_file': upload,
+                'dry_run': 'on',
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        messages = list(response.context['messages'])
+        self.assertTrue(any('Dry run complete' in str(message) for message in messages))
+        self.assertEqual(Car.objects.count(), 0)
+
+    def test_manager_can_import_cars_into_selected_garage(self):
+        self.client.force_login(self.owner)
+        upload = SimpleUploadedFile(
+            'cars.json',
+            json.dumps([{'make': 'Ford', 'model': 'Focus', 'vin': '1FAHP3F28CL512345'}]).encode('utf-8'),
+            content_type='application/json',
+        )
+
+        response = self.client.post(
+            reverse('shop-garage-import', args=[self.garage.pk]),
+            data={
+                'import_file': upload,
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        car = Car.objects.get(vin='1FAHP3F28CL512345')
+        self.assertEqual(car.garage, self.garage)
+
+
+class CarImportViewTests(TestCase):
+    def setUp(self) -> None:
+        self.owner = ShopUser.objects.create_user(
+            username='car-owner',
+            email='car-owner@example.com',
+            password='pass1234',
+        )
+        self.member = ShopUser.objects.create_user(
+            username='car-member',
+            email='car-member@example.com',
+            password='pass1234',
+        )
+        self.garage = Garage.objects.create(name='Car Import Garage', created_by=self.owner)
+        GarageMembership.objects.create(
+            garage=self.garage,
+            user=self.owner,
+            role=GarageMembership.ROLE_OWNER,
+        )
+        GarageMembership.objects.create(
+            garage=self.garage,
+            user=self.member,
+            role=GarageMembership.ROLE_MEMBER,
+        )
+        self.car = Car.objects.create(
+            garage=self.garage,
+            usual_name='Daily Driver',
+            make='Toyota',
+            model='Corolla',
+            vin='2T1BURHE5JC512345',
+        )
+
+    def test_non_manager_is_redirected_from_car_import(self):
+        self.client.force_login(self.member)
+
+        response = self.client.get(reverse('shop-car-import', args=[self.car.pk]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], reverse('shop-car-detail', args=[self.car.pk]))
+
+    def test_manager_can_dry_run_workjob_import_for_selected_car(self):
+        self.client.force_login(self.owner)
+        upload = SimpleUploadedFile(
+            'workjobs.json',
+            json.dumps([{'title': 'Oil change', 'planned_date': '2026-08-02'}]).encode('utf-8'),
+            content_type='application/json',
+        )
+
+        response = self.client.post(
+            reverse('shop-car-import', args=[self.car.pk]),
+            data={
+                'import_type': 'workjob',
+                'import_file': upload,
+                'dry_run': 'on',
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        messages = list(response.context['messages'])
+        self.assertTrue(any('Dry run complete' in str(message) for message in messages))
+        self.assertEqual(WorkJob.objects.count(), 0)
+
+    def test_manager_can_import_report_for_selected_car_without_car_field(self):
+        self.client.force_login(self.owner)
+        upload = SimpleUploadedFile(
+            'reports.json',
+            json.dumps([{'job_name': 'Brake service', 'date_done': '2026-08-03', 'note': 'Pads replaced'}]).encode('utf-8'),
+            content_type='application/json',
+        )
+
+        response = self.client.post(
+            reverse('shop-car-import', args=[self.car.pk]),
+            data={
+                'import_type': 'report',
+                'import_file': upload,
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        report = Report.objects.get(job_name='Brake service')
+        self.assertEqual(report.car, self.car)
