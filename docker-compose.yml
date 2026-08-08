@@ -1,10 +1,8 @@
 services:
   db:
     image: postgres:18
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-open_garage}
-      POSTGRES_USER: ${POSTGRES_USER:-open_garage_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    env_file:
+      - ./src/.env
     ports:
       - '5432:5432'
     healthcheck:
@@ -14,7 +12,7 @@ services:
       retries: 20
       start_period: 5s
     volumes:
-      - postgres_data:/var/lib/postgresql/data/
+      - postgres_data:/var/lib/postgresql
     networks:
       - open-garage-network
 

@@ -33,11 +33,15 @@ def load_dotenv(path: Path) -> None:
         if name and name not in os.environ:
             os.environ[name] = value
 
-# Load .env from the Django BASE_DIR; if not present there, also check the repository root.
-env_path = BASE_DIR / '.env'
-if not env_path.exists():
-    env_path = BASE_DIR.parent / '.env'
-load_dotenv(env_path)
+# Load environment settings from .env first, then fall back to the checked-in template.
+env_paths = [
+    BASE_DIR / '.env',
+    BASE_DIR / '.env.template',
+    BASE_DIR.parent / '.env',
+    BASE_DIR.parent / '.env.template',
+]
+for env_path in env_paths:
+    load_dotenv(env_path)
 
 
 # Quick-start development settings - unsuitable for production
