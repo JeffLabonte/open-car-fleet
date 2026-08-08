@@ -5,6 +5,7 @@ from shop import views
 urlpatterns = [
     path('login', views.login_view),
     path('login/', views.login_view, name='shop-login'),
+    path('theme/<str:theme>/', views.theme_view, name='shop-theme'),
     path('logout/', views.logout_view, name='shop-logout'),
     path('auth/hanko/callback/', views.hanko_callback, name='shop-hanko-callback'),
     path('', views.index, name='shop-index'),

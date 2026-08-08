@@ -6,6 +6,7 @@ from typing import Any, cast
 from django.conf import settings
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.urls import reverse
 from django.contrib import messages
 from django.contrib.auth import logout
@@ -31,6 +32,13 @@ from shop.models.report import Report
 from shop.view_helpers import user_can_manage_garage, user_cars_queryset, user_garages_queryset
 
 
+def get_theme_from_request(request: HttpRequest) -> str:
+    theme_cookie = request.COOKIES.get('theme')
+    if theme_cookie in {'light', 'dark'}:
+        return theme_cookie
+    return 'light'
+
+
 @csrf_exempt
 def login_view(request: HttpRequest) -> HttpResponse:
     if request.user.is_authenticated:
@@ -42,7 +50,17 @@ def login_view(request: HttpRequest) -> HttpResponse:
         'hanko_api_url': os.environ.get('HANKO_API_URL', ''),
         'next_url': request.GET.get('next', '/'),
         'logged_out': request.GET.get('logged_out') == '1',
+        'theme': get_theme_from_request(request),
     })
+
+
+def theme_view(request: HttpRequest, theme: str) -> HttpResponse:
+    if theme not in {'light', 'dark'}:
+        theme = 'light'
+
+    response = redirect(request.GET.get('next') or reverse('shop-index'))
+    response.set_cookie('theme', theme, max_age=60 * 60 * 24 * 365, httponly=False, samesite='Lax')
+    return response
 
 
 @csrf_exempt

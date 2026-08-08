@@ -123,6 +123,24 @@ class HankoAuthenticationIntegrationTests(TestCase):
         self.assertNotIn('hanko_session_token', self.client.session)
         self.assertNotIn('hanko_user_id', self.client.session)
 
+    def test_theme_preference_sets_cookie_and_redirects(self):
+        response = self.client.get(
+            reverse('shop-theme', kwargs={'theme': 'dark'}),
+            {'next': reverse('shop-login')},
+            follow=False,
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], reverse('shop-login'))
+        self.assertEqual(response.cookies['theme'].value, 'dark')
+        self.assertEqual(response.cookies['theme']['max-age'], '31536000')
+
+    def test_login_page_renders_current_theme_attribute(self):
+        response = self.client.get(reverse('shop-login'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-theme="light"')
+
     @override_settings(HANKO_API_URL='https://hanko.example.com')
     def test_car_list_uses_hanko_session_token_to_authenticate(self):
         factory = RequestFactory()

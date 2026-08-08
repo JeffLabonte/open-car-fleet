@@ -1,16 +1,84 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="{{ theme|default:'light' }}">
   <head>
     <meta charset="UTF-8" />
     <title>{{ title|default:'My App' }}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+    <style>
+      :root {
+        color-scheme: light;
+        --bg-color: #f7f7fa;
+        --surface-color: #ffffff;
+        --text-color: #2f2f2f;
+        --muted-color: #6b7280;
+        --border-color: #dbdbdb;
+      }
+
+      html[data-theme="dark"] {
+        color-scheme: dark;
+        --bg-color: #121722;
+        --surface-color: #1f2937;
+        --text-color: #f3f4f6;
+        --muted-color: #d1d5db;
+        --border-color: #374151;
+      }
+
+      body {
+        background: var(--bg-color);
+        color: var(--text-color);
+        transition: background-color 0.2s ease, color 0.2s ease;
+      }
+
+      .hero, .navbar, .box, .notification, .card, .content, .table {
+        background-color: var(--surface-color);
+        color: var(--text-color);
+        border-color: var(--border-color);
+      }
+
+      .navbar-item, .navbar-link, .button.is-light, .button.is-link, .button.is-info {
+        color: var(--text-color);
+      }
+
+      .subtitle, .help, .tag, .content p, .content li, .label {
+        color: var(--muted-color);
+      }
+
+      .is-light {
+        background-color: var(--surface-color) !important;
+        color: var(--text-color) !important;
+      }
+
+      .theme-toggle {
+        margin-left: 0.75rem;
+        display: flex;
+        gap: 0.5rem;
+      }
+
+      .theme-toggle .is-active {
+        background-color: #3273dc;
+        border-color: #3273dc;
+        color: white;
+      }
+    </style>
   </head>
   <body>
     <section class="hero is-light">
       <div class="hero-body">
         <div class="container">
-          <h1 class="title">{{ title|default:'My App' }}</h1>
-          <h2 class="subtitle">{{ subtitle|default:'A flexible Bulma-powered interface' }}</h2>
+          <div class="is-flex is-justify-content-space-between is-align-items-center">
+            <div>
+              <h1 class="title">{{ title|default:'My App' }}</h1>
+              <h2 class="subtitle">{{ subtitle|default:'A flexible Bulma-powered interface' }}</h2>
+            </div>
+            <div class="theme-toggle">
+              <a class="button is-small is-light{% if theme == 'dark' %} is-active{% endif %}" href="{% url 'shop-theme' 'dark' %}{% if request.get_full_path != '/' %}?next={{ request.get_full_path|urlencode }}{% endif %}">
+                Dark mode
+              </a>
+              <a class="button is-small is-light{% if theme == 'light' %} is-active{% endif %}" href="{% url 'shop-theme' 'light' %}{% if request.get_full_path != '/' %}?next={{ request.get_full_path|urlencode }}{% endif %}">
+                Light mode
+              </a>
+            </div>
+          </div>
         </div>
       </div>
     </section>
