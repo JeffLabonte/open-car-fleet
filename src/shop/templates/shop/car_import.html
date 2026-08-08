@@ -1,0 +1,45 @@
+{% extends 'shop/index.html' %}
+
+{% block content %}
+  <div class="box">
+    <h1 class="title">Import records for {{ car.usual_name|default:car.make }}</h1>
+    <p class="subtitle">Use normalized JSON to import work jobs or reports for this car.</p>
+
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="notification is-danger">
+          {{ form.non_field_errors }}
+        </div>
+      {% endif %}
+
+      <div class="notification is-info is-light">
+        The selected car is applied automatically. The JSON file does not need a <strong>car</strong> field unless you want an explicit self-check.
+      </div>
+
+      {% for field in form.visible_fields %}
+        <div class="field">
+          {{ field.label_tag }}
+          <div class="control">
+            {{ field }}
+          </div>
+          {% if field.help_text %}
+            <p class="help">{{ field.help_text }}</p>
+          {% endif %}
+          {% for error in field.errors %}
+            <p class="help is-danger">{{ error }}</p>
+          {% endfor %}
+        </div>
+      {% endfor %}
+
+      <div class="field is-grouped">
+        <div class="control">
+          <button class="button is-primary" type="submit">Run import</button>
+        </div>
+        <div class="control">
+          <a class="button is-light" href="{% url 'shop-car-detail' car.pk %}">Cancel</a>
+        </div>
+      </div>
+    </form>
+  </div>
+{% endblock %}

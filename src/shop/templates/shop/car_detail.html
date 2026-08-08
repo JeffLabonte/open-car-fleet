@@ -21,6 +21,7 @@
     <div class="buttons">
       <a class="button is-link" href="{% url 'shop-car-update' car.pk %}">Edit</a>
       <a class="button is-primary" href="{% url 'shop-workjob-create' car.pk %}">Add planned work</a>
+      <a class="button is-info is-light" href="{% url 'shop-car-import' car.pk %}">Import work jobs or reports</a>
       <a class="button is-light" href="{% url 'shop-car-list' %}">Back to list</a>
     </div>
   </div>
@@ -33,6 +34,9 @@
         </div>
       </div>
       <div class="level-right">
+        <div class="level-item">
+          <a class="button is-info is-light" href="{% url 'shop-car-import' car.pk %}?type=workjob">Import work jobs</a>
+        </div>
         <div class="level-item">
           <a class="button is-primary" href="{% url 'shop-workjob-create' car.pk %}">Add planned work</a>
         </div>
@@ -92,6 +96,9 @@
         </div>
       </div>
       <div class="level-right">
+        <div class="level-item">
+          <a class="button is-info is-light" href="{% url 'shop-car-import' car.pk %}?type=report">Import reports</a>
+        </div>
         <div class="level-item">
           <a class="button is-primary" href="{% url 'shop-report-create' car.pk %}">Add maintenance report</a>
         </div>
