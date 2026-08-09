@@ -20,6 +20,10 @@
 
     <div class="buttons">
       <a class="button is-link" href="{% url 'shop-car-update' car.pk %}">Edit</a>
+      <form method="post" action="{% url 'shop-car-delete' car.pk %}" style="display:inline;">
+        {% csrf_token %}
+        <button class="button is-danger is-light" type="submit" onclick="return confirm('Delete this car?')">Delete</button>
+      </form>
       <a class="button is-primary" href="{% url 'shop-workjob-create' car.pk %}">Add planned work</a>
       <a class="button is-info is-light" href="{% url 'shop-car-import' car.pk %}">Import work jobs or reports</a>
       <a class="button is-light" href="{% url 'shop-car-list' %}">Back to list</a>

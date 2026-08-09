@@ -1,22 +1,19 @@
 {% extends 'shop/index.html' %}
 
 {% block content %}
-  <div class="level">
-    <div class="level-left">
-      <div class="level-item">
-        <h1 class="title">Cars</h1>
-      </div>
+  <div class="page-header">
+    <div>
+      <h1 class="title page-title">Cars</h1>
+      <p class="page-subtitle">Browse the vehicles in your shared garages.</p>
     </div>
-    <div class="level-right">
-      <div class="level-item">
-        <a class="button is-primary" href="{% url 'shop-car-create' %}">Add a new car</a>
-      </div>
+    <div class="page-actions">
+      <a class="button is-primary" href="{% url 'shop-car-create' %}">Add a new car</a>
     </div>
   </div>
 
   {% if cars %}
-    <div class="table-container">
-      <table class="table is-fullwidth is-striped is-hoverable is-bordered">
+    <div class="table-container content-card">
+      <table class="table is-fullwidth is-striped is-hoverable">
         <thead>
           <tr>
             <th>Name</th>
@@ -24,6 +21,7 @@
             <th>Year</th>
             <th>VIN</th>
             <th>License</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -34,13 +32,19 @@
               <td>{{ car.year|default:"—" }}</td>
               <td>{{ car.vin|default:"—" }}</td>
               <td>{{ car.license_plate|default:"—" }}</td>
+              <td>
+                <form method="post" action="{% url 'shop-car-delete' car.pk %}" style="display:inline;">
+                  {% csrf_token %}
+                  <button class="button is-small is-danger is-light" type="submit" onclick="return confirm('Delete this car?')">Delete</button>
+                </form>
+              </td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   {% else %}
-    <div class="notification is-warning">
+    <div class="empty-state">
       No cars yet.
     </div>
   {% endif %}

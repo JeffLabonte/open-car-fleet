@@ -16,6 +16,8 @@ from shop.auth import complete_hanko_login
 PUBLIC_PATHS = {
     '/login',
     '/login/',
+    '/theme',
+    '/theme/',
     '/auth/hanko/callback/',
 }
 
@@ -30,6 +32,9 @@ class HankoAuthenticationMiddleware(MiddlewareMixin):
 
     def process_request(self, request: HttpRequest) -> Optional[HttpResponse]:
         if request.path in PUBLIC_PATHS or request.path.startswith(PUBLIC_PREFIXES):
+            return None
+
+        if request.path.startswith('/theme/'):
             return None
 
         if request.user.is_authenticated:

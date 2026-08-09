@@ -1,37 +1,31 @@
 {% extends 'shop/index.html' %}
 
 {% block content %}
-  <div class="level">
-    <div class="level-left">
-      <div class="level-item">
-        <h1 class="title">{{ garage.name }}</h1>
-      </div>
+  <div class="page-header">
+    <div>
+      <h1 class="title page-title">{{ garage.name }}</h1>
+      <p class="page-subtitle">Review the vehicles in this garage and manage access.</p>
     </div>
-    <div class="level-right">
-      <div class="level-item">
-        <a class="button is-light" href="{% url 'shop-index' %}">Back to my garages</a>
-      </div>
-      <div class="level-item">
+    <div class="page-actions">
+      <a class="button is-light" href="{% url 'shop-index' %}">Back to garages</a>
+      {% if can_manage_garage %}
         <a class="button is-link is-light" href="{% url 'shop-garage-share' garage.pk %}">Share garage</a>
-      </div>
-      <div class="level-item">
         <a class="button is-info is-light" href="{% url 'shop-garage-import' garage.pk %}">Import cars</a>
-      </div>
-      <div class="level-item">
-        <a class="button is-primary" href="{% url 'shop-car-create' %}">Add car</a>
-      </div>
+        <a class="button is-success is-light" href="{% url 'shop-garage-export' garage.pk %}">Export to Excel</a>
+      {% endif %}
+      <a class="button is-primary" href="{% url 'shop-car-create' %}">Add car</a>
     </div>
   </div>
 
   {% if garage.description %}
-    <div class="box">
+    <div class="box content-card mb-4">
       <p>{{ garage.description }}</p>
     </div>
   {% endif %}
 
   {% if cars %}
-    <div class="table-container">
-      <table class="table is-fullwidth is-striped is-hoverable is-bordered">
+    <div class="table-container content-card">
+      <table class="table is-fullwidth is-striped is-hoverable">
         <thead>
           <tr>
             <th>Name</th>
@@ -55,7 +49,7 @@
       </table>
     </div>
   {% else %}
-    <div class="notification is-info">
+    <div class="empty-state">
       No cars in this garage yet.
     </div>
   {% endif %}

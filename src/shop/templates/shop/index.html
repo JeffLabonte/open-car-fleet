@@ -2,137 +2,337 @@
 <html lang="en" data-theme="{{ theme|default:'light' }}">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{ title|default:'My App' }}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
     <style>
       :root {
         color-scheme: light;
-        --bg-color: #f7f7fa;
+        --bg-color: #f3f5fb;
         --surface-color: #ffffff;
-        --text-color: #2f2f2f;
-        --muted-color: #6b7280;
-        --border-color: #dbdbdb;
+        --surface-elevated: #f8faff;
+        --text-color: #172033;
+        --muted-color: #5f6f85;
+        --border-color: #dce3ee;
+        --accent-color: #2563eb;
+        --accent-strong: #1d4ed8;
+        --accent-soft: rgba(37, 99, 235, 0.12);
+        --shadow: 0 12px 35px rgba(15, 23, 42, 0.08);
       }
 
       html[data-theme="dark"] {
         color-scheme: dark;
-        --bg-color: #121722;
-        --surface-color: #1f2937;
-        --text-color: #f3f4f6;
-        --muted-color: #d1d5db;
-        --border-color: #374151;
+        --bg-color: #0f172a;
+        --surface-color: #111827;
+        --surface-elevated: #172033;
+        --text-color: #f8fafc;
+        --muted-color: #cbd5e1;
+        --border-color: #334155;
+        --accent-color: #60a5fa;
+        --accent-strong: #93c5fd;
+        --accent-soft: rgba(96, 165, 250, 0.2);
+        --shadow: 0 14px 35px rgba(2, 6, 23, 0.4);
       }
 
       body {
         background: var(--bg-color);
         color: var(--text-color);
         transition: background-color 0.2s ease, color 0.2s ease;
+        min-height: 100vh;
+        font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
       }
 
-      .hero, .navbar, .box, .notification, .card, .content, .table {
+      a {
+        color: var(--accent-color);
+      }
+
+      .page-shell {
+        min-height: 100vh;
+      }
+
+      .app-hero {
+        background: linear-gradient(135deg, var(--accent-soft), transparent 65%);
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .hero-card {
+        background: var(--surface-color);
+        border: 1px solid var(--border-color);
+        border-radius: 1.25rem;
+        box-shadow: var(--shadow);
+        padding: 1.25rem;
+      }
+
+      .hero-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+
+      .hero-title {
+        margin-bottom: 0.15rem;
+        font-size: clamp(1.4rem, 3.5vw, 2rem);
+      }
+
+      .hero-subtitle {
+        color: var(--muted-color);
+        margin-bottom: 0;
+      }
+
+      .app-nav {
+        background: var(--surface-color);
+        border-bottom: 1px solid var(--border-color);
+        position: sticky;
+        top: 0;
+        z-index: 20;
+      }
+
+      .navbar {
+        background-color: transparent;
+      }
+
+      .navbar-item,
+      .navbar-link,
+      .button.is-light,
+      .button.is-link,
+      .button.is-info {
+        color: var(--text-color);
+      }
+
+      .navbar-item:hover,
+      .navbar-link:hover {
+        background-color: var(--accent-soft);
+        border-radius: 0.75rem;
+      }
+
+      .hero,
+      .navbar,
+      .box,
+      .notification,
+      .card,
+      .content,
+      .table-container,
+      .table {
         background-color: var(--surface-color);
         color: var(--text-color);
         border-color: var(--border-color);
       }
 
-      .navbar-item, .navbar-link, .button.is-light, .button.is-link, .button.is-info {
-        color: var(--text-color);
-      }
-
-      .subtitle, .help, .tag, .content p, .content li, .label {
+      .subtitle,
+      .help,
+      .tag,
+      .content p,
+      .content li,
+      .label {
         color: var(--muted-color);
       }
 
       .is-light {
-        background-color: var(--surface-color) !important;
+        background-color: var(--surface-elevated) !important;
         color: var(--text-color) !important;
       }
 
       .theme-toggle {
-        margin-left: 0.75rem;
-        display: flex;
+        display: inline-flex;
         gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+
+      .theme-toggle .button {
+        border-radius: 999px;
       }
 
       .theme-toggle .is-active {
-        background-color: #3273dc;
-        border-color: #3273dc;
+        background-color: var(--accent-color);
+        border-color: var(--accent-color);
         color: white;
+      }
+
+      .page-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+      }
+
+      .page-title {
+        margin-bottom: 0 !important;
+      }
+
+      .page-subtitle {
+        color: var(--muted-color);
+        margin-top: 0.2rem;
+      }
+
+      .page-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .content-card,
+      .empty-state {
+        border: 1px solid var(--border-color);
+        border-radius: 1rem;
+        box-shadow: var(--shadow);
+        background: var(--surface-color);
+      }
+
+      .empty-state {
+        padding: 1.25rem;
+        color: var(--muted-color);
+      }
+
+      .button.is-primary {
+        background-color: var(--accent-color);
+        border-color: var(--accent-color);
+      }
+
+      .button.is-primary:hover,
+      .button.is-primary:focus {
+        background-color: var(--accent-strong);
+        border-color: var(--accent-strong);
+      }
+
+      .button.is-light:hover,
+      .button.is-light:focus {
+        background-color: var(--accent-soft);
+        color: var(--text-color);
+      }
+
+      .input,
+      .textarea,
+      .select select {
+        background-color: var(--surface-color);
+        color: var(--text-color);
+        border-color: var(--border-color);
+      }
+
+      .input::placeholder,
+      .textarea::placeholder {
+        color: var(--muted-color);
+      }
+
+      .notification.is-info {
+        background-color: var(--accent-soft);
+        color: var(--text-color);
+      }
+
+      .table thead th {
+        background-color: var(--surface-elevated);
+        color: var(--text-color);
+      }
+
+      .table td,
+      .table th {
+        border-color: var(--border-color);
+      }
+
+      @media (max-width: 768px) {
+        .hero-body {
+          padding: 1rem 0 1.25rem;
+        }
+
+        .hero-card {
+          padding: 1rem;
+        }
+
+        .page-header {
+          align-items: stretch;
+        }
+
+        .page-actions {
+          width: 100%;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .page-actions .button {
+          width: 100%;
+        }
       }
     </style>
   </head>
   <body>
-    <section class="hero is-light">
-      <div class="hero-body">
-        <div class="container">
-          <div class="is-flex is-justify-content-space-between is-align-items-center">
-            <div>
-              <h1 class="title">{{ title|default:'My App' }}</h1>
-              <h2 class="subtitle">{{ subtitle|default:'A flexible Bulma-powered interface' }}</h2>
-            </div>
-            <div class="theme-toggle">
-              <a class="button is-small is-light{% if theme == 'dark' %} is-active{% endif %}" href="{% url 'shop-theme' 'dark' %}{% if request.get_full_path != '/' %}?next={{ request.get_full_path|urlencode }}{% endif %}">
-                Dark mode
-              </a>
-              <a class="button is-small is-light{% if theme == 'light' %} is-active{% endif %}" href="{% url 'shop-theme' 'light' %}{% if request.get_full_path != '/' %}?next={{ request.get_full_path|urlencode }}{% endif %}">
-                Light mode
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    {% if request.user.is_authenticated %}
-      <nav class="navbar" role="navigation" aria-label="main navigation">
-        <div class="container">
-          <div class="navbar-brand">
-            <a class="navbar-item" href="{% url 'shop-index' %}">
-              {{ brand_name|default:'App' }}
-            </a>
-            <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navbarMenu">
-              <span aria-hidden="true"></span>
-              <span aria-hidden="true"></span>
-              <span aria-hidden="true"></span>
-            </a>
-          </div>
-
-          <div id="navbarMenu" class="navbar-menu">
-            <div class="navbar-start">
-              <a class="navbar-item" href="{% url 'shop-index' %}">My Garages</a>
-            </div>
-            <div class="navbar-end">
-              <div class="navbar-item">
-                <span>Hello, {{ request.user.display_name|default:request.user.username }}</span>
-              </div>
-              <div class="navbar-item">
-                <form method="post" action="{% url 'shop-logout' %}">
-                  {% csrf_token %}
-                  <button class="button is-light" type="submit">Logout</button>
-                </form>
+    <div class="page-shell">
+      <section class="hero app-hero">
+        <div class="hero-body">
+          <div class="container">
+            <div class="hero-card">
+              <div class="hero-header">
+                <div>
+                  <h1 class="hero-title">{{ title|default:'My App' }}</h1>
+                  <p class="hero-subtitle">{{ subtitle|default:'A flexible Bulma-powered interface' }}</p>
+                </div>
+                <div class="theme-toggle" aria-label="Theme switcher">
+                  <a class="button is-small is-light{% if theme == 'dark' %} is-active{% endif %}" href="{% url 'shop-theme' 'dark' %}{% if request.get_full_path != '/' %}?next={{ request.get_full_path|urlencode }}{% endif %}">
+                    Theme: Dark
+                  </a>
+                  <a class="button is-small is-light{% if theme == 'light' %} is-active{% endif %}" href="{% url 'shop-theme' 'light' %}{% if request.get_full_path != '/' %}?next={{ request.get_full_path|urlencode }}{% endif %}">
+                    Theme: Light
+                  </a>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </nav>
-    {% endif %}
+      </section>
 
-    <section class="section">
-      <div class="container">
-        {% if messages %}
-          {% for message in messages %}
-            <div class="notification {% if message.tags %}is-{{ message.tags }}{% else %}is-info{% endif %}">
-              {{ message }}
+      {% if request.user.is_authenticated %}
+        <nav class="navbar app-nav" role="navigation" aria-label="main navigation">
+          <div class="container">
+            <div class="navbar-brand">
+              <a class="navbar-item" href="{% url 'shop-index' %}">
+                {{ brand_name|default:'Open Garage' }}
+              </a>
+              <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navbarMenu">
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+              </a>
             </div>
-          {% endfor %}
-        {% endif %}
 
-        {% block content %}
-          <div class="box">
-            <p>Welcome to the shop app.</p>
+            <div id="navbarMenu" class="navbar-menu">
+              <div class="navbar-start">
+                <a class="navbar-item" href="{% url 'shop-index' %}">My Garages</a>
+              </div>
+              <div class="navbar-end">
+                <div class="navbar-item">
+                  <span>Hello, {{ request.user.display_name|default:request.user.username }}</span>
+                </div>
+                <div class="navbar-item">
+                  <form method="post" action="{% url 'shop-logout' %}">
+                    {% csrf_token %}
+                    <button class="button is-light" type="submit">Logout</button>
+                  </form>
+                </div>
+              </div>
+            </div>
           </div>
-        {% endblock %}
-      </div>
-    </section>
+        </nav>
+      {% endif %}
+
+      <section class="section">
+        <div class="container">
+          {% if messages %}
+            {% for message in messages %}
+              <div class="notification {% if message.tags %}is-{{ message.tags }}{% else %}is-info{% endif %}">
+                {{ message }}
+              </div>
+            {% endfor %}
+          {% endif %}
+
+          {% block content %}
+            <div class="box content-card">
+              <p>Welcome to the shop app.</p>
+            </div>
+          {% endblock %}
+        </div>
+      </section>
+    </div>
   </body>
 </html>
