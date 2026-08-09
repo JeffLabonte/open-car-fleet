@@ -19,19 +19,27 @@
             <th>Name</th>
             <th>Make</th>
             <th>Year</th>
-            <th>VIN</th>
-            <th>License</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for car in cars %}
             <tr>
-              <td><a href="{% url 'shop-car-detail' car.pk %}">{{ car.usual_name|default:car.make }}</a></td>
+              <td>
+                <a href="{% url 'shop-car-detail' car.pk %}">{{ car.usual_name|default:car.make }}</a>
+                <div class="is-size-7 has-text-grey">
+                  <span style="color:#1d4ed8; font-weight:600;">Plate:</span>
+                  <strong style="color:#2563eb;">{{ car.license_plate|default:"—" }}</strong>
+                  <span style="color:#9ca3af;"> · </span>
+                  <span style="color:#166534; font-weight:600;">VIN:</span>
+                  <span style="color:#16a34a;">{{ car.vin|default:"—" }}</span>
+                  <span style="color:#9ca3af;"> · </span>
+                  <span style="color:#9a3412; font-weight:600;">Color:</span>
+                  <span style="color:#ea580c;">{{ car.color|default:"—" }}</span>
+                </div>
+              </td>
               <td>{{ car.make }}</td>
               <td>{{ car.year|default:"—" }}</td>
-              <td>{{ car.vin|default:"—" }}</td>
-              <td>{{ car.license_plate|default:"—" }}</td>
               <td>
                 <form method="post" action="{% url 'shop-car-delete' car.pk %}" style="display:inline;">
                   {% csrf_token %}
