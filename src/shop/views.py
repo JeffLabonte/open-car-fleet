@@ -6,14 +6,15 @@ from typing import Any, cast
 from django.conf import settings
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
-from django.utils.http import url_has_allowed_host_and_scheme
 from django.urls import reverse
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 from django.utils import timezone
 
 from shop.auth import complete_hanko_login
+from shop.exporters import export_garage_to_excel
 from shop.forms import (
     CarImportForm,
     CarCreateForm,
@@ -26,7 +27,7 @@ from shop.forms import (
 )
 from shop.importers import ImportContext, ImportValidationError, JSONImporter
 from shop.middleware import hanko_login_required
-from shop.models.garage import Garage, GarageInvitation, GarageMembership
+from shop.models.garage import GarageInvitation, GarageMembership
 from shop.models.job import WorkJob
 from shop.models.report import Report
 from shop.view_helpers import user_can_manage_garage, user_cars_queryset, user_garages_queryset
@@ -60,6 +61,7 @@ def theme_view(request: HttpRequest, theme: str) -> HttpResponse:
 
     response = redirect(request.GET.get('next') or reverse('shop-index'))
     response.set_cookie('theme', theme, max_age=60 * 60 * 24 * 365, httponly=False, samesite='Lax')
+    response.cookies['theme']['max-age'] = '31536000'
     return response
 
 
@@ -104,6 +106,12 @@ def hanko_callback(request: HttpRequest) -> JsonResponse:
 def index(request: HttpRequest) -> HttpResponse:
     """Authenticated homepage showing only garages the user belongs to."""
     garages = user_garages_queryset(request.user).prefetch_related('cars').order_by('name')
+    manageable_garage_ids = set(
+        GarageMembership.objects.filter(
+            user=request.user,
+            role__in=[GarageMembership.ROLE_OWNER, GarageMembership.ROLE_MANAGER],
+        ).values_list('garage_id', flat=True)
+    )
     return render(
         request,
         'shop/garage_list.html',
@@ -111,6 +119,7 @@ def index(request: HttpRequest) -> HttpResponse:
             'title': 'My Garages',
             'subtitle': 'Garages you belong to',
             'garages': garages,
+            'manageable_garage_ids': manageable_garage_ids,
         },
     )
 
@@ -119,12 +128,14 @@ def index(request: HttpRequest) -> HttpResponse:
 def garage_detail(request: HttpRequest, pk: str) -> HttpResponse:
     """Show one garage and its cars for a member."""
     garage = get_object_or_404(user_garages_queryset(request.user).prefetch_related('cars'), pk=pk)
+    can_manage_garage = user_can_manage_garage(request.user, garage)
     cars = garage.cars.order_by('-created_at')
     return render(
         request,
         'shop/garage_detail.html',
         {
             'garage': garage,
+            'can_manage_garage': can_manage_garage,
             'cars': cars,
             'title': garage.name,
             'subtitle': 'Garage details',
@@ -290,6 +301,22 @@ def garage_import(request: HttpRequest, pk: str) -> HttpResponse:
 
 
 @hanko_login_required
+def garage_export(request: HttpRequest, pk: str) -> HttpResponse:
+    garage = get_object_or_404(user_garages_queryset(request.user), pk=pk)
+    if not user_can_manage_garage(request.user, garage):
+        messages.error(request, 'You do not have permission to export data from this garage.')
+        return redirect(reverse('shop-garage-detail', args=[garage.pk]))
+
+    workbook = export_garage_to_excel(garage)
+    response = HttpResponse(
+        workbook.content,
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    response['Content-Disposition'] = f'attachment; filename="{workbook.filename}"'
+    return response
+
+
+@hanko_login_required
 def car_import(request: HttpRequest, pk: str) -> HttpResponse:
     car = get_object_or_404(user_cars_queryset(request.user).select_related('garage'), pk=pk)
     if not user_can_manage_garage(request.user, car.garage):
@@ -399,6 +426,20 @@ def car_list(request: HttpRequest) -> HttpResponse:
     """Display list of cars with basic info."""
     cars = user_cars_queryset(request.user).order_by('-created_at')
     return render(request, 'shop/car_list.html', {'cars': cars})
+
+
+@hanko_login_required
+@require_POST
+def car_delete(request: HttpRequest, pk: str) -> HttpResponse:
+    """Delete a car from a garage the user can manage."""
+    car = get_object_or_404(user_cars_queryset(request.user).select_related('garage'), pk=pk)
+    if not user_can_manage_garage(request.user, car.garage):
+        messages.error(request, 'You do not have permission to delete this car.')
+        return redirect(reverse('shop-car-list'))
+
+    car.delete()
+    messages.success(request, 'Car deleted successfully.')
+    return redirect(reverse('shop-car-list'))
 
 
 @hanko_login_required

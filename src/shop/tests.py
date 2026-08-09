@@ -1,6 +1,8 @@
 import json
 import tempfile
+import uuid
 from datetime import timedelta
+from io import BytesIO
 from io import StringIO
 from pathlib import Path
 from typing import cast
@@ -9,6 +11,7 @@ from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.contrib.auth.middleware import AuthenticationMiddleware
 from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.db import models
 from django.http import HttpRequest, HttpResponse
@@ -17,8 +20,10 @@ from django.test import RequestFactory, TestCase
 from django.test.utils import override_settings
 from django.urls import reverse
 from django.utils import timezone
+from openpyxl import load_workbook
 
 from shop import views
+from shop.exporters import export_garage_to_excel
 from shop.forms import CarCreateForm, CarUpdateForm, GarageCreateForm, ReportForm, WorkJobForm
 from shop.importers import ImportContext, JSONImporter
 from shop.middleware import HankoAuthenticationMiddleware
@@ -140,6 +145,13 @@ class HankoAuthenticationIntegrationTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'data-theme="light"')
+
+    def test_login_page_includes_mobile_viewport_and_theme_toggle(self):
+        response = self.client.get(reverse('shop-login'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '<meta name="viewport"')
+        self.assertContains(response, 'Theme')
 
     @override_settings(HANKO_API_URL='https://hanko.example.com')
     def test_car_list_uses_hanko_session_token_to_authenticate(self):
@@ -325,6 +337,21 @@ class GarageSharingTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response['Location'], reverse('shop-garage-detail', args=[self.garage.pk]))
 
+    def test_owner_can_delete_car_from_car_list(self):
+        self.client.force_login(self.owner)
+        car = Car.objects.create(
+            garage=self.garage,
+            make='Toyota',
+            model='Yaris',
+            vin='JTDKB20U793512345',
+        )
+
+        response = self.client.post(reverse('shop-car-delete', args=[car.pk]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], reverse('shop-car-list'))
+        self.assertFalse(Car.objects.filter(pk=car.pk).exists())
+
 
 class FormEditableFieldsCoverageTests(TestCase):
     def _editable_model_field_names(self, model: type[models.Model], *, exclude: set[str] | None = None) -> set[str]:
@@ -453,6 +480,226 @@ class ImportJsonCommandTests(TestCase):
 
         self.assertIn('Dry run complete', output.getvalue())
         self.assertEqual(Car.objects.count(), 0)
+
+    def test_export_garage_command_writes_excel_file(self):
+        Car.objects.create(
+            garage=self.garage,
+            usual_name='Command Export Car',
+            make='Mazda',
+            model='3',
+            vin='JM1BK323171512345',
+        )
+        output = StringIO()
+
+        with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as handle:
+            output_path = Path(handle.name)
+        output_path.unlink(missing_ok=True)
+
+        try:
+            call_command(
+                'export_garage',
+                str(self.garage.pk),
+                '--output',
+                str(output_path),
+                stdout=output,
+            )
+            self.assertTrue(output_path.exists())
+            workbook = load_workbook(filename=str(output_path))
+            self.assertIn('cars_import', workbook.sheetnames)
+            cars_sheet = workbook['cars_import']
+            rows = list(cars_sheet.iter_rows(min_row=2, values_only=True))
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0][3], 'Mazda')
+        finally:
+            output_path.unlink(missing_ok=True)
+
+    def test_export_garage_command_errors_for_unknown_garage(self):
+        with self.assertRaises(CommandError):
+            call_command('export_garage', str(uuid.uuid4()))
+
+
+class GarageExportServiceTests(TestCase):
+    def setUp(self) -> None:
+        self.owner = ShopUser.objects.create_user(
+            username='export-owner',
+            email='export-owner@example.com',
+            password='pass1234',
+            is_mechanic=True,
+        )
+        self.garage = Garage.objects.create(name='Primary Garage', created_by=self.owner)
+        GarageMembership.objects.create(
+            garage=self.garage,
+            user=self.owner,
+            role=GarageMembership.ROLE_OWNER,
+        )
+
+        self.other_garage = Garage.objects.create(name='Other Garage', created_by=self.owner)
+        GarageMembership.objects.create(
+            garage=self.other_garage,
+            user=self.owner,
+            role=GarageMembership.ROLE_OWNER,
+        )
+
+        self.primary_car = Car.objects.create(
+            garage=self.garage,
+            usual_name='Daily Driver',
+            make='Toyota',
+            model='Corolla',
+            vin='2T1BURHE5JC512345',
+        )
+        self.other_car = Car.objects.create(
+            garage=self.other_garage,
+            usual_name='Spare Car',
+            make='Honda',
+            model='Civic',
+            vin='2HGFG12698H512345',
+        )
+
+        WorkJob.objects.create(
+            car=self.primary_car,
+            title='Oil Change',
+            assigned_to=self.owner,
+            required_items=['Oil', 'Filter'],
+            status='pending',
+            urgency='soon',
+        )
+        WorkJob.objects.create(
+            car=self.other_car,
+            title='Do Not Export',
+        )
+
+        Report.objects.create(
+            car=self.primary_car,
+            mileage=120000,
+            job_name='Brake Service',
+            assigned_to=self.owner,
+            date_done=timezone.now().date(),
+            documents=['invoice.pdf'],
+            photos=['before.jpg', 'after.jpg'],
+        )
+        Report.objects.create(
+            car=self.other_car,
+            job_name='Skip Report',
+            date_done=timezone.now().date(),
+        )
+
+    def test_export_garage_to_excel_includes_expected_sheets_and_rows(self):
+        workbook_file = export_garage_to_excel(self.garage)
+        workbook = load_workbook(filename=BytesIO(workbook_file.content))
+
+        self.assertIn('meta', workbook.sheetnames)
+        self.assertIn('garage', workbook.sheetnames)
+        self.assertIn('memberships', workbook.sheetnames)
+        self.assertIn('cars_import', workbook.sheetnames)
+        self.assertIn('workjobs_import', workbook.sheetnames)
+        self.assertIn('reports_import', workbook.sheetnames)
+
+        cars_rows = list(workbook['cars_import'].iter_rows(min_row=2, values_only=True))
+        self.assertEqual(len(cars_rows), 1)
+        self.assertEqual(cars_rows[0][3], 'Toyota')
+        self.assertNotIn('2HGFG12698H512345', [row[7] for row in cars_rows])
+
+        job_rows = list(workbook['workjobs_import'].iter_rows(min_row=2, values_only=True))
+        self.assertEqual(len(job_rows), 1)
+        self.assertEqual(job_rows[0][3], 'Oil Change')
+        self.assertEqual(job_rows[0][14], 'Oil\nFilter')
+
+        report_rows = list(workbook['reports_import'].iter_rows(min_row=2, values_only=True))
+        self.assertEqual(len(report_rows), 1)
+        self.assertEqual(report_rows[0][4], 'Brake Service')
+        self.assertEqual(report_rows[0][12], 'invoice.pdf')
+        self.assertEqual(report_rows[0][13], 'before.jpg\nafter.jpg')
+
+
+class GarageExportViewTests(TestCase):
+    def setUp(self) -> None:
+        self.owner = ShopUser.objects.create_user(
+            username='export-view-owner',
+            email='export-view-owner@example.com',
+            password='pass1234',
+            is_mechanic=True,
+        )
+        self.manager = ShopUser.objects.create_user(
+            username='export-view-manager',
+            email='export-view-manager@example.com',
+            password='pass1234',
+        )
+        self.member = ShopUser.objects.create_user(
+            username='export-view-member',
+            email='export-view-member@example.com',
+            password='pass1234',
+        )
+
+        self.garage = Garage.objects.create(name='Export View Garage', created_by=self.owner)
+        GarageMembership.objects.create(
+            garage=self.garage,
+            user=self.owner,
+            role=GarageMembership.ROLE_OWNER,
+        )
+        GarageMembership.objects.create(
+            garage=self.garage,
+            user=self.manager,
+            role=GarageMembership.ROLE_MANAGER,
+        )
+        GarageMembership.objects.create(
+            garage=self.garage,
+            user=self.member,
+            role=GarageMembership.ROLE_MEMBER,
+        )
+
+        self.primary_car = Car.objects.create(
+            garage=self.garage,
+            usual_name='Exportable',
+            make='Ford',
+            model='Focus',
+            vin='1FAHP3F28CL512345',
+        )
+
+        self.other_garage = Garage.objects.create(name='External Garage', created_by=self.owner)
+        GarageMembership.objects.create(
+            garage=self.other_garage,
+            user=self.owner,
+            role=GarageMembership.ROLE_OWNER,
+        )
+        Car.objects.create(
+            garage=self.other_garage,
+            usual_name='Hidden',
+            make='Tesla',
+            model='Model 3',
+            vin='5YJ3E1EA7LF512345',
+        )
+
+    def test_unauthenticated_user_is_redirected_from_garage_export(self):
+        response = self.client.get(reverse('shop-garage-export', args=[self.garage.pk]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response['Location'].startswith(f"{reverse('shop-login')}?next="))
+
+    def test_non_manager_is_redirected_from_garage_export(self):
+        self.client.force_login(self.member)
+
+        response = self.client.get(reverse('shop-garage-export', args=[self.garage.pk]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], reverse('shop-garage-detail', args=[self.garage.pk]))
+
+    def test_manager_can_download_garage_export_workbook(self):
+        self.client.force_login(self.manager)
+
+        response = self.client.get(reverse('shop-garage-export', args=[self.garage.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response['Content-Type'],
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        self.assertIn('attachment; filename="garage_export-view-garage_', response['Content-Disposition'])
+
+        workbook = load_workbook(filename=BytesIO(response.content))
+        cars_rows = list(workbook['cars_import'].iter_rows(min_row=2, values_only=True))
+        vins = [row[7] for row in cars_rows]
+        self.assertIn('1FAHP3F28CL512345', vins)
+        self.assertNotIn('5YJ3E1EA7LF512345', vins)
 
 
 class GarageImportViewTests(TestCase):

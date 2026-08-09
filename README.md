@@ -18,6 +18,18 @@ Import reports from normalized JSON:
 poetry run python ./src/manage.py import_json Report src/imports/reports_FMG3809.json
 ```
 
+Export one garage to an Excel backup workbook:
+
+```bash
+poetry run python ./src/manage.py export_garage <garage-uuid>
+```
+
+Export to a specific output path:
+
+```bash
+poetry run python ./src/manage.py export_garage <garage-uuid> --output ./backups/my-garage.xlsx
+```
+
 ## JSON import workflow
 
 - The importer currently supports normalized UTF-8 JSON for `Car`, `WorkJob`, and `Report`.
@@ -26,6 +38,13 @@ poetry run python ./src/manage.py import_json Report src/imports/reports_FMG3809
 - In the CLI or any non-car-scoped flow, the `car` field can reference an existing car by UUID, VIN, license plate, or usual name.
 - List fields such as `required_items`, `documents`, and `photos` accept either JSON arrays or newline-delimited strings.
 - CSV support is not implemented yet.
+
+## Excel backup export workflow
+
+- Garage backups are available from the garage detail page (`Export to Excel`), from the garage list quick action, and from the `export_garage` management command.
+- Export requires owner or manager role for the target garage in the web UI.
+- The default workbook includes `meta`, `garage`, `memberships`, `cars_import`, `workjobs_import`, and `reports_import` sheets.
+- Invitation history is intentionally excluded from the default export.
 
 ## Normalized JSON schemas
 
