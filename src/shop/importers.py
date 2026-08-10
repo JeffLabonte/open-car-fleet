@@ -232,6 +232,11 @@ class JSONImporter:
             "documents": self._coerce_string_list(record.get("documents"), field_name="documents"),
             "photos": self._coerce_string_list(record.get("photos"), field_name="photos"),
             "note": self._clean_optional_text(record.get("note")) or "",
+            "additional_information": (
+                self._clean_optional_text(record.get("additional_information"))
+                or self._clean_optional_text(record.get("extra_information"))
+                or ""
+            ),
         }
         self._validate_assignment_target(data["assigned_to"], data["assigned_shop"])
         warnings = self._ignored_field_warnings(record, set(data.keys()))

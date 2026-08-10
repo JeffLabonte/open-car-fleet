@@ -8,7 +8,7 @@ class GarageCreateForm(forms.ModelForm):
         model = Garage
         fields = ['name', 'description']
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'input', 'placeholder': 'Garage name'}),
+            'name': forms.TextInput(attrs={'class': 'input', 'placeholder': 'Fleet name'}),
             'description': forms.Textarea(attrs={'class': 'textarea', 'rows': 4, 'placeholder': 'Optional description'}),
         }
 

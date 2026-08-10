@@ -3,11 +3,11 @@
 {% block content %}
   <div class="page-header">
     <div>
-      <h1 class="title page-title">My Garages</h1>
+      <h1 class="title page-title">My Fleets</h1>
       <p class="page-subtitle">Keep an eye on the spaces and vehicles you manage.</p>
     </div>
     <div class="page-actions">
-      <a class="button is-primary" href="{% url 'shop-garage-create' %}">Create garage</a>
+      <a class="button is-primary" href="{% url 'shop-garage-create' %}">Create fleet</a>
     </div>
   </div>
 
@@ -37,7 +37,7 @@
     </div>
   {% else %}
     <div class="empty-state">
-      You are not a member of any garage yet.
+      You are not a member of any fleet yet.
     </div>
   {% endif %}
 {% endblock %}

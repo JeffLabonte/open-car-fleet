@@ -3,7 +3,7 @@
 {% block content %}
   <div class="box">
     <h1 class="title">Import cars into {{ garage.name }}</h1>
-    <p class="subtitle">Use one normalized JSON file per import. Every imported car will be assigned to this garage.</p>
+    <p class="subtitle">Use one normalized JSON file per import. Every imported car will be assigned to this fleet.</p>
 
     <form method="post" enctype="multipart/form-data" novalidate>
       {% csrf_token %}

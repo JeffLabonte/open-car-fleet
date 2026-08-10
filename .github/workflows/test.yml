@@ -1,0 +1,38 @@
+name: Test Suite
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container:
+      image: debian:bookworm-slim
+
+    steps:
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            ca-certificates \
+            curl \
+            git \
+            python3 \
+            python3-pip \
+            python3-venv
+          rm -rf /var/lib/apt/lists/*
+
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Poetry
+        run: python3 -m pip install --no-cache-dir poetry
+
+      - name: Install project dependencies
+        run: poetry install --no-interaction --no-ansi --no-root
+
+      - name: Run tests
+        run: poetry run pytest -q

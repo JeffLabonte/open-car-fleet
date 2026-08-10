@@ -4,12 +4,12 @@
   <div class="page-header">
     <div>
       <h1 class="title page-title">{{ garage.name }}</h1>
-      <p class="page-subtitle">Review the vehicles in this garage and manage access.</p>
+      <p class="page-subtitle">Review the vehicles in this fleet and manage access.</p>
     </div>
     <div class="page-actions">
-      <a class="button is-light" href="{% url 'shop-index' %}">Back to garages</a>
+      <a class="button is-light" href="{% url 'shop-index' %}">Back to fleets</a>
       {% if can_manage_garage %}
-        <a class="button is-link is-light" href="{% url 'shop-garage-share' garage.pk %}">Share garage</a>
+        <a class="button is-link is-light" href="{% url 'shop-garage-share' garage.pk %}">Share fleet</a>
         <a class="button is-info is-light" href="{% url 'shop-garage-import' garage.pk %}">Import cars</a>
         <a class="button is-success is-light" href="{% url 'shop-garage-export' garage.pk %}">Export to Excel</a>
       {% endif %}
@@ -50,7 +50,7 @@
     </div>
   {% else %}
     <div class="empty-state">
-      No cars in this garage yet.
+      No cars in this fleet yet.
     </div>
   {% endif %}
 {% endblock %}

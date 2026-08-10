@@ -17,7 +17,7 @@ def ensure_default_garage(user: ShopUser) -> None:
 
     display = user.display_name or user.username or user.email.split('@')[0] if user.email else 'User'
     garage = Garage.objects.create(
-        name=f"{display}'s Garage",
+        name=f"{display}'s Fleet",
         created_by=user,
     )
     GarageMembership.objects.create(

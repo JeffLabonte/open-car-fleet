@@ -29,7 +29,7 @@ from shop.importers import ImportContext, ImportValidationError, JSONImporter
 from shop.middleware import hanko_login_required
 from shop.models.garage import GarageInvitation, GarageMembership
 from shop.models.job import WorkJob
-from shop.models.report import Report
+from shop.models.report import Report, ReportAttachment
 from shop.view_helpers import user_can_manage_garage, user_cars_queryset, user_garages_queryset
 
 
@@ -45,12 +45,16 @@ def login_view(request: HttpRequest) -> HttpResponse:
     if request.user.is_authenticated:
         return redirect(reverse('shop-index'))
 
+    # One-time logout marker prevents stale query params from re-triggering
+    # frontend logout behavior after users sign back in.
+    logged_out = bool(request.session.pop('logged_out', False))
+
     return render(request, 'shop/login.html', {
         'title': 'Login',
         'subtitle': 'Authenticate with Hanko to continue',
         'hanko_api_url': os.environ.get('HANKO_API_URL', ''),
         'next_url': request.GET.get('next', '/'),
-        'logged_out': request.GET.get('logged_out') == '1',
+        'logged_out': logged_out,
         'theme': get_theme_from_request(request),
     })
 
@@ -116,8 +120,8 @@ def index(request: HttpRequest) -> HttpResponse:
         request,
         'shop/garage_list.html',
         {
-            'title': 'My Garages',
-            'subtitle': 'Garages you belong to',
+            'title': 'My Fleets',
+            'subtitle': 'Fleets you belong to',
             'garages': garages,
             'manageable_garage_ids': manageable_garage_ids,
         },
@@ -138,7 +142,7 @@ def garage_detail(request: HttpRequest, pk: str) -> HttpResponse:
             'can_manage_garage': can_manage_garage,
             'cars': cars,
             'title': garage.name,
-            'subtitle': 'Garage details',
+            'subtitle': 'Fleet details',
         },
     )
 
@@ -156,7 +160,7 @@ def garage_create(request: HttpRequest) -> HttpResponse:
                 user=request.user,
                 role=GarageMembership.ROLE_OWNER,
             )
-            messages.success(request, 'Garage created successfully.')
+            messages.success(request, 'Fleet created successfully.')
             return redirect(reverse('shop-garage-detail', args=[garage.pk]))
     else:
         form = GarageCreateForm()
@@ -167,7 +171,7 @@ def garage_create(request: HttpRequest) -> HttpResponse:
         {
             'form': form,
             'is_create': True,
-            'title': 'Create Garage',
+            'title': 'Create Fleet',
             'subtitle': 'Set up a new shared workspace for your vehicles',
         },
     )
@@ -177,7 +181,7 @@ def garage_create(request: HttpRequest) -> HttpResponse:
 def garage_share(request: HttpRequest, pk: str) -> HttpResponse:
     garage = get_object_or_404(user_garages_queryset(request.user), pk=pk)
     if not user_can_manage_garage(request.user, garage):
-        messages.error(request, 'You do not have permission to share this garage.')
+        messages.error(request, 'You do not have permission to share this fleet.')
         return redirect(reverse('shop-garage-detail', args=[garage.pk]))
 
     if request.method == 'POST':
@@ -188,7 +192,7 @@ def garage_share(request: HttpRequest, pk: str) -> HttpResponse:
             message = form.cleaned_data['message']
 
             if garage.members.filter(email__iexact=invited_email).exists():
-                messages.info(request, f'{invited_email} is already a member of this garage.')
+                messages.info(request, f'{invited_email} is already a member of this fleet.')
             elif garage.invitations.filter(
                 invited_email__iexact=invited_email,
                 status=GarageInvitation.STATUS_PENDING,
@@ -237,7 +241,7 @@ def garage_share(request: HttpRequest, pk: str) -> HttpResponse:
             'form': form,
             'pending_invitations': pending_invitations,
             'title': f'Share {garage.name}',
-            'subtitle': 'Invite people to collaborate in this garage',
+            'subtitle': 'Invite people to collaborate in this fleet',
         },
     )
 
@@ -246,7 +250,7 @@ def garage_share(request: HttpRequest, pk: str) -> HttpResponse:
 def garage_import(request: HttpRequest, pk: str) -> HttpResponse:
     garage = get_object_or_404(user_garages_queryset(request.user), pk=pk)
     if not user_can_manage_garage(request.user, garage):
-        messages.error(request, 'You do not have permission to import data into this garage.')
+        messages.error(request, 'You do not have permission to import data into this fleet.')
         return redirect(reverse('shop-garage-detail', args=[garage.pk]))
 
     if request.method == 'POST':
@@ -295,7 +299,7 @@ def garage_import(request: HttpRequest, pk: str) -> HttpResponse:
             'form': form,
             'garage': garage,
             'title': f'Import cars into {garage.name}',
-            'subtitle': 'Upload normalized JSON for cars assigned to this garage',
+            'subtitle': 'Upload normalized JSON for cars assigned to this fleet',
         },
     )
 
@@ -304,7 +308,7 @@ def garage_import(request: HttpRequest, pk: str) -> HttpResponse:
 def garage_export(request: HttpRequest, pk: str) -> HttpResponse:
     garage = get_object_or_404(user_garages_queryset(request.user), pk=pk)
     if not user_can_manage_garage(request.user, garage):
-        messages.error(request, 'You do not have permission to export data from this garage.')
+        messages.error(request, 'You do not have permission to export data from this fleet.')
         return redirect(reverse('shop-garage-detail', args=[garage.pk]))
 
     workbook = export_garage_to_excel(garage)
@@ -528,15 +532,39 @@ def workjob_update(request: HttpRequest, car_pk: str, pk: str) -> HttpResponse:
     return render(request, 'shop/workjob_form.html', {'form': form, 'is_create': False, 'car': car, 'work_job': work_job})
 
 
+def _persist_report_attachments(report: Report, uploaded_files: list[Any], external_links: list[str]) -> None:
+    for index, uploaded_file in enumerate(uploaded_files):
+        attachment = ReportAttachment(
+            report=report,
+            source_type=ReportAttachment.SOURCE_UPLOAD,
+            file=uploaded_file,
+            display_name=getattr(uploaded_file, 'name', f'attachment-{index + 1}'),
+            mime_type=getattr(uploaded_file, 'content_type', ''),
+        )
+        attachment.save()
+
+    for index, external_link in enumerate(external_links):
+        attachment = ReportAttachment(
+            report=report,
+            source_type=ReportAttachment.SOURCE_EXTERNAL,
+            url=external_link,
+            display_name=external_link.split('/')[-1] or f'link-{index + 1}',
+            kind=ReportAttachment.KIND_LINK,
+        )
+        attachment.save()
+
+
 @hanko_login_required
 def report_create(request: HttpRequest, car_pk: str) -> HttpResponse:
     car = get_object_or_404(user_cars_queryset(request.user), pk=car_pk)
     if request.method == 'POST':
-        form = ReportForm(request.POST)
+        form = ReportForm(request.POST, request.FILES)
         if form.is_valid():
             report = form.save(commit=False)
             report.car = car
             report.save()
+            uploaded_files = form.cleaned_data.get('attachments', [])
+            _persist_report_attachments(report, uploaded_files, form.cleaned_data.get('external_links', []))
             messages.success(request, 'Maintenance report added successfully.')
             return redirect(reverse('shop-car-detail', args=[car.pk]))
     else:
@@ -549,9 +577,11 @@ def report_update(request: HttpRequest, car_pk: str, pk: str) -> HttpResponse:
     car = get_object_or_404(user_cars_queryset(request.user), pk=car_pk)
     report = get_object_or_404(Report, pk=pk, car=car)
     if request.method == 'POST':
-        form = ReportForm(request.POST, instance=report)
+        form = ReportForm(request.POST, request.FILES, instance=report)
         if form.is_valid():
             form.save()
+            uploaded_files = form.cleaned_data.get('attachments', [])
+            _persist_report_attachments(report, uploaded_files, form.cleaned_data.get('external_links', []))
             messages.success(request, 'Maintenance report updated successfully.')
             return redirect(reverse('shop-car-detail', args=[car.pk]))
     else:
@@ -562,5 +592,6 @@ def report_update(request: HttpRequest, car_pk: str, pk: str) -> HttpResponse:
 def logout_view(request: HttpRequest) -> HttpResponse:
     if request.method == 'POST':
         logout(request)
+        request.session['logged_out'] = True
         messages.success(request, 'Logged out successfully.')
-    return redirect(f"{reverse('shop-login')}?logged_out=1")
+    return redirect(reverse('shop-login'))

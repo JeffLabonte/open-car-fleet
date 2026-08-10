@@ -2,7 +2,7 @@
 
 {% block content %}
   <div class="box">
-    <h1 class="title">{% if is_create %}Create Garage{% else %}Edit Garage{% endif %}</h1>
+    <h1 class="title">{% if is_create %}Create Fleet{% else %}Edit Fleet{% endif %}</h1>
 
     <form method="post" novalidate>
       {% csrf_token %}

@@ -118,7 +118,10 @@
               <a class="button is-small is-link" href="{% url 'shop-report-update' car.pk report.pk %}">Edit</a>
             </div>
             <div class="message-body">
-              <p>{{ report.note|default:'No additional notes.' }}</p>
+              <p>{{ report.note|linebreaksbr|default:'No maintenance report details provided.' }}</p>
+              {% if report.additional_information %}
+                <p class="mt-2"><strong>Additional information:</strong> {{ report.additional_information|linebreaksbr }}</p>
+              {% endif %}
               {% if report.assigned_to %}
                 <p><strong>Mechanic:</strong> {{ report.assigned_to }}</p>
               {% elif report.assigned_shop %}
@@ -126,6 +129,35 @@
               {% endif %}
               <p><strong>Documents:</strong> {{ report.documents|length }}</p>
               <p><strong>Photos:</strong> {{ report.photos|length }}</p>
+              {% if report.attachments.exists %}
+                <div class="mt-3">
+                  <strong>Attachments:</strong>
+                  <ul>
+                    {% for attachment in report.attachments.all %}
+                      <li>
+                        {% if attachment.source_type == 'external' %}
+                          <a href="{{ attachment.url }}" target="_blank" rel="noopener noreferrer">{{ attachment.display_name|default:attachment.url }}</a>
+                        {% elif attachment.kind == 'image' and attachment.file %}
+                          <a href="{{ attachment.file.url }}" target="_blank" rel="noopener noreferrer">{{ attachment.display_name|default:attachment.file.name }}</a>
+                          <div class="mt-2">
+                            <img src="{{ attachment.file.url }}" alt="{{ attachment.display_name|default:attachment.file.name }}" style="max-width: 220px; height: auto; border-radius: 0.5rem;" />
+                          </div>
+                        {% elif attachment.kind == 'video' and attachment.file %}
+                          <a href="{{ attachment.file.url }}" target="_blank" rel="noopener noreferrer">{{ attachment.display_name|default:attachment.file.name }}</a>
+                          <div class="mt-2">
+                            <video controls preload="metadata" style="max-width: 320px; width: 100%; border-radius: 0.5rem;">
+                              <source src="{{ attachment.file.url }}" type="{{ attachment.mime_type|default:'video/mp4' }}" />
+                              Your browser does not support embedded videos.
+                            </video>
+                          </div>
+                        {% else %}
+                          <a href="{{ attachment.file.url }}" target="_blank" rel="noopener noreferrer">{{ attachment.display_name|default:attachment.file.name }}</a>
+                        {% endif %}
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              {% endif %}
             </div>
           </article>
         {% endfor %}

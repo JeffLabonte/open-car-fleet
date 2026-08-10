@@ -14,7 +14,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql
     networks:
-      - open-garage-network
+      - open-car-fleet-network
 
   web:
     build:
@@ -34,11 +34,11 @@ services:
     volumes:
       - .:/app:Z
     networks:
-      - open-garage-network
+      - open-car-fleet-network
 
 volumes:
   postgres_data:
 
 networks:
-  open-garage-network:
+  open-car-fleet-network:
     driver: bridge

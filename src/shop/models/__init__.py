@@ -1,7 +1,7 @@
 from shop.models.car import Car
 from shop.models.garage import Garage, GarageInvitation, GarageMembership, KnownShop
 from shop.models.job import WorkJob
-from shop.models.report import Report
+from shop.models.report import Report, ReportAttachment
 from shop.models.user import ShopUser
 
 __all__ = [
@@ -12,5 +12,6 @@ __all__ = [
 	"KnownShop",
 	"WorkJob",
 	"Report",
+	"ReportAttachment",
 	"ShopUser",
 ]
