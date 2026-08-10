@@ -118,13 +118,13 @@ def export_garage_to_excel(garage: Garage) -> GarageExportWorkbook:
             "usual_name",
             "make",
             "model",
-            "color",
             "year",
             "mileage",
             "vin",
             "license_plate",
             "created_at",
             "updated_at",
+            "colour",
         ],
         [
             [
@@ -133,13 +133,13 @@ def export_garage_to_excel(garage: Garage) -> GarageExportWorkbook:
                 car.usual_name,
                 car.make,
                 car.model,
-                car.color,
                 _string_or_empty(car.year),
                 _string_or_empty(car.mileage),
                 car.vin or "",
                 car.license_plate,
                 _format_datetime(car.created_at),
                 _format_datetime(car.updated_at),
+                car.colour,
             ]
             for car in cars
         ],

@@ -12,7 +12,7 @@ class Car(models.Model):
     - id: UUID primary key
     - usual_name: short human-friendly name (e.g. "Daily Driver")
     - make: manufacturer / model name
-    - color: required paint color
+    - colour: required paint colour
     - year: production year
     - vin: vehicle identification number
     - license_plate: registration plate
@@ -27,7 +27,7 @@ class Car(models.Model):
     mileage = models.PositiveIntegerField(null=True, blank=True)
     usual_name = models.CharField(max_length=200, blank=True)
     make = models.CharField(max_length=100)
-    color = models.CharField(max_length=50, validators=[MinLengthValidator(1)])
+    colour = models.CharField(max_length=50, blank=True, validators=[MinLengthValidator(1)])
     model = models.CharField(max_length=100)
     year = models.PositiveSmallIntegerField(null=True, blank=True)
     vin = models.CharField(max_length=50, unique=True, null=True, blank=True)

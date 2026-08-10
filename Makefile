@@ -49,7 +49,7 @@ run: migrate
 	$(PYTHON) src/manage.py runserver $(HOST):$(PORT)
 
 test:
-	$(PYTHON) src/manage.py test shop.tests
+	$(POETRY) run pytest -q
 
 test-fast:
-	$(PYTHON) src/manage.py test shop.tests.FormEditableFieldsCoverageTests
+	$(POETRY) run pytest -q src/shop/tests.py -k FormEditableFieldsCoverageTests

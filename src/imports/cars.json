@@ -5,10 +5,12 @@
         "license_plate": "FMG3809",
         "make": "Toyota",
         "model": "Yaris",
+        "colour": "Noir",
         "year": 2015
     },
     {
         "usual_name": "Yaris Noir Duberger",
+        "colour": "Noir",
         "vin": "VNKKTUD38GA057599",
         "license_plate": "FNW2948",
         "make": "Toyota",
@@ -19,6 +21,7 @@
         "usual_name": "Yaris Blanche",
         "vin": "VNKJTUD35EA014606",
         "license_plate": "FNR4428",
+        "colour": "Blanc",
         "make": "Toyota",
         "model": "Yaris",
         "year": 2014
@@ -26,7 +29,8 @@
     {
         "usual_name": "Honda Civic Luc",
         "vin": "2HGFB2F43DH027660",
-        "license_plate": "FXXXXX",
+        "license_plate": "FFT4807",
+        "colour": "Blanc",
         "make": "Honda",
         "model": "Civic LX",
         "year": 2013

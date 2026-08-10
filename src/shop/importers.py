@@ -185,7 +185,7 @@ class JSONImporter:
             "usual_name": self._clean_optional_text(record.get("usual_name")) or "",
             "make": self._require_text(record, "make"),
             "model": self._require_text(record, "model"),
-            "color": self._clean_optional_text(record.get("color")) or "",
+            "colour": self._clean_optional_text(record.get("colour")) or "",
             "year": self._coerce_optional_int(record.get("year"), field_name="year"),
             "mileage": self._coerce_optional_int(record.get("mileage"), field_name="mileage"),
             "vin": self._normalize_vin(record.get("vin")),
