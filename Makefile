@@ -1,4 +1,4 @@
-.PHONY: install db-up db-wait db-stop db-reset migrate run test test-fast
+.PHONY: install db-up db-wait db-stop db-reset db-snapshot migrate run test test-fast
 
 POETRY ?= poetry
 PYTHON ?= $(POETRY) run python
@@ -53,3 +53,10 @@ test:
 
 test-fast:
 	$(POETRY) run pytest -q src/shop/tests.py -k FormEditableFieldsCoverageTests
+
+db-snapshot: db-up db-wait
+	@mkdir -p db_backups
+	@timestamp=$$(date +%Y%m%d_%H%M%S); \
+	outfile="db_backups/db_snapshot_$$timestamp.sql"; \
+	docker compose exec -T db sh -c 'pg_dump -U "$${POSTGRES_USER:-open_garage_user}" -d "$${POSTGRES_DB:-open_garage}"' > "$$outfile"; \
+	echo "Database snapshot written to $$outfile"
