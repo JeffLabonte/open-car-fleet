@@ -334,5 +334,45 @@
         </div>
       </section>
     </div>
+
+    {% block extra_scripts %}
+      <script>
+        document.addEventListener('DOMContentLoaded', () => {
+          const burger = document.querySelector('.navbar-burger');
+          const menuId = burger?.dataset.target;
+          const menu = menuId ? document.getElementById(menuId) : null;
+
+          if (!burger || !menu) {
+            return;
+          }
+
+          const closeMenu = () => {
+            burger.classList.remove('is-active');
+            menu.classList.remove('is-active');
+            burger.setAttribute('aria-expanded', 'false');
+          };
+
+          burger.addEventListener('click', () => {
+            const isActive = burger.classList.toggle('is-active');
+            menu.classList.toggle('is-active', isActive);
+            burger.setAttribute('aria-expanded', String(isActive));
+          });
+
+          menu.querySelectorAll('a, button').forEach((item) => {
+            item.addEventListener('click', () => {
+              if (window.matchMedia('(max-width: 1023px)').matches) {
+                closeMenu();
+              }
+            });
+          });
+
+          window.addEventListener('resize', () => {
+            if (!window.matchMedia('(max-width: 1023px)').matches) {
+              closeMenu();
+            }
+          });
+        });
+      </script>
+    {% endblock %}
   </body>
 </html>
