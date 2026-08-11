@@ -26,7 +26,7 @@ jobs:
           dnf clean all
 
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install Poetry
         run: python3 -m pip install --no-cache-dir poetry
