@@ -2,12 +2,12 @@
 
 POETRY ?= poetry
 PYTHON ?= $(POETRY) run python
-HOST ?= 127.0.0.1
+HOST ?= 0.0.0.0
 PORT ?= 8000
 DB_WAIT_SECONDS ?= 60
 
 install:
-	$(POETRY) install
+	$(POETRY) install --no-root
 
 db-up:
 	docker compose up -d db
@@ -45,7 +45,7 @@ db-reset:
 migrate: db-up db-wait
 	$(PYTHON) src/manage.py migrate
 
-run: migrate
+run: install db-up migrate
 	$(PYTHON) src/manage.py runserver $(HOST):$(PORT)
 
 test:
