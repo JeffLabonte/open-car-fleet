@@ -1,6 +1,6 @@
-# Open Garage — Agent Instructions
+# Open Car Fleet — Agent Instructions
 
-Open Garage is a Django 6 vehicle maintenance management system. Users track cars, plan work jobs, and record maintenance reports across shared garages.
+Open Car Fleet is a Django 6 vehicle maintenance management system. Users track cars, plan work jobs, and record maintenance reports across shared garages.
 
 ## Build & Test
 

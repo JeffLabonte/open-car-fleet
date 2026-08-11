@@ -1,8 +1,8 @@
-![Open Garage logo](src/public/logo.png)
+![Open Car Fleet logo](src/public/logo.png)
 
-# Open Garage
+# Open Car Fleet
 
-Open Garage is an open-source Django 6 application for automotive maintenance management.
+Open Car Fleet is an open-source Django 6 application for automotive maintenance management.
 It helps individuals and shared garages organize vehicles, plan maintenance work, and record completed service reports in one place.
 
 ## Project description
