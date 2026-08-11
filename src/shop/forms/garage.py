@@ -3,7 +3,7 @@ from django import forms
 from shop.models.garage import Garage
 
 
-class GarageCreateForm(forms.ModelForm):
+class FleetCreateForm(forms.ModelForm):
     class Meta:
         model = Garage
         fields = ['name', 'description']
@@ -13,10 +13,10 @@ class GarageCreateForm(forms.ModelForm):
         }
 
 
-class GarageInviteForm(forms.Form):
+class FleetInviteForm(forms.Form):
     invited_email = forms.EmailField(
         widget=forms.EmailInput(attrs={'class': 'input', 'placeholder': 'member@example.com'}),
-        help_text='We will email this person an invitation link.',
+        help_text='We will email this person a fleet invitation link.',
     )
     message = forms.CharField(
         required=False,
@@ -32,3 +32,8 @@ class GarageInviteForm(forms.Form):
 
     def clean_invited_email(self) -> str:
         return self.cleaned_data['invited_email'].strip().lower()
+
+
+# Backward-compatible aliases used across existing views/tests.
+GarageCreateForm = FleetCreateForm
+GarageInviteForm = FleetInviteForm
