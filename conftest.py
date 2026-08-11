@@ -22,3 +22,15 @@ from django.test.utils import setup_test_environment
 
 django.setup()
 setup_test_environment()
+
+
+def pytest_sessionstart(session):
+    from django.test.runner import DiscoverRunner
+    runner = DiscoverRunner(verbosity=0)
+    session._django_db_config = runner.setup_databases()
+    session._django_runner = runner
+
+
+def pytest_sessionfinish(session, exitstatus):
+    if hasattr(session, '_django_db_config'):
+        session._django_runner.teardown_databases(session._django_db_config)
