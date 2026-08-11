@@ -1,3 +1,18 @@
+![Open Garage logo](src/public/logo.png)
+
+# Open Garage
+
+Open Garage is an open-source Django 6 application for automotive maintenance management.
+It helps individuals and shared garages organize vehicles, plan maintenance work, and record completed service reports in one place.
+
+## Project description
+
+- Manage garages and memberships with role-based access.
+- Track cars with key identity and maintenance context.
+- Plan and assign work jobs to mechanics or known shops.
+- Record maintenance reports with dates, mileage, notes, and attachments.
+- Import normalized JSON datasets and export garage backups to Excel.
+
 ## Command examples using the manage commands
 
 Import cars from normalized JSON into a target garage:
