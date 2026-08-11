@@ -37,7 +37,7 @@ class Garage(models.Model):
 
 
 class GarageMembership(models.Model):
-    """Membership relation between a user and a garage."""
+    """Membership relation between a user and a fleet."""
 
     ROLE_OWNER = "owner"
     ROLE_MANAGER = "manager"
@@ -59,11 +59,11 @@ class GarageMembership(models.Model):
         unique_together = ("garage", "user")
 
     def __str__(self) -> str:
-        return f"{self.user} in {self.garage} ({self.role})"
+        return f"{self.user} in fleet {self.garage} ({self.role})"
 
 
 class GarageInvitation(models.Model):
-    """Invitation used to share a garage with an email recipient."""
+    """Invitation used to share a fleet with an email recipient."""
 
     STATUS_PENDING = "pending"
     STATUS_ACCEPTED = "accepted"
@@ -116,7 +116,7 @@ class GarageInvitation(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"Invite {self.invited_email} to {self.garage}"
+        return f"Invite {self.invited_email} to fleet {self.garage}"
 
     @property
     def is_expired(self) -> bool:
@@ -159,3 +159,9 @@ class KnownShop(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+
+# Fleet terminology aliases that preserve current database model names.
+Fleet = Garage
+FleetMembership = GarageMembership
+FleetInvitation = GarageInvitation
