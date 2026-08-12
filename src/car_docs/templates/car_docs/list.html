@@ -1,0 +1,61 @@
+{% extends 'shop/index.html' %}
+
+{% block content %}
+  <div class="box">
+    <div class="level">
+      <div class="level-left">
+        <div class="level-item">
+          <div>
+            <h1 class="title">{{ car.usual_name|default:car.make }} docs</h1>
+            <p class="subtitle is-6">Notes, service details, and reference info</p>
+          </div>
+        </div>
+      </div>
+      <div class="level-right">
+        <div class="level-item">
+          <a class="button is-primary" href="{% url 'shop-car-doc-create' car.pk %}">Add document</a>
+        </div>
+      </div>
+    </div>
+
+    {% if docs %}
+      <div class="table-container">
+        <table class="table is-fullwidth is-striped is-hoverable">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Updated</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for doc in docs %}
+              <tr>
+                <td>
+                  <a href="{% url 'shop-car-doc-detail' car.pk doc.pk %}">{{ doc.title }}</a>
+                  {% if doc.file %}<br><small>{{ doc.file.name }}</small>{% endif %}
+                </td>
+                <td>{{ doc.updated_at|date:'M j, Y' }}</td>
+                <td>
+                  <div class="buttons are-small">
+                    <a class="button is-link" href="{% url 'shop-car-doc-detail' car.pk doc.pk %}">View</a>
+                    <a class="button is-light" href="{% url 'shop-car-doc-update' car.pk doc.pk %}">Edit</a>
+                    <a class="button is-danger is-light" href="{% url 'shop-car-doc-delete' car.pk doc.pk %}">Delete</a>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="notification is-info">
+        No documents have been added for this car yet.
+      </div>
+    {% endif %}
+
+    <div class="mt-4">
+      <a class="button is-light" href="{% url 'shop-car-detail' car.pk %}">Back to car</a>
+    </div>
+  </div>
+{% endblock %}
