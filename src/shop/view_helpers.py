@@ -12,6 +12,11 @@ def user_garages_queryset(user: Any):
     return Garage.objects.filter(members=user).distinct()
 
 
+def user_car_docs_queryset(user: Any):
+    from car_docs.models import CarDoc
+    return CarDoc.objects.filter(car__garage__members=user).distinct()
+
+
 def user_can_manage_garage(user: Any, garage: Garage) -> bool:
     return garage.memberships.filter(
         user=user,

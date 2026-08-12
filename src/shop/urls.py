@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import include, path
 
 from shop import views
 
@@ -25,4 +25,5 @@ urlpatterns = [
     path('cars/<uuid:car_pk>/work-jobs/<int:pk>/edit/', views.workjob_update, name='shop-workjob-update'),
     path('cars/<uuid:car_pk>/reports/add/', views.report_create, name='shop-report-create'),
     path('cars/<uuid:car_pk>/reports/<int:pk>/edit/', views.report_update, name='shop-report-update'),
+    path('cars/<uuid:car_pk>/docs/', include('car_docs.urls')),
 ]

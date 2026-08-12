@@ -156,14 +156,14 @@ class HankoAuthenticationIntegrationTests(TestCase):
         response = self.client.get(reverse('shop-login'))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'data-theme="light"')
+        self.assertContains(response, 'data-theme="dark"')
 
     def test_login_page_includes_mobile_viewport_and_theme_toggle(self):
         response = self.client.get(reverse('shop-login'))
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '<meta name="viewport"')
-        self.assertContains(response, 'Theme')
+        self.assertContains(response, 'Dark mode')
 
     @override_settings(HANKO_API_URL='https://hanko.example.com')
     def test_car_list_uses_hanko_session_token_to_authenticate(self):
