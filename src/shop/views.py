@@ -34,7 +34,10 @@ from shop.view_helpers import user_can_manage_garage, user_cars_queryset, user_g
 
 
 def get_theme_from_request(request: HttpRequest) -> str:
-    return 'dark'
+    cookie_theme = request.COOKIES.get('theme', '').lower()
+    if cookie_theme in {'light', 'dark'}:
+        return cookie_theme
+    return 'light'
 
 
 @csrf_exempt
@@ -57,10 +60,12 @@ def login_view(request: HttpRequest) -> HttpResponse:
 
 
 def theme_view(request: HttpRequest, theme: str) -> HttpResponse:
-    theme = 'dark'
+    normalized_theme = theme.lower() if isinstance(theme, str) else 'light'
+    if normalized_theme not in {'light', 'dark'}:
+        normalized_theme = 'light'
 
     response = redirect(request.GET.get('next') or reverse('shop-index'))
-    response.set_cookie('theme', theme, max_age=60 * 60 * 24 * 365, httponly=False, samesite='Lax')
+    response.set_cookie('theme', normalized_theme, max_age=60 * 60 * 24 * 365, httponly=False, samesite='Lax')
     response.cookies['theme']['max-age'] = '31536000'
     return response
 

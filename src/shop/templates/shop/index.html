@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en" data-theme="{{ theme|default:'dark' }}">
+<html lang="en" data-theme="{{ theme|default:'light' }}">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -8,20 +8,27 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
     <style>
       :root {
-        color-scheme: dark;
-        --bg-color: #0f172a;
-        --surface-color: #111827;
-        --surface-elevated: #172033;
-        --text-color: #f8fafc;
-        --muted-color: #cbd5e1;
-        --border-color: #334155;
+        color-scheme: light;
+        --bg-color: #f8fafc;
+        --surface-color: #ffffff;
+        --surface-elevated: #f1f5f9;
+        --text-color: #0f172a;
+        --muted-color: #475569;
+        --border-color: #dbe3ee;
+        --focus-ring: rgba(222, 74, 92, 0.38);
         --logo-color: #de4a5c;
-        --logo-color-strong: #f06a79;
-        --logo-color-soft: rgba(222, 74, 92, 0.24);
+        --logo-color-strong: #c1273d;
+        --logo-color-soft: rgba(222, 74, 92, 0.12);
         --accent-color: var(--logo-color);
         --accent-strong: var(--logo-color-strong);
         --accent-soft: var(--logo-color-soft);
-        --shadow: 0 14px 35px rgba(2, 6, 23, 0.4);
+        --success-color: #15803d;
+        --success-soft: rgba(21, 128, 61, 0.14);
+        --warning-color: #b45309;
+        --warning-soft: rgba(180, 83, 9, 0.14);
+        --danger-color: #b91c1c;
+        --danger-soft: rgba(185, 28, 28, 0.14);
+        --shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
       }
 
       html[data-theme="dark"] {
@@ -32,12 +39,19 @@
         --text-color: #f8fafc;
         --muted-color: #cbd5e1;
         --border-color: #334155;
+        --focus-ring: rgba(240, 106, 121, 0.45);
         --logo-color: #de4a5c;
         --logo-color-strong: #f06a79;
         --logo-color-soft: rgba(222, 74, 92, 0.24);
         --accent-color: var(--logo-color);
         --accent-strong: var(--logo-color-strong);
         --accent-soft: var(--logo-color-soft);
+        --success-color: #4ade80;
+        --success-soft: rgba(74, 222, 128, 0.2);
+        --warning-color: #fbbf24;
+        --warning-soft: rgba(251, 191, 36, 0.2);
+        --danger-color: #f87171;
+        --danger-soft: rgba(248, 113, 113, 0.22);
         --shadow: 0 14px 35px rgba(2, 6, 23, 0.4);
       }
 
@@ -51,6 +65,20 @@
 
       a {
         color: var(--accent-color);
+      }
+
+      a:focus,
+      a:active {
+        color: var(--accent-strong);
+      }
+
+      a:focus-visible,
+      .button:focus-visible,
+      .input:focus-visible,
+      .textarea:focus-visible,
+      .select select:focus-visible {
+        outline: 2px solid var(--focus-ring);
+        outline-offset: 2px;
       }
 
       .page-shell {
@@ -148,12 +176,6 @@
         color: var(--text-color);
       }
 
-      .navbar-item:hover,
-      .navbar-link:hover {
-        background-color: var(--accent-soft);
-        border-radius: 0.75rem;
-      }
-
       .hero,
       .navbar,
       .box,
@@ -170,10 +192,20 @@
       .subtitle,
       .help,
       .tag,
-      .content p,
-      .content li,
       .label {
         color: var(--muted-color);
+      }
+
+      .title,
+      .title a,
+      .page-title,
+      .content-card .title,
+      .content-card .title a,
+      .box h1,
+      .box h2,
+      .box h3,
+      .box h4 {
+        color: var(--text-color) !important;
       }
 
       .is-light {
@@ -183,18 +215,50 @@
 
       .theme-toggle {
         display: inline-flex;
-        gap: 0.5rem;
+        align-items: flex-start;
+        gap: 0.75rem;
         flex-wrap: wrap;
       }
 
-      .theme-toggle .button {
-        border-radius: 999px;
+      .theme-option {
+        position: relative;
+        display: inline-flex;
       }
 
-      .theme-toggle .is-active {
+      .theme-option .button {
+        border-radius: 999px;
+        text-decoration: none;
+      }
+
+      .theme-option .button.is-active {
         background-color: var(--accent-color);
         border-color: var(--accent-color);
         color: white;
+      }
+
+      .theme-option-dark {
+        padding-bottom: 0.8rem;
+      }
+
+      .theme-beta {
+        position: absolute;
+        left: 0.8rem;
+        bottom: -0.7rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 1.15rem;
+        padding: 0.15rem 0.45rem;
+        border-radius: 999px;
+        background: var(--surface-elevated);
+        border: 1px solid var(--border-color);
+        color: var(--muted-color);
+        font-size: 0.62rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        line-height: 1;
+        text-transform: lowercase;
+        white-space: nowrap;
       }
 
       .page-header {
@@ -239,13 +303,33 @@
         border-color: var(--accent-color);
       }
 
-      .button.is-primary:hover,
       .button.is-primary:focus {
         background-color: var(--accent-strong);
         border-color: var(--accent-strong);
       }
 
-      .button.is-light:hover,
+      .button.is-link:not(.is-light) {
+        background-color: transparent;
+        border-color: var(--accent-color);
+        color: var(--accent-color);
+      }
+
+      .button.is-link:not(.is-light):focus {
+        background-color: var(--accent-soft);
+        border-color: var(--accent-strong);
+        color: var(--accent-strong);
+      }
+
+      .button.is-success.is-light {
+        border-color: var(--success-color);
+        color: var(--success-color) !important;
+      }
+
+      .button.is-danger.is-light {
+        border-color: var(--danger-color);
+        color: var(--danger-color) !important;
+      }
+
       .button.is-light:focus {
         background-color: var(--accent-soft);
         color: var(--text-color);
@@ -267,11 +351,73 @@
       .notification.is-info {
         background-color: var(--accent-soft);
         color: var(--text-color);
+        border-left: 4px solid var(--accent-color);
+      }
+
+      .notification.is-success {
+        background-color: var(--success-soft);
+        color: var(--text-color);
+        border-left: 4px solid var(--success-color);
+      }
+
+      .notification.is-warning {
+        background-color: var(--warning-soft);
+        color: var(--text-color);
+        border-left: 4px solid var(--warning-color);
+      }
+
+      .notification.is-danger {
+        background-color: var(--danger-soft);
+        color: var(--text-color);
+        border-left: 4px solid var(--danger-color);
+      }
+
+      .message {
+        background-color: var(--surface-color);
+        border: 1px solid var(--border-color);
+      }
+
+      .message-header {
+        background-color: var(--surface-elevated);
+        color: var(--text-color);
+      }
+
+      .message-body {
+        background-color: var(--surface-color);
+        color: var(--text-color);
+        border-color: var(--border-color);
+      }
+
+      .message-body p,
+      .message-body li,
+      .message-body strong,
+      .message-header p {
+        color: var(--text-color);
+      }
+
+      .report-description {
+        background-color: var(--surface-elevated);
+        border: 1px solid var(--border-color);
+        border-left: 4px solid var(--accent-color);
+        border-radius: 0.75rem;
+        padding: 0.85rem 1rem;
+      }
+
+      .report-description + .report-description {
+        margin-top: 0.75rem;
       }
 
       .table thead th {
         background-color: var(--surface-elevated);
         color: var(--text-color);
+      }
+
+      .table.is-striped tbody tr:not(.is-selected):nth-child(even) {
+        background-color: var(--surface-elevated);
+      }
+
+      .table.is-striped tbody tr:not(.is-selected):nth-child(odd) {
+        background-color: var(--surface-color);
       }
 
       .table td,
@@ -280,16 +426,23 @@
         color: var(--text-color);
       }
 
-      .table a,
-      .table a:hover,
+      .table a {
+        color: var(--accent-color);
+      }
+
       .table a:focus {
-        color: #f8fafc;
+        color: var(--accent-strong) !important;
       }
 
       .table .has-text-grey,
       .table .is-size-7,
       .table .is-size-7 * {
         color: var(--muted-color) !important;
+      }
+
+      .navbar-item:focus,
+      .navbar-link:focus {
+        color: var(--text-color) !important;
       }
 
       .content-card,
@@ -358,8 +511,16 @@
                   </h1>
                   <p class="hero-subtitle">{{ subtitle|default:'Shared vehicle maintenance' }}</p>
                 </div>
-                <div class="theme-toggle" aria-label="Dark mode enabled" aria-hidden="true">
-                  <span class="button is-small is-light is-active">Dark mode</span>
+                <div class="theme-toggle" aria-label="Theme selector">
+                  <a class="theme-option" href="{% url 'shop-theme' theme='light' %}?next={{ request.get_full_path|urlencode }}">
+                    <span class="button is-small is-light {% if theme == 'light' %}is-active{% endif %}">Light mode</span>
+                  </a>
+                  <div class="theme-option theme-option-dark">
+                    <a href="{% url 'shop-theme' theme='dark' %}?next={{ request.get_full_path|urlencode }}">
+                      <span class="button is-small is-light {% if theme == 'dark' %}is-active{% endif %}">Dark mode</span>
+                    </a>
+                    <span class="theme-beta">beta</span>
+                  </div>
                 </div>
               </div>
             </div>
