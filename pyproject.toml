@@ -6,7 +6,7 @@ authors = [
     {name = "Jean-Francois Labonte",email = "jeff.labonte12@gmail.com"}
 ]
 license = {text = "GPLv3"}
-requires-python = ">=3.14"
+requires-python = ">=3.12"
 dependencies = [
     "django (>=6.0.8,<7.0.0)",
     "django-pytest (>=0.2.0,<0.3.0)",
