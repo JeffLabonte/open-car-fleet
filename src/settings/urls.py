@@ -16,9 +16,9 @@ Including another URLconf
 """
 from django.conf import settings
 from django.contrib import admin
-from django.urls import include, path
-from django.conf.urls.static import static
+from django.urls import include, path, re_path
 from django.views.i18n import set_language
+from django.views.static import serve as serve_static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -29,4 +29,14 @@ urlpatterns = [
 if settings.DEBUG:
     from django.contrib.staticfiles.urls import staticfiles_urlpatterns
     urlpatterns += staticfiles_urlpatterns()
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# No reverse proxy serves /media/ in front of this app, so Django must serve
+# uploaded files itself even outside DEBUG, or attachment links 404.
+# (django.conf.urls.static.static() is a no-op when DEBUG is False.)
+urlpatterns += [
+    re_path(
+        r'^%s(?P<path>.*)$' % settings.MEDIA_URL.lstrip('/'),
+        serve_static,
+        {'document_root': settings.MEDIA_ROOT},
+    ),
+]
