@@ -28,7 +28,7 @@ from shop.forms import CarCreateForm, CarUpdateForm, GarageCreateForm, ReportFor
 from shop.importers import ImportContext, JSONImporter
 from shop.middleware import HankoAuthenticationMiddleware
 from shop.models.car import Car, CarPart, CarPartStatusHistory
-from shop.models.garage import Garage, GarageInvitation, GarageMembership
+from shop.models.garage import Garage, GarageInvitation, GarageMembership, KnownShop, KnownShopProof
 from shop.models.job import WorkJob
 from shop.models.report import Report, ReportAttachment
 from shop.models.user import ShopUser
@@ -269,6 +269,7 @@ class GarageSharingTests(TestCase):
             role=GarageMembership.ROLE_OWNER,
         )
 
+
     def test_create_garage_adds_owner_membership(self):
         self.client.force_login(self.owner)
 
@@ -409,6 +410,46 @@ class GarageSharingTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response['Location'], reverse('shop-car-list'))
         self.assertFalse(Car.objects.filter(pk=car.pk).exists())
+
+
+class KnownShopTests(TestCase):
+    def setUp(self) -> None:
+        self.user = ShopUser.objects.create_user(
+            username='shop-user',
+            email='shop-user@example.com',
+            password='pass1234',
+        )
+
+    def test_user_can_add_shop_and_proof(self):
+        self.client.force_login(self.user)
+
+        shop_response = self.client.post(
+            reverse('shop-known-shop-create'),
+            data={
+                'name': 'Northside Auto',
+                'email': 'service@northside.example',
+                'phone': '555-0100',
+                'address': '10 Main Street',
+                'notes': 'Recommended by the fleet manager.',
+            },
+        )
+
+        self.assertEqual(shop_response.status_code, 302)
+        shop = KnownShop.objects.get(name='Northside Auto')
+        proof_response = self.client.post(
+            reverse('shop-known-shop-proof-create', args=[shop.pk]),
+            data={
+                'title': 'Business registration',
+                'content': 'Registration document received.',
+                'file': SimpleUploadedFile('registration.pdf', b'%PDF-1.4 proof', content_type='application/pdf'),
+            },
+        )
+
+        self.assertEqual(proof_response.status_code, 302)
+        proof = KnownShopProof.objects.get(shop=shop)
+        self.assertEqual(proof.title, 'Business registration')
+        self.assertIn('registration', proof.file.name)
+        self.assertTrue(proof.file.name.endswith('.pdf'))
 
 
 class FormEditableFieldsCoverageTests(TestCase):

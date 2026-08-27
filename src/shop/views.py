@@ -24,13 +24,15 @@ from shop.forms import (
     GarageCreateForm,
     GarageImportForm,
     GarageInviteForm,
+    KnownShopForm,
+    KnownShopProofForm,
     ReportForm,
     WorkJobForm,
 )
 from shop.importers import ImportContext, ImportValidationError, JSONImporter
 from shop.middleware import hanko_login_required
 from shop.models.car import CarPart
-from shop.models.garage import GarageInvitation, GarageMembership
+from shop.models.garage import GarageInvitation, GarageMembership, KnownShop
 from shop.models.job import WorkJob
 from shop.models.report import Report, ReportAttachment
 from shop.view_helpers import user_can_manage_garage, user_cars_queryset, user_garages_queryset
@@ -122,7 +124,7 @@ def index(request: HttpRequest) -> HttpResponse:
     )
     return render(
         request,
-        'shop/garage_list.html',
+        'shop/fleet_list.html',
         {
             'title': 'My Fleets',
             'subtitle': 'Fleets you belong to',
@@ -140,7 +142,7 @@ def garage_detail(request: HttpRequest, pk: str) -> HttpResponse:
     cars = garage.cars.order_by('-created_at')
     return render(
         request,
-        'shop/garage_detail.html',
+        'shop/fleet_detail.html',
         {
             'garage': garage,
             'can_manage_garage': can_manage_garage,
@@ -171,7 +173,7 @@ def garage_create(request: HttpRequest) -> HttpResponse:
 
     return render(
         request,
-        'shop/garage_form.html',
+        'shop/fleet_form.html',
         {
             'form': form,
             'is_create': True,
@@ -239,7 +241,7 @@ def garage_share(request: HttpRequest, pk: str) -> HttpResponse:
 
     return render(
         request,
-        'shop/garage_share.html',
+        'shop/fleet_share.html',
         {
             'garage': garage,
             'form': form,
@@ -298,7 +300,7 @@ def garage_import(request: HttpRequest, pk: str) -> HttpResponse:
 
     return render(
         request,
-        'shop/garage_import.html',
+        'shop/fleet_import.html',
         {
             'form': form,
             'garage': garage,
@@ -322,6 +324,65 @@ def garage_export(request: HttpRequest, pk: str) -> HttpResponse:
     )
     response['Content-Disposition'] = f'attachment; filename="{workbook.filename}"'
     return response
+
+
+@hanko_login_required
+def known_shop_list(request: HttpRequest) -> HttpResponse:
+    shops = KnownShop.objects.prefetch_related('proofs').order_by('name')
+    return render(request, 'shop/shop_list.html', {
+        'shops': shops,
+        'title': 'Known shops',
+        'subtitle': 'Keep trusted repair shops and their supporting proofs together',
+    })
+
+
+@hanko_login_required
+def known_shop_create(request: HttpRequest) -> HttpResponse:
+    if request.method == 'POST':
+        form = KnownShopForm(request.POST)
+        if form.is_valid():
+            shop = form.save()
+            messages.success(request, _('Shop added successfully.'))
+            return redirect(reverse('shop-known-shop-detail', args=[shop.pk]))
+    else:
+        form = KnownShopForm()
+    return render(request, 'shop/shop_form.html', {
+        'form': form,
+        'is_create': True,
+        'title': 'Add known shop',
+        'subtitle': 'Save a shop now and add supporting proofs over time',
+    })
+
+
+@hanko_login_required
+def known_shop_detail(request: HttpRequest, pk: int) -> HttpResponse:
+    shop = get_object_or_404(KnownShop.objects.prefetch_related('proofs'), pk=pk)
+    return render(request, 'shop/shop_detail.html', {
+        'shop': shop,
+        'title': shop.name,
+        'subtitle': 'Shop details and supporting proofs',
+    })
+
+
+@hanko_login_required
+def known_shop_proof_create(request: HttpRequest, shop_pk: int) -> HttpResponse:
+    shop = get_object_or_404(KnownShop, pk=shop_pk)
+    if request.method == 'POST':
+        form = KnownShopProofForm(request.POST, request.FILES)
+        if form.is_valid():
+            proof = form.save(commit=False)
+            proof.shop = shop
+            proof.save()
+            messages.success(request, _('Proof added successfully.'))
+            return redirect(reverse('shop-known-shop-detail', args=[shop.pk]))
+    else:
+        form = KnownShopProofForm()
+    return render(request, 'shop/shop_proof_form.html', {
+        'form': form,
+        'shop': shop,
+        'title': f'Add proof for {shop.name}',
+        'subtitle': 'Add a document or notes supporting this shop',
+    })
 
 
 @hanko_login_required

@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Open Car Fleet\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-27 22:13+0000\n"
+"POT-Creation-Date: 2026-08-27 23:19+0000\n"
 "Language: fr_CA\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -47,11 +47,13 @@ msgid "Optional nickname"
 msgstr "Surnom facultatif"
 
 #: src/shop/forms/car.py:39 src/shop/templates/shop/car_list.html:21
-#: src/shop/templates/shop/garage_detail.html:32
+#: src/shop/templates/shop/fleet_detail.html:32
+#: src/shop/templates/shop/fleet_list.html:37
 msgid "Make"
 msgstr "Marque"
 
-#: src/shop/forms/car.py:40 src/shop/templates/shop/garage_detail.html:32
+#: src/shop/forms/car.py:40 src/shop/templates/shop/fleet_detail.html:32
+#: src/shop/templates/shop/fleet_list.html:38
 msgid "Model"
 msgstr "Modèle"
 
@@ -61,7 +63,8 @@ msgstr "Couleur"
 
 #: src/shop/forms/car.py:42 src/shop/templates/shop/car_detail.html:244
 #: src/shop/templates/shop/car_list.html:22
-#: src/shop/templates/shop/garage_detail.html:32
+#: src/shop/templates/shop/fleet_detail.html:32
+#: src/shop/templates/shop/fleet_list.html:39
 msgid "Year"
 msgstr "Année"
 
@@ -70,7 +73,8 @@ msgid "Mileage"
 msgstr "Kilométrage"
 
 #: src/shop/forms/car.py:44 src/shop/templates/shop/car_detail.html:245
-#: src/shop/templates/shop/garage_detail.html:32
+#: src/shop/templates/shop/fleet_detail.html:32
+#: src/shop/templates/shop/fleet_list.html:40
 msgid "VIN"
 msgstr ""
 
@@ -438,7 +442,8 @@ msgstr "Voitures connexes"
 
 #: src/shop/templates/shop/car_detail.html:243
 #: src/shop/templates/shop/car_list.html:20
-#: src/shop/templates/shop/garage_detail.html:32
+#: src/shop/templates/shop/fleet_detail.html:32
+#: src/shop/templates/shop/fleet_list.html:36
 msgid "Name"
 msgstr "Nom"
 
@@ -457,7 +462,7 @@ msgid "Edit Car"
 msgstr ""
 
 #: src/shop/templates/shop/car_form.html:33
-#: src/shop/templates/shop/garage_form.html:33
+#: src/shop/templates/shop/fleet_form.html:33
 #: src/shop/templates/shop/part_form.html:33
 #: src/shop/templates/shop/report_form.html:90
 #: src/shop/templates/shop/workjob_form.html:33
@@ -467,7 +472,7 @@ msgid "Create"
 msgstr "Créé le"
 
 #: src/shop/templates/shop/car_form.html:33
-#: src/shop/templates/shop/garage_form.html:33
+#: src/shop/templates/shop/fleet_form.html:33
 #: src/shop/templates/shop/part_form.html:33
 #: src/shop/templates/shop/report_form.html:90
 #: src/shop/templates/shop/workjob_form.html:33
@@ -476,8 +481,8 @@ msgstr ""
 
 #: src/shop/templates/shop/car_form.html:36
 #: src/shop/templates/shop/car_import.html:41
-#: src/shop/templates/shop/garage_form.html:36
-#: src/shop/templates/shop/garage_import.html:41
+#: src/shop/templates/shop/fleet_form.html:36
+#: src/shop/templates/shop/fleet_import.html:41
 #: src/shop/templates/shop/part_form.html:36
 #: src/shop/templates/shop/report_form.html:93
 #: src/shop/templates/shop/workjob_form.html:36
@@ -499,7 +504,7 @@ msgid ""
 msgstr ""
 
 #: src/shop/templates/shop/car_import.html:38
-#: src/shop/templates/shop/garage_import.html:38
+#: src/shop/templates/shop/fleet_import.html:38
 msgid "Run import"
 msgstr ""
 
@@ -523,126 +528,126 @@ msgstr "Plaque :"
 msgid "No cars yet."
 msgstr "Aucune voiture pour le moment."
 
-#: src/shop/templates/shop/garage_detail.html:8
+#: src/shop/templates/shop/fleet_detail.html:8
 msgid "Review the vehicles in this fleet and manage access."
 msgstr ""
 
-#: src/shop/templates/shop/garage_detail.html:11
+#: src/shop/templates/shop/fleet_detail.html:11
 #, fuzzy
 #| msgid "Create fleet"
 msgid "Back to fleets"
 msgstr "Créer un parc"
 
-#: src/shop/templates/shop/garage_detail.html:13
+#: src/shop/templates/shop/fleet_detail.html:13
 #, fuzzy
 #| msgid "Create fleet"
 msgid "Share fleet"
 msgstr "Créer un parc"
 
-#: src/shop/templates/shop/garage_detail.html:14
+#: src/shop/templates/shop/fleet_detail.html:14
 msgid "Import cars"
 msgstr ""
 
-#: src/shop/templates/shop/garage_detail.html:15
-#: src/shop/templates/shop/garage_list.html:32
+#: src/shop/templates/shop/fleet_detail.html:15
+#: src/shop/templates/shop/fleet_list.html:60
 msgid "Export to Excel"
 msgstr "Exporter vers Excel"
 
-#: src/shop/templates/shop/garage_detail.html:17
+#: src/shop/templates/shop/fleet_detail.html:17
 #, fuzzy
 #| msgid "Add a new car"
 msgid "Add car"
 msgstr "Ajouter une voiture"
 
-#: src/shop/templates/shop/garage_detail.html:50
+#: src/shop/templates/shop/fleet_detail.html:50
 #, fuzzy
 #| msgid "No cars yet."
 msgid "No cars in this fleet yet."
 msgstr "Aucune voiture pour le moment."
 
-#: src/shop/templates/shop/garage_form.html:6
+#: src/shop/templates/shop/fleet_form.html:6
 #, fuzzy
 #| msgid "Create fleet"
 msgid "Create Fleet"
 msgstr "Créer un parc"
 
-#: src/shop/templates/shop/garage_form.html:6
+#: src/shop/templates/shop/fleet_form.html:6
 #, fuzzy
 #| msgid "My Fleets"
 msgid "Edit Fleet"
 msgstr "Mes parcs"
 
-#: src/shop/templates/shop/garage_import.html:6
+#: src/shop/templates/shop/fleet_import.html:6
 msgid "Import cars into"
 msgstr ""
 
-#: src/shop/templates/shop/garage_import.html:7
+#: src/shop/templates/shop/fleet_import.html:7
 msgid ""
 "Use one normalized JSON file per import. Every imported car will be assigned "
 "to this fleet."
 msgstr ""
 
-#: src/shop/templates/shop/garage_import.html:18
+#: src/shop/templates/shop/fleet_import.html:18
 msgid ""
 "This page only imports cars. To import work jobs or reports, open the car "
 "page after the car exists and use its import action."
 msgstr ""
 
-#: src/shop/templates/shop/garage_list.html:7
+#: src/shop/templates/shop/fleet_list.html:7
 #: src/shop/templates/shop/index.html:562
 msgid "My Fleets"
 msgstr "Mes parcs"
 
-#: src/shop/templates/shop/garage_list.html:8
+#: src/shop/templates/shop/fleet_list.html:8
 msgid "Keep an eye on the spaces and vehicles you manage."
 msgstr "Gardez un œil sur les espaces et les véhicules que vous gérez."
 
-#: src/shop/templates/shop/garage_list.html:11
+#: src/shop/templates/shop/fleet_list.html:11
 msgid "Create fleet"
 msgstr "Créer un parc"
 
-#: src/shop/templates/shop/garage_list.html:27
+#: src/shop/templates/shop/fleet_list.html:27
 msgid "cars"
 msgstr "voitures"
 
-#: src/shop/templates/shop/garage_list.html:28
+#: src/shop/templates/shop/fleet_list.html:28
 msgid "Created"
 msgstr "Créé le"
 
-#: src/shop/templates/shop/garage_list.html:41
+#: src/shop/templates/shop/fleet_list.html:69
 msgid "You are not a member of any fleet yet."
 msgstr "Vous n'êtes membre d'aucun parc pour le moment."
 
-#: src/shop/templates/shop/garage_share.html:8
+#: src/shop/templates/shop/fleet_share.html:8
 msgid "Share Fleet:"
 msgstr ""
 
-#: src/shop/templates/shop/garage_share.html:9
+#: src/shop/templates/shop/fleet_share.html:9
 msgid ""
 "Invite a member by email. They must sign in with that same email to accept."
 msgstr ""
 
-#: src/shop/templates/shop/garage_share.html:36
+#: src/shop/templates/shop/fleet_share.html:36
 msgid "Send invitation"
 msgstr ""
 
-#: src/shop/templates/shop/garage_share.html:39
+#: src/shop/templates/shop/fleet_share.html:39
 msgid "Back"
 msgstr ""
 
-#: src/shop/templates/shop/garage_share.html:48
+#: src/shop/templates/shop/fleet_share.html:48
 msgid "Pending invitations"
 msgstr ""
 
-#: src/shop/templates/shop/garage_share.html:54
+#: src/shop/templates/shop/fleet_share.html:54
 msgid "Sent"
 msgstr ""
 
-#: src/shop/templates/shop/garage_share.html:56
+#: src/shop/templates/shop/fleet_share.html:56
 msgid "Expires"
 msgstr ""
 
-#: src/shop/templates/shop/garage_share.html:62
+#: src/shop/templates/shop/fleet_share.html:62
 msgid "No pending invitations."
 msgstr ""
 
