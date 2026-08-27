@@ -1,13 +1,14 @@
 {% extends 'shop/index.html' %}
+{% load i18n %}
 
 {% block content %}
   <div class="page-header">
     <div>
-      <h1 class="title page-title">My Fleets</h1>
-      <p class="page-subtitle">Keep an eye on the spaces and vehicles you manage.</p>
+      <h1 class="title page-title">{% translate 'My Fleets' %}</h1>
+      <p class="page-subtitle">{% translate 'Keep an eye on the spaces and vehicles you manage.' %}</p>
     </div>
     <div class="page-actions">
-      <a class="button is-primary" href="{% url 'shop-garage-create' %}">Create fleet</a>
+      <a class="button is-primary" href="{% url 'shop-garage-create' %}">{% translate 'Create fleet' %}</a>
     </div>
   </div>
 
@@ -23,12 +24,12 @@
               <p class="mb-3">{{ garage.description }}</p>
             {% endif %}
             <div class="buttons are-small mt-4">
-              <span class="button is-light is-static">{{ garage.cars.count }} cars</span>
-              <span class="button is-light is-static">Created {{ garage.created_at|date:'M j, Y' }}</span>
+              <span class="button is-light is-static">{{ garage.cars.count }} {% translate 'cars' %}</span>
+              <span class="button is-light is-static">{% translate 'Created' %} {{ garage.created_at|date:'M j, Y' }}</span>
             </div>
             {% if garage.pk in manageable_garage_ids %}
               <div class="mt-3">
-                <a class="button is-small is-success is-light" href="{% url 'shop-garage-export' garage.pk %}">Export to Excel</a>
+                <a class="button is-small is-success is-light" href="{% url 'shop-garage-export' garage.pk %}">{% translate 'Export to Excel' %}</a>
               </div>
             {% endif %}
           </div>
@@ -37,7 +38,7 @@
     </div>
   {% else %}
     <div class="empty-state">
-      You are not a member of any fleet yet.
+      {% translate 'You are not a member of any fleet yet.' %}
     </div>
   {% endif %}
 {% endblock %}

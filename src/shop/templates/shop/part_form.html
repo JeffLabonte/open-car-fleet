@@ -1,8 +1,9 @@
 {% extends 'shop/index.html' %}
+{% load i18n %}
 
 {% block content %}
   <div class="box">
-    <h1 class="title">{% if is_create %}Add Part Status{% else %}Edit Part Status{% endif %}</h1>
+    <h1 class="title">{% if is_create %}{% translate 'Add Part Status' %}{% else %}{% translate 'Edit Part Status' %}{% endif %}</h1>
 
     <form method="post" novalidate>
       {% csrf_token %}
@@ -29,10 +30,10 @@
 
       <div class="field is-grouped">
         <div class="control">
-          <button class="button is-primary" type="submit">{% if is_create %}Create{% else %}Update{% endif %}</button>
+          <button class="button is-primary" type="submit">{% if is_create %}{% translate 'Create' %}{% else %}{% translate 'Update' %}{% endif %}</button>
         </div>
         <div class="control">
-          <a class="button is-light" href="{% url 'shop-car-detail' car.pk %}">Cancel</a>
+          <a class="button is-light" href="{% url 'shop-car-detail' car.pk %}">{% translate 'Cancel' %}</a>
         </div>
       </div>
     </form>

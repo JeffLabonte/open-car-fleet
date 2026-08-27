@@ -1,13 +1,14 @@
 {% extends 'shop/index.html' %}
+{% load i18n %}
 
 {% block content %}
   <div class="page-header">
     <div>
-      <h1 class="title page-title">Cars</h1>
-      <p class="page-subtitle">Browse the vehicles in your shared fleets.</p>
+      <h1 class="title page-title">{% translate 'Cars' %}</h1>
+      <p class="page-subtitle">{% translate 'Browse the vehicles in your shared fleets.' %}</p>
     </div>
     <div class="page-actions">
-      <a class="button is-primary" href="{% url 'shop-car-create' %}">Add a new car</a>
+      <a class="button is-primary" href="{% url 'shop-car-create' %}">{% translate 'Add a new car' %}</a>
     </div>
   </div>
 
@@ -16,10 +17,10 @@
       <table class="table is-fullwidth is-striped is-hoverable">
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Make</th>
-            <th>Year</th>
-            <th>Actions</th>
+            <th>{% translate 'Name' %}</th>
+            <th>{% translate 'Make' %}</th>
+            <th>{% translate 'Year' %}</th>
+            <th>{% translate 'Actions' %}</th>
           </tr>
         </thead>
         <tbody>
@@ -28,13 +29,13 @@
               <td>
                 <a href="{% url 'shop-car-detail' car.pk %}">{{ car.usual_name|default:car.make }}</a>
                 <div class="is-size-7 has-text-grey">
-                  <span class="has-text-weight-semibold">Plate:</span>
+                  <span class="has-text-weight-semibold">{% translate 'Plate:' %}</span>
                   <strong>{{ car.license_plate|default:"—" }}</strong>
                   <span> · </span>
-                  <span class="has-text-weight-semibold">VIN:</span>
+                  <span class="has-text-weight-semibold">{% translate 'VIN:' %}</span>
                   <span>{{ car.vin|default:"—" }}</span>
                   <span> · </span>
-                  <span class="has-text-weight-semibold">Colour:</span>
+                  <span class="has-text-weight-semibold">{% translate 'Colour:' %}</span>
                   <span>{{ car.colour|default:"—" }}</span>
                 </div>
               </td>
@@ -43,7 +44,7 @@
               <td>
                 <form method="post" action="{% url 'shop-car-delete' car.pk %}" style="display:inline;">
                   {% csrf_token %}
-                  <button class="button is-small is-danger is-light" type="submit" onclick="return confirm('Delete this car?')">Delete</button>
+                  <button class="button is-small is-danger is-light" type="submit" onclick="return confirm('{% translate 'Delete this car?' %}')">{% translate 'Delete' %}</button>
                 </form>
               </td>
             </tr>
@@ -53,7 +54,7 @@
     </div>
   {% else %}
     <div class="empty-state">
-      No cars yet.
+      {% translate 'No cars yet.' %}
     </div>
   {% endif %}
 {% endblock %}

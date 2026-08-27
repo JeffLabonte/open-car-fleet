@@ -1,6 +1,6 @@
-{% load static %}
+{% load static i18n %}
 <!DOCTYPE html>
-<html lang="en" data-theme="{{ theme|default:'light' }}">
+<html lang="{{ LANGUAGE_CODE|default:'en-ca' }}" data-theme="{{ theme|default:'light' }}">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -511,16 +511,30 @@
                   </h1>
                   <p class="hero-subtitle">{{ subtitle|default:'Shared vehicle maintenance' }}</p>
                 </div>
-                <div class="theme-toggle" aria-label="Theme selector">
+                <div class="theme-toggle" aria-label="{% translate 'Theme selector' %}">
                   <a class="theme-option" href="{% url 'shop-theme' theme='light' %}?next={{ request.get_full_path|urlencode }}">
-                    <span class="button is-small is-light {% if theme == 'light' %}is-active{% endif %}">Light mode</span>
+                    <span class="button is-small is-light {% if theme == 'light' %}is-active{% endif %}">{% translate 'Light mode' %}</span>
                   </a>
                   <div class="theme-option theme-option-dark">
                     <a href="{% url 'shop-theme' theme='dark' %}?next={{ request.get_full_path|urlencode }}">
-                      <span class="button is-small is-light {% if theme == 'dark' %}is-active{% endif %}">Dark mode</span>
+                      <span class="button is-small is-light {% if theme == 'dark' %}is-active{% endif %}">{% translate 'Dark mode' %}</span>
                     </a>
                     <span class="theme-beta">beta</span>
                   </div>
+                </div>
+                <div class="language-toggle" aria-label="{% translate 'Language selector' %}">
+                  {% for lang_code, lang_name in LANGUAGES %}
+                    {% if lang_code == LANGUAGE_CODE %}
+                      <span class="button is-small is-link is-rounded is-rounded-active">{{ lang_name }}</span>
+                    {% else %}
+                      <form method="post" action="{% url 'set_language' %}" class="is-inline-block">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <input type="hidden" name="language" value="{{ lang_code }}">
+                        <button type="submit" class="button is-small is-light is-rounded">{{ lang_name }}</button>
+                      </form>
+                    {% endif %}
+                  {% endfor %}
                 </div>
               </div>
             </div>
@@ -529,13 +543,14 @@
       </section>
 
       {% if request.user.is_authenticated %}
-        <nav class="navbar app-nav" role="navigation" aria-label="main navigation">
+        <nav class="navbar app-nav" role="navigation" aria-label="{% translate 'Main navigation' %}">
           <div class="container">
             <div class="navbar-brand">
               <a class="navbar-item" href="{% url 'shop-index' %}">
-                {{ brand_name|default:'Open Fleets' }}
+                {% translate 'Open Fleets' as default_brand_name %}
+                {{ brand_name|default:default_brand_name }}
               </a>
-              <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navbarMenu">
+              <a role="button" class="navbar-burger" aria-label="{% translate 'Menu' %}" aria-expanded="false" data-target="navbarMenu">
                 <span aria-hidden="true"></span>
                 <span aria-hidden="true"></span>
                 <span aria-hidden="true"></span>
@@ -544,16 +559,16 @@
 
             <div id="navbarMenu" class="navbar-menu">
               <div class="navbar-start">
-                <a class="navbar-item" href="{% url 'shop-index' %}">My Fleets</a>
+                <a class="navbar-item" href="{% url 'shop-index' %}">{% translate 'My Fleets' %}</a>
               </div>
               <div class="navbar-end">
                 <div class="navbar-item">
-                  <span>Hello, {{ request.user.display_name|default:request.user.username }}</span>
+                  <span>{% translate 'Hello,' %} {{ request.user.display_name|default:request.user.username }}</span>
                 </div>
                 <div class="navbar-item">
                   <form method="post" action="{% url 'shop-logout' %}">
                     {% csrf_token %}
-                    <button class="button is-light" type="submit">Logout</button>
+                    <button class="button is-light" type="submit">{% translate 'Logout' %}</button>
                   </form>
                 </div>
               </div>

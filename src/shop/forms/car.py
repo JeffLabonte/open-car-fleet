@@ -4,6 +4,7 @@ from typing import Any
 
 from django import forms
 from django.core.exceptions import ValidationError
+from django.utils.translation import gettext_lazy as _
 
 from shop.models.car import Car, CarPart
 
@@ -16,15 +17,15 @@ class CarPartForm(forms.ModelForm):
         model = CarPart
         fields = ['name', 'status', 'notes']
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'input', 'placeholder': 'Part or component name'}),
+            'name': forms.TextInput(attrs={'class': 'input', 'placeholder': _('Part or component name')}),
             'status': forms.Select(attrs={'class': 'input'}),
-            'notes': forms.Textarea(attrs={'class': 'textarea', 'rows': 4, 'placeholder': 'Notes about this part, including inspection or replacement details'}),
+            'notes': forms.Textarea(attrs={'class': 'textarea', 'rows': 4, 'placeholder': _('Notes about this part, including inspection or replacement details')}),
         }
 
     def clean_name(self) -> str:
         name = (self.cleaned_data.get('name') or '').strip()
         if not name:
-            raise ValidationError('Part name is required.')
+            raise ValidationError(_('Part name is required.'))
         return name
 
 
@@ -34,14 +35,14 @@ class CarBaseForm(forms.ModelForm):
         fields = ['garage', 'usual_name', 'make', 'model', 'colour', 'year', 'mileage', 'vin', 'license_plate']
         widgets = {
             'garage': forms.Select(attrs={'class': 'input'}),
-            'usual_name': forms.TextInput(attrs={'class': 'input', 'placeholder': 'Optional nickname'}),
-            'make': forms.TextInput(attrs={'class': 'input', 'placeholder': 'Make'}),
-            'model': forms.TextInput(attrs={'class': 'input', 'placeholder': 'Model'}),
-            'colour': forms.TextInput(attrs={'class': 'input', 'placeholder': 'Colour'}),
-            'year': forms.NumberInput(attrs={'class': 'input', 'placeholder': 'Year'}),
-            'mileage': forms.NumberInput(attrs={'class': 'input', 'placeholder': 'Mileage'}),
-            'vin': forms.TextInput(attrs={'class': 'input', 'placeholder': 'VIN'}),
-            'license_plate': forms.TextInput(attrs={'class': 'input', 'placeholder': 'License plate'}),
+            'usual_name': forms.TextInput(attrs={'class': 'input', 'placeholder': _('Optional nickname')}),
+            'make': forms.TextInput(attrs={'class': 'input', 'placeholder': _('Make')}),
+            'model': forms.TextInput(attrs={'class': 'input', 'placeholder': _('Model')}),
+            'colour': forms.TextInput(attrs={'class': 'input', 'placeholder': _('Colour')}),
+            'year': forms.NumberInput(attrs={'class': 'input', 'placeholder': _('Year')}),
+            'mileage': forms.NumberInput(attrs={'class': 'input', 'placeholder': _('Mileage')}),
+            'vin': forms.TextInput(attrs={'class': 'input', 'placeholder': _('VIN')}),
+            'license_plate': forms.TextInput(attrs={'class': 'input', 'placeholder': _('License plate')}),
         }
 
     def __init__(self, *args: Any, user: Any = None, **kwargs: Any) -> None:
@@ -56,7 +57,7 @@ class CarBaseForm(forms.ModelForm):
             return garage
 
         if self._user is not None and not self._user.garages.filter(pk=garage.pk).exists():
-            raise ValidationError('You can only select a garage you are a member of.')
+            raise ValidationError(_('You can only select a garage you are a member of.'))
         return garage
 
     def clean_year(self) -> int | None:
@@ -65,7 +66,7 @@ class CarBaseForm(forms.ModelForm):
             return year
         current = date.today().year
         if year < 1886 or year > current + 1:
-            raise ValidationError('Enter a realistic year between 1886 and %(max)d.', params={'max': current + 1})
+            raise ValidationError(_('Enter a realistic year between 1886 and %(max)d.'), params={'max': current + 1})
         return year
 
     def clean_vin(self) -> str | None:
@@ -74,14 +75,14 @@ class CarBaseForm(forms.ModelForm):
             return vin
         vin = re.sub(r"\s+", "", vin).upper()
         if any(ch in VIN_BAD_CHARS for ch in vin):
-            raise ValidationError('VIN contains invalid characters (I, O, Q are not allowed).')
+            raise ValidationError(_('VIN contains invalid characters (I, O, Q are not allowed).'))
         if not re.match(r'^[A-HJ-NPR-Z0-9]{11,17}$', vin):
-            raise ValidationError('VIN must be 11–17 alphanumeric characters (no I/O/Q).')
+            raise ValidationError(_('VIN must be 11-17 alphanumeric characters (no I/O/Q).'))
         qs = Car.objects.filter(vin=vin)
         if self.instance and self.instance.pk:
             qs = qs.exclude(pk=self.instance.pk)
         if qs.exists():
-            raise ValidationError('A car with this VIN already exists.')
+            raise ValidationError(_('A car with this VIN already exists.'))
         return vin
 
     def clean_license_plate(self) -> str:
@@ -90,9 +91,9 @@ class CarBaseForm(forms.ModelForm):
         if plate == '':
             return ''
         if len(plate) > 20:
-            raise ValidationError('License plate must be 20 characters or fewer.')
+            raise ValidationError(_('License plate must be 20 characters or fewer.'))
         if not re.match(r'^[A-Z0-9 \-]+$', plate):
-            raise ValidationError('License plate contains invalid characters.')
+            raise ValidationError(_('License plate contains invalid characters.'))
         return plate
 
 

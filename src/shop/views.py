@@ -12,6 +12,7 @@ from django.contrib.auth import logout
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.utils import timezone
+from django.utils.translation import gettext as _
 
 from shop.auth import complete_hanko_login
 from shop.exporters import export_garage_to_excel
@@ -52,8 +53,8 @@ def login_view(request: HttpRequest) -> HttpResponse:
     logged_out = bool(request.session.pop('logged_out', False))
 
     return render(request, 'shop/login.html', {
-        'title': 'Login',
-        'subtitle': 'Authenticate with Hanko to continue',
+        'title': _('Login'),
+        'subtitle': _('Authenticate with Hanko to continue'),
         'hanko_api_url': os.environ.get('HANKO_API_URL', ''),
         'next_url': request.GET.get('next', '/'),
         'logged_out': logged_out,
@@ -163,7 +164,7 @@ def garage_create(request: HttpRequest) -> HttpResponse:
                 user=request.user,
                 role=GarageMembership.ROLE_OWNER,
             )
-            messages.success(request, 'Fleet created successfully.')
+            messages.success(request, _('Fleet created successfully.'))
             return redirect(reverse('shop-garage-detail', args=[garage.pk]))
     else:
         form = GarageCreateForm()
@@ -184,7 +185,7 @@ def garage_create(request: HttpRequest) -> HttpResponse:
 def garage_share(request: HttpRequest, pk: str) -> HttpResponse:
     garage = get_object_or_404(user_garages_queryset(request.user), pk=pk)
     if not user_can_manage_garage(request.user, garage):
-        messages.error(request, 'You do not have permission to share this fleet.')
+        messages.error(request, _('You do not have permission to share this fleet.'))
         return redirect(reverse('shop-garage-detail', args=[garage.pk]))
 
     if request.method == 'POST':
@@ -195,12 +196,12 @@ def garage_share(request: HttpRequest, pk: str) -> HttpResponse:
             message = form.cleaned_data['message']
 
             if garage.members.filter(email__iexact=invited_email).exists():
-                messages.info(request, f'{invited_email} is already a member of this fleet.')
+                messages.info(request, _('%(email)s is already a member of this fleet.') % {'email': invited_email})
             elif garage.invitations.filter(
                 invited_email__iexact=invited_email,
                 status=GarageInvitation.STATUS_PENDING,
             ).exists():
-                messages.info(request, f'A pending invitation already exists for {invited_email}.')
+                messages.info(request, _('A pending invitation already exists for %(email)s.') % {'email': invited_email})
             else:
                 invitation = GarageInvitation.objects.create(
                     garage=garage,
@@ -218,7 +219,7 @@ def garage_share(request: HttpRequest, pk: str) -> HttpResponse:
                         accept_base_url=invitation_base_url,
                         sender_email=getattr(settings, 'DEFAULT_FROM_EMAIL', None),
                     )
-                    messages.success(request, f'Invitation sent to {invited_email}.')
+                    messages.success(request, _('Invitation sent to %(email)s.') % {'email': invited_email})
                 except Exception:
                     messages.warning(
                         request,
@@ -253,7 +254,7 @@ def garage_share(request: HttpRequest, pk: str) -> HttpResponse:
 def garage_import(request: HttpRequest, pk: str) -> HttpResponse:
     garage = get_object_or_404(user_garages_queryset(request.user), pk=pk)
     if not user_can_manage_garage(request.user, garage):
-        messages.error(request, 'You do not have permission to import data into this fleet.')
+        messages.error(request, _('You do not have permission to import data into this fleet.'))
         return redirect(reverse('shop-garage-detail', args=[garage.pk]))
 
     if request.method == 'POST':
@@ -311,7 +312,7 @@ def garage_import(request: HttpRequest, pk: str) -> HttpResponse:
 def garage_export(request: HttpRequest, pk: str) -> HttpResponse:
     garage = get_object_or_404(user_garages_queryset(request.user), pk=pk)
     if not user_can_manage_garage(request.user, garage):
-        messages.error(request, 'You do not have permission to export data from this fleet.')
+        messages.error(request, _('You do not have permission to export data from this fleet.'))
         return redirect(reverse('shop-garage-detail', args=[garage.pk]))
 
     workbook = export_garage_to_excel(garage)
@@ -327,7 +328,7 @@ def garage_export(request: HttpRequest, pk: str) -> HttpResponse:
 def car_import(request: HttpRequest, pk: str) -> HttpResponse:
     car = get_object_or_404(user_cars_queryset(request.user).select_related('garage'), pk=pk)
     if not user_can_manage_garage(request.user, car.garage):
-        messages.error(request, 'You do not have permission to import data into this car.')
+        messages.error(request, _('You do not have permission to import data into this car.'))
         return redirect(reverse('shop-car-detail', args=[car.pk]))
 
     if request.method == 'POST':
@@ -393,13 +394,13 @@ def garage_invitation_accept(request: HttpRequest, token: str) -> HttpResponse:
     )
 
     if invitation.status != GarageInvitation.STATUS_PENDING:
-        messages.info(request, 'This invitation is no longer active.')
+        messages.info(request, _('This invitation is no longer active.'))
         return redirect(reverse('shop-index'))
 
     if invitation.is_expired:
         invitation.status = GarageInvitation.STATUS_EXPIRED
         invitation.save(update_fields=['status'])
-        messages.error(request, 'This invitation has expired.')
+        messages.error(request, _('This invitation has expired.'))
         return redirect(reverse('shop-index'))
 
     user_email = (request.user.email or '').strip().lower()
@@ -411,7 +412,7 @@ def garage_invitation_accept(request: HttpRequest, token: str) -> HttpResponse:
         )
         return redirect(reverse('shop-index'))
 
-    _, created = GarageMembership.objects.get_or_create(
+    membership, created = GarageMembership.objects.get_or_create(
         garage=invitation.garage,
         user=request.user,
         defaults={'role': GarageMembership.ROLE_MEMBER},
@@ -422,9 +423,9 @@ def garage_invitation_accept(request: HttpRequest, token: str) -> HttpResponse:
     invitation.save(update_fields=['status', 'accepted_at', 'accepted_by'])
 
     if created:
-        messages.success(request, f"You have joined '{invitation.garage.name}'.")
+        messages.success(request, _("You have joined '%(fleet)s'.") % {'fleet': invitation.garage.name})
     else:
-        messages.info(request, f"You are already a member of '{invitation.garage.name}'.")
+        messages.info(request, _("You are already a member of '%(fleet)s'.") % {'fleet': invitation.garage.name})
     return redirect(reverse('shop-garage-detail', args=[invitation.garage.pk]))
 
 
@@ -441,11 +442,11 @@ def car_delete(request: HttpRequest, pk: str) -> HttpResponse:
     """Delete a car from a garage the user can manage."""
     car = get_object_or_404(user_cars_queryset(request.user).select_related('garage'), pk=pk)
     if not user_can_manage_garage(request.user, car.garage):
-        messages.error(request, 'You do not have permission to delete this car.')
+        messages.error(request, _('You do not have permission to delete this car.'))
         return redirect(reverse('shop-car-list'))
 
     car.delete()
-    messages.success(request, 'Car deleted successfully.')
+    messages.success(request, _('Car deleted successfully.'))
     return redirect(reverse('shop-car-list'))
 
 
@@ -484,7 +485,7 @@ def car_create(request: HttpRequest) -> HttpResponse:
         form = CarCreateForm(request.POST, user=request.user)
         if form.is_valid():
             car = form.save()
-            messages.success(request, 'Car created successfully.')
+            messages.success(request, _('Car created successfully.'))
             return redirect(reverse('shop-car-detail', args=[car.pk]))
     else:
         form = CarCreateForm(user=request.user)
@@ -499,7 +500,7 @@ def car_update(request: HttpRequest, pk: str) -> HttpResponse:
         form = CarUpdateForm(request.POST, instance=car, user=request.user)
         if form.is_valid():
             form.save()
-            messages.success(request, 'Car updated successfully.')
+            messages.success(request, _('Car updated successfully.'))
             return redirect(reverse('shop-car-detail', args=[car.pk]))
     else:
         form = CarUpdateForm(instance=car, user=request.user)
@@ -515,7 +516,7 @@ def part_create(request: HttpRequest, car_pk: str) -> HttpResponse:
             part = form.save(commit=False)
             part.car = car
             part.save()
-            messages.success(request, 'Part status added successfully.')
+            messages.success(request, _('Part status added successfully.'))
             return redirect(reverse('shop-car-detail', args=[car.pk]))
     else:
         form = CarPartForm()
@@ -530,7 +531,7 @@ def part_update(request: HttpRequest, car_pk: str, pk: str) -> HttpResponse:
         form = CarPartForm(request.POST, instance=part)
         if form.is_valid():
             form.save()
-            messages.success(request, 'Part status updated successfully.')
+            messages.success(request, _('Part status updated successfully.'))
             return redirect(reverse('shop-car-detail', args=[car.pk]))
     else:
         form = CarPartForm(instance=part)
@@ -546,7 +547,7 @@ def workjob_create(request: HttpRequest, car_pk: str) -> HttpResponse:
             work_job = form.save(commit=False)
             work_job.car = car
             work_job.save()
-            messages.success(request, 'Planned work added successfully.')
+            messages.success(request, _('Planned work added successfully.'))
             return redirect(reverse('shop-car-detail', args=[car.pk]))
     else:
         form = WorkJobForm()
@@ -561,7 +562,7 @@ def workjob_update(request: HttpRequest, car_pk: str, pk: str) -> HttpResponse:
         form = WorkJobForm(request.POST, instance=work_job)
         if form.is_valid():
             form.save()
-            messages.success(request, 'Planned work updated successfully.')
+            messages.success(request, _('Planned work updated successfully.'))
             return redirect(reverse('shop-car-detail', args=[car.pk]))
     else:
         form = WorkJobForm(instance=work_job)
@@ -601,7 +602,7 @@ def report_create(request: HttpRequest, car_pk: str) -> HttpResponse:
             report.save()
             uploaded_files = form.cleaned_data.get('attachments', [])
             _persist_report_attachments(report, uploaded_files, form.cleaned_data.get('external_links', []))
-            messages.success(request, 'Maintenance report added successfully.')
+            messages.success(request, _('Maintenance report added successfully.'))
             return redirect(reverse('shop-car-detail', args=[car.pk]))
     else:
         form = ReportForm()
@@ -618,7 +619,7 @@ def report_update(request: HttpRequest, car_pk: str, pk: str) -> HttpResponse:
             form.save()
             uploaded_files = form.cleaned_data.get('attachments', [])
             _persist_report_attachments(report, uploaded_files, form.cleaned_data.get('external_links', []))
-            messages.success(request, 'Maintenance report updated successfully.')
+            messages.success(request, _('Maintenance report updated successfully.'))
             return redirect(reverse('shop-car-detail', args=[car.pk]))
     else:
         form = ReportForm(instance=report)
@@ -629,5 +630,5 @@ def logout_view(request: HttpRequest) -> HttpResponse:
     if request.method == 'POST':
         logout(request)
         request.session['logged_out'] = True
-        messages.success(request, 'Logged out successfully.')
+        messages.success(request, _('Logged out successfully.'))
     return redirect(reverse('shop-login'))
