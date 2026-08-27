@@ -36,6 +36,67 @@
     <div class="level">
       <div class="level-left">
         <div class="level-item">
+          <h2 class="title is-4">Part status tracker</h2>
+        </div>
+      </div>
+      <div class="level-right">
+        <div class="level-item">
+          <a class="button is-primary" href="{% url 'shop-part-create' car.pk %}">Add part status</a>
+        </div>
+      </div>
+    </div>
+    {% if parts %}
+      <div class="table-container">
+        <table class="table is-fullwidth is-striped is-hoverable is-bordered">
+          <thead>
+            <tr>
+              <th>Part</th>
+              <th>Status</th>
+              <th>Last updated</th>
+              <th>Notes</th>
+              <th>Change history</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for part in parts %}
+              <tr>
+                <td>{{ part.name }}</td>
+                <td>{{ part.get_status_display }}</td>
+                <td>{{ part.updated_at|date:'M j, Y g:i a' }}</td>
+                <td>{{ part.notes|default:'—'|linebreaksbr }}</td>
+                <td>
+                  {% with history=part.status_history.all|slice:':3' %}
+                    {% if history %}
+                      <ul>
+                        {% for event in history %}
+                          <li>{{ event.changed_at|date:'M j, Y g:i a' }}: {{ event.previous_status|default:'initial' }} → {{ event.new_status }}</li>
+                        {% endfor %}
+                      </ul>
+                    {% else %}
+                      —
+                    {% endif %}
+                  {% endwith %}
+                </td>
+                <td>
+                  <a class="button is-small is-link" href="{% url 'shop-part-update' car.pk part.pk %}">Edit</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="notification is-warning">
+        No parts tracked for this car yet.
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="box">
+    <div class="level">
+      <div class="level-left">
+        <div class="level-item">
           <h2 class="title is-4">Planned work and assignments</h2>
         </div>
       </div>
@@ -119,9 +180,9 @@
               <a class="button is-small is-link" href="{% url 'shop-report-update' car.pk report.pk %}">Edit</a>
             </div>
             <div class="message-body">
-              <p>{{ report.note|linebreaksbr|default:'No maintenance report details provided.' }}</p>
+              <p class="report-description">{{ report.note|linebreaksbr|default:'No maintenance report details provided.' }}</p>
               {% if report.additional_information %}
-                <p class="mt-2"><strong>Additional information:</strong> {{ report.additional_information|linebreaksbr }}</p>
+                <p class="report-description"><strong>Additional information:</strong> {{ report.additional_information|linebreaksbr }}</p>
               {% endif %}
               {% if report.assigned_to %}
                 <p><strong>Mechanic:</strong> {{ report.assigned_to }}</p>

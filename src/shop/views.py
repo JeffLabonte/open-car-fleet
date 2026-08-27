@@ -18,6 +18,7 @@ from shop.exporters import export_garage_to_excel
 from shop.forms import (
     CarImportForm,
     CarCreateForm,
+    CarPartForm,
     CarUpdateForm,
     GarageCreateForm,
     GarageImportForm,
@@ -27,6 +28,7 @@ from shop.forms import (
 )
 from shop.importers import ImportContext, ImportValidationError, JSONImporter
 from shop.middleware import hanko_login_required
+from shop.models.car import CarPart
 from shop.models.garage import GarageInvitation, GarageMembership
 from shop.models.job import WorkJob
 from shop.models.report import Report, ReportAttachment
@@ -449,13 +451,14 @@ def car_delete(request: HttpRequest, pk: str) -> HttpResponse:
 
 @hanko_login_required
 def car_detail(request: HttpRequest, pk: str) -> HttpResponse:
-    """Show a single car's full details, maintenance plan and history."""
+    """Show a single car's full details, maintenance plan and status ledger."""
     car = get_object_or_404(
-        user_cars_queryset(request.user).prefetch_related('work_jobs', 'reports'),
+        user_cars_queryset(request.user).prefetch_related('work_jobs', 'reports', 'parts__status_history'),
         pk=pk,
     )
     work_jobs = car.work_jobs.order_by('status', 'planned_date', 'created_at')
     reports = car.reports.order_by('-date_done', '-created_at')
+    parts = list(car.parts.order_by('name'))
     related_cars = (
         user_cars_queryset(request.user).filter(make=car.make, model=car.model)
         .exclude(pk=car.pk)
@@ -469,6 +472,7 @@ def car_detail(request: HttpRequest, pk: str) -> HttpResponse:
             'related_cars': related_cars,
             'work_jobs': work_jobs,
             'reports': reports,
+            'parts': parts,
         },
     )
 
@@ -500,6 +504,37 @@ def car_update(request: HttpRequest, pk: str) -> HttpResponse:
     else:
         form = CarUpdateForm(instance=car, user=request.user)
     return render(request, 'shop/car_form.html', {'form': form, 'is_create': False, 'car': car})
+
+
+@hanko_login_required
+def part_create(request: HttpRequest, car_pk: str) -> HttpResponse:
+    car = get_object_or_404(user_cars_queryset(request.user), pk=car_pk)
+    if request.method == 'POST':
+        form = CarPartForm(request.POST)
+        if form.is_valid():
+            part = form.save(commit=False)
+            part.car = car
+            part.save()
+            messages.success(request, 'Part status added successfully.')
+            return redirect(reverse('shop-car-detail', args=[car.pk]))
+    else:
+        form = CarPartForm()
+    return render(request, 'shop/part_form.html', {'form': form, 'is_create': True, 'car': car})
+
+
+@hanko_login_required
+def part_update(request: HttpRequest, car_pk: str, pk: str) -> HttpResponse:
+    car = get_object_or_404(user_cars_queryset(request.user), pk=car_pk)
+    part = get_object_or_404(CarPart, pk=pk, car=car)
+    if request.method == 'POST':
+        form = CarPartForm(request.POST, instance=part)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Part status updated successfully.')
+            return redirect(reverse('shop-car-detail', args=[car.pk]))
+    else:
+        form = CarPartForm(instance=part)
+    return render(request, 'shop/part_form.html', {'form': form, 'is_create': False, 'car': car, 'part': part})
 
 
 @hanko_login_required

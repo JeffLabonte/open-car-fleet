@@ -5,10 +5,27 @@ from typing import Any
 from django import forms
 from django.core.exceptions import ValidationError
 
-from shop.models.car import Car
+from shop.models.car import Car, CarPart
 
 
 VIN_BAD_CHARS = set('IOQ')
+
+
+class CarPartForm(forms.ModelForm):
+    class Meta:
+        model = CarPart
+        fields = ['name', 'status', 'notes']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'input', 'placeholder': 'Part or component name'}),
+            'status': forms.Select(attrs={'class': 'input'}),
+            'notes': forms.Textarea(attrs={'class': 'textarea', 'rows': 4, 'placeholder': 'Notes about this part, including inspection or replacement details'}),
+        }
+
+    def clean_name(self) -> str:
+        name = (self.cleaned_data.get('name') or '').strip()
+        if not name:
+            raise ValidationError('Part name is required.')
+        return name
 
 
 class CarBaseForm(forms.ModelForm):

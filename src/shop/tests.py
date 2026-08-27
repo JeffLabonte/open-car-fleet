@@ -27,7 +27,7 @@ from shop.exporters import export_garage_to_excel
 from shop.forms import CarCreateForm, CarUpdateForm, GarageCreateForm, ReportForm, WorkJobForm
 from shop.importers import ImportContext, JSONImporter
 from shop.middleware import HankoAuthenticationMiddleware
-from shop.models.car import Car
+from shop.models.car import Car, CarPart, CarPartStatusHistory
 from shop.models.garage import Garage, GarageInvitation, GarageMembership
 from shop.models.job import WorkJob
 from shop.models.report import Report, ReportAttachment
@@ -200,6 +200,49 @@ class HankoAuthenticationIntegrationTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'Cars', response.content)
+
+
+class CarPartStatusTrackingTests(TestCase):
+    def setUp(self) -> None:
+        self.garage = Garage.objects.create(name='North Garage')
+        self.car = Car.objects.create(
+            garage=self.garage,
+            make='Toyota',
+            model='Corolla',
+            colour='Blue',
+            year=2022,
+            vin='1HGBH41JXMN109186',
+            license_plate='ABC123',
+        )
+
+    def test_part_status_changes_are_recorded_with_timestamps(self):
+        part = CarPart.objects.create(
+            car=self.car,
+            name='Brake pads',
+            status=CarPart.STATUS_NEW,
+            notes='Initial issue spotted on inspection.',
+        )
+
+        self.assertEqual(part.status, CarPart.STATUS_NEW)
+        self.assertEqual(part.status_history.count(), 1)
+
+        part.update_status(CarPart.STATUS_ORDERED, note='Ordered replacement set from supplier.')
+        part.refresh_from_db()
+
+        self.assertEqual(part.status, CarPart.STATUS_ORDERED)
+        self.assertEqual(part.status_history.count(), 2)
+
+        first_event = part.status_history.order_by('changed_at').first()
+        second_event = part.status_history.order_by('changed_at').last()
+
+        self.assertEqual(first_event.previous_status, '')
+        self.assertEqual(first_event.new_status, CarPart.STATUS_NEW)
+        self.assertIsNotNone(first_event.changed_at)
+
+        self.assertEqual(second_event.previous_status, CarPart.STATUS_NEW)
+        self.assertEqual(second_event.new_status, CarPart.STATUS_ORDERED)
+        self.assertEqual(second_event.note, 'Ordered replacement set from supplier.')
+        self.assertIsNotNone(second_event.changed_at)
 
 
 class GarageSharingTests(TestCase):

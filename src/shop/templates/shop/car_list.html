@@ -28,14 +28,14 @@
               <td>
                 <a href="{% url 'shop-car-detail' car.pk %}">{{ car.usual_name|default:car.make }}</a>
                 <div class="is-size-7 has-text-grey">
-                  <span style="color:#f8fafc; font-weight:600;">Plate:</span>
-                  <strong style="color:#dbeafe;">{{ car.license_plate|default:"—" }}</strong>
-                  <span style="color:#cbd5e1;"> · </span>
-                  <span style="color:#f8fafc; font-weight:600;">VIN:</span>
-                  <span style="color:#dcfce7;">{{ car.vin|default:"—" }}</span>
-                  <span style="color:#cbd5e1;"> · </span>
-                  <span style="color:#f8fafc; font-weight:600;">Colour:</span>
-                  <span style="color:#fed7aa;">{{ car.colour|default:"—" }}</span>
+                  <span class="has-text-weight-semibold">Plate:</span>
+                  <strong>{{ car.license_plate|default:"—" }}</strong>
+                  <span> · </span>
+                  <span class="has-text-weight-semibold">VIN:</span>
+                  <span>{{ car.vin|default:"—" }}</span>
+                  <span> · </span>
+                  <span class="has-text-weight-semibold">Colour:</span>
+                  <span>{{ car.colour|default:"—" }}</span>
                 </div>
               </td>
               <td>{{ car.make }}</td>
