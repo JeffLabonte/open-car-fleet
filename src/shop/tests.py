@@ -69,6 +69,7 @@ class HankoAuthenticationIntegrationTests(TestCase):
         self.assertEqual(user.hanko_id, 'hanko-user-123')
         self.assertEqual(user.display_name, 'Test Driver')
         self.assertTrue(user.is_active)
+        self.assertFalse(user.garages.exists())
 
         self.client.logout()
         self.client.session['hanko_session_token'] = 'session-token-123'
