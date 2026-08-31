@@ -62,4 +62,4 @@ db-snapshot: db-up db-wait
 	echo "Database snapshot written to $$outfile"
 
 translations: install
-	$(POETRY) run python src/manage.py makemessages -l en_CA -l fr_CA
+	$(POETRY)T rue python src/manage.py makemessages -l en_CA -l fr_CA

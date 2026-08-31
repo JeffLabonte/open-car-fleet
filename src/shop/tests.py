@@ -141,6 +141,38 @@ class HankoAuthenticationIntegrationTests(TestCase):
         self.assertEqual(first_login_page.context['logged_out'], True)
         self.assertEqual(second_login_page.context['logged_out'], False)
 
+    @override_settings(
+        ALLOWED_HOSTS=['xps-server.kanyu-bluegill.ts.net'],
+        CSRF_TRUSTED_ORIGINS=['https://xps-server.kanyu-bluegill.ts.net'],
+    )
+    def test_logout_with_trusted_origin_succeeds(self):
+        from django.test import Client
+        from django.middleware.csrf import get_token
+        client = Client(enforce_csrf_checks=True)
+        user = ShopUser.objects.create_user(username='csrf-user', email='csrf@example.com', password='pass1234')
+        client.force_login(user)
+
+        login_resp = client.get(reverse('shop-login'), HTTP_HOST='xps-server.kanyu-bluegill.ts.net')
+        csrf_token = login_resp.cookies['csrftoken'].value if 'csrftoken' in login_resp.cookies else get_token(login_resp.wsgi_request)
+
+        # Untrusted origin fails CSRF check with 403
+        untrusted_resp = client.post(
+            reverse('shop-logout'),
+            {'csrfmiddlewaretoken': csrf_token},
+            HTTP_ORIGIN='https://untrusted-domain.com',
+            HTTP_HOST='xps-server.kanyu-bluegill.ts.net',
+        )
+        self.assertEqual(untrusted_resp.status_code, 403)
+
+        # Trusted origin succeeds with 302
+        trusted_resp = client.post(
+            reverse('shop-logout'),
+            {'csrfmiddlewaretoken': csrf_token},
+            HTTP_ORIGIN='https://xps-server.kanyu-bluegill.ts.net',
+            HTTP_HOST='xps-server.kanyu-bluegill.ts.net',
+        )
+        self.assertEqual(trusted_resp.status_code, 302)
+
     def test_theme_preference_sets_cookie_and_redirects(self):
         response = self.client.get(
             reverse('shop-theme', kwargs={'theme': 'dark'}),
