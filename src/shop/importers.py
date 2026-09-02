@@ -72,16 +72,18 @@ class CSVImporter:
         if not raw_content or not raw_content.strip():
             return []
 
+        dialect = self._detect_dialect(raw_content[:4096])
         try:
-            sample = raw_content[:4096]
-            reader = csv.DictReader(io.StringIO(raw_content), dialect=self._detect_dialect(sample))
-            if reader.fieldnames is None:
-                return []
-
-            records = (self._clean_csv_row(row) for row in reader)
-            return [record for record in records if any(record.values())]
+            reader = csv.DictReader(io.StringIO(raw_content), dialect=dialect)
+            rows = list(reader)
         except csv.Error as exc:
             raise ImportValidationError(f"Invalid CSV format in {source_name}: {exc}") from exc
+
+        if reader.fieldnames is None:
+            return []
+
+        records = [self._clean_csv_row(row) for row in rows]
+        return [record for record in records if any(record.values())]
 
     @staticmethod
     def _detect_dialect(sample: str) -> type[csv.Dialect]:
