@@ -25,7 +25,7 @@ from openpyxl import load_workbook
 from shop import views
 from shop.exporters import export_garage_to_excel
 from shop.forms import CarCreateForm, CarUpdateForm, GarageCreateForm, ReportForm, WorkJobForm
-from shop.importers import ImportContext, JSONImporter
+from shop.importers import CSVImporter, ImportContext
 from shop.middleware import HankoAuthenticationMiddleware
 from shop.models.car import Car, CarPart, CarPartStatusHistory
 from shop.models.garage import Garage, GarageInvitation, GarageMembership, KnownShop, KnownShopProof
@@ -551,7 +551,7 @@ class ColourFieldTests(TestCase):
         self.assertEqual(form.fields['colour'].label, 'Colour')
 
     def test_importer_reads_colour_key_from_record(self):
-        importer = JSONImporter()
+        importer = CSVImporter()
         result = importer.import_records(
             Car,
             [{
@@ -677,7 +677,7 @@ class ReportAttachmentTests(TestCase):
         self.assertContains(response, 'https://drive.google.com/file/d/456/view')
 
 
-class JSONImporterTests(TestCase):
+class CSVImporterTests(TestCase):
     def setUp(self) -> None:
         self.user = ShopUser.objects.create_user(
             username='import-owner',
@@ -690,7 +690,7 @@ class JSONImporterTests(TestCase):
             user=self.user,
             role=GarageMembership.ROLE_OWNER,
         )
-        self.importer = JSONImporter()
+        self.importer = CSVImporter()
 
     def test_car_dry_run_requires_target_garage_and_does_not_persist(self):
         result = self.importer.import_records(
@@ -714,7 +714,7 @@ class JSONImporterTests(TestCase):
                 'job_name': 'Brake service',
                 'date_done': '2026-08-01',
                 'documents': 'invoice.pdf\nchecklist.pdf',
-                'photos': ['before.jpg', 'after.jpg'],
+                'photos': 'before.jpg\nafter.jpg',
                 'mileage': '12345',
             }],
             context=ImportContext(garage=self.garage),
@@ -739,7 +739,7 @@ class JSONImporterTests(TestCase):
         self.assertIn('Car not found', result.errors[0].message)
 
 
-class ImportJsonCommandTests(TestCase):
+class ImportCsvCommandTests(TestCase):
     def setUp(self) -> None:
         self.user = ShopUser.objects.create_user(
             username='command-owner',
@@ -754,14 +754,14 @@ class ImportJsonCommandTests(TestCase):
         )
 
     def test_car_import_command_dry_run_validates_without_persisting(self):
-        with tempfile.NamedTemporaryFile('w', suffix='.json', delete=False) as handle:
-            json.dump([{'make': 'Mazda', 'model': '3', 'vin': 'JM1BK323171512345'}], handle)
+        with tempfile.NamedTemporaryFile('w', suffix='.csv', delete=False) as handle:
+            handle.write('make,model,vin\nMazda,3,JM1BK323171512345\n')
             temp_path = handle.name
 
         output = StringIO()
         try:
             call_command(
-                'import_json',
+                'import_csv',
                 'Car',
                 temp_path,
                 '--garage',
@@ -1031,9 +1031,9 @@ class GarageImportViewTests(TestCase):
     def test_manager_can_dry_run_car_import_from_upload(self):
         self.client.force_login(self.owner)
         upload = SimpleUploadedFile(
-            'cars.json',
-            json.dumps([{'make': 'Subaru', 'model': 'Outback', 'vin': '4S4BSENC0J3351234'}]).encode('utf-8'),
-            content_type='application/json',
+            'cars.csv',
+            b'make,model,vin\nSubaru,Outback,4S4BSENC0J3351234',
+            content_type='text/csv',
         )
 
         response = self.client.post(
@@ -1053,9 +1053,9 @@ class GarageImportViewTests(TestCase):
     def test_manager_can_import_cars_into_selected_garage(self):
         self.client.force_login(self.owner)
         upload = SimpleUploadedFile(
-            'cars.json',
-            json.dumps([{'make': 'Ford', 'model': 'Focus', 'vin': '1FAHP3F28CL512345'}]).encode('utf-8'),
-            content_type='application/json',
+            'cars.csv',
+            b'make,model,vin\nFord,Focus,1FAHP3F28CL512345',
+            content_type='text/csv',
         )
 
         response = self.client.post(
@@ -1113,9 +1113,9 @@ class CarImportViewTests(TestCase):
     def test_manager_can_dry_run_workjob_import_for_selected_car(self):
         self.client.force_login(self.owner)
         upload = SimpleUploadedFile(
-            'workjobs.json',
-            json.dumps([{'title': 'Oil change', 'planned_date': '2026-08-02'}]).encode('utf-8'),
-            content_type='application/json',
+            'workjobs.csv',
+            b'title,planned_date\nOil change,2026-08-02',
+            content_type='text/csv',
         )
 
         response = self.client.post(
@@ -1136,9 +1136,9 @@ class CarImportViewTests(TestCase):
     def test_manager_can_import_report_for_selected_car_without_car_field(self):
         self.client.force_login(self.owner)
         upload = SimpleUploadedFile(
-            'reports.json',
-            json.dumps([{'job_name': 'Brake service', 'date_done': '2026-08-03', 'note': 'Pads replaced'}]).encode('utf-8'),
-            content_type='application/json',
+            'reports.csv',
+            b'job_name,date_done,note\nBrake service,2026-08-03,Pads replaced',
+            content_type='text/csv',
         )
 
         response = self.client.post(

@@ -11,26 +11,26 @@ It helps individuals and shared garages organize vehicles, plan maintenance work
 - Track cars with key identity and maintenance context.
 - Plan and assign work jobs to mechanics or known shops.
 - Record maintenance reports with dates, mileage, notes, and attachments.
-- Import normalized JSON datasets and export garage backups to Excel.
+- Import normalized CSV datasets and export garage backups to Excel.
 
 ## Command examples using the manage commands
 
-Import cars from normalized JSON into a target garage:
+Import cars from normalized CSV into a target garage:
 
 ```bash
-poetry run python ./src/manage.py import_json Car src/imports/cars.json --garage <garage-uuid>
+poetry run python ./src/manage.py import_csv Car src/imports/cars.csv --garage <garage-uuid>
 ```
 
-Import work jobs from normalized JSON:
+Import work jobs from normalized CSV:
 
 ```bash
-poetry run python ./src/manage.py import_json WorkJob src/imports/workjobs.json
+poetry run python ./src/manage.py import_csv WorkJob src/imports/workjobs.csv
 ```
 
-Import reports from normalized JSON:
+Import reports from normalized CSV:
 
 ```bash
-poetry run python ./src/manage.py import_json Report src/imports/reports_FMG3809.json
+poetry run python ./src/manage.py import_csv Report src/imports/reports_FMG3809.csv
 ```
 
 Export one garage to an Excel backup workbook:
@@ -45,14 +45,14 @@ Export to a specific output path:
 poetry run python ./src/manage.py export_garage <garage-uuid> --output ./backups/my-garage.xlsx
 ```
 
-## JSON import workflow
+## CSV import workflow
 
-- The importer currently supports normalized UTF-8 JSON for `Car`, `WorkJob`, and `Report`.
+- The importer supports normalized UTF-8 CSV files for `Car`, `WorkJob`, and `Report`.
+- Automatic dialect detection via Python's `csv.Sniffer` supports comma, semicolon, tab, or pipe delimited CSV files.
 - Car imports require a single target garage. In the web UI, use the garage detail page and choose `Import cars`; in the CLI, pass `--garage <garage-uuid>`.
-- Work jobs and reports are imported from the selected car page in the web UI. In that flow, the selected car is applied automatically, so the JSON file can omit `car`.
+- Work jobs and reports are imported from the selected car page in the web UI. In that flow, the selected car is applied automatically, so the CSV file can omit `car`.
 - In the CLI or any non-car-scoped flow, the `car` field can reference an existing car by UUID, VIN, license plate, or usual name.
-- List fields such as `required_items`, `documents`, and `photos` accept either JSON arrays or newline-delimited strings.
-- CSV support is not implemented yet.
+- List fields such as `required_items`, `documents`, and `photos` accept newline-delimited strings in quoted CSV cells.
 
 ## Excel backup export workflow
 
@@ -61,13 +61,13 @@ poetry run python ./src/manage.py export_garage <garage-uuid> --output ./backups
 - The default workbook includes `meta`, `garage`, `memberships`, `cars_import`, `workjobs_import`, and `reports_import` sheets.
 - Invitation history is intentionally excluded from the default export.
 
-## Normalized JSON schemas
+## Normalized CSV schemas
 
-Each import file can be either a single JSON object or an array of JSON objects. Arrays are the normal bulk-import case.
+Each import file contains a header row with field names, followed by data rows.
 
 ### Car import schema
 
-Use this from a garage page in the web UI or with `import_json Car ... --garage <garage-uuid>` in the CLI.
+Use this from a garage page in the web UI or with `import_csv Car ... --garage <garage-uuid>` in the CLI.
 
 Required fields:
 - `make`: string
@@ -75,6 +75,7 @@ Required fields:
 
 Optional fields:
 - `usual_name`: string
+- `colour`: string
 - `year`: integer
 - `mileage`: integer
 - `vin`: string, 11 to 17 chars, no `I`, `O`, or `Q`
@@ -82,32 +83,19 @@ Optional fields:
 
 Example:
 
-```json
-[
-	{
-		"usual_name": "Daily Driver",
-		"make": "Toyota",
-		"model": "Corolla",
-		"year": 2018,
-		"mileage": 92450,
-		"vin": "2T1BURHE5JC512345",
-		"license_plate": "ABC 123"
-	},
-	{
-		"make": "Mazda",
-		"model": "CX-5",
-		"year": 2021
-	}
-]
+```csv
+usual_name,make,model,colour,year,mileage,vin,license_plate
+Daily Driver,Toyota,Corolla,,2018,92450,2T1BURHE5JC512345,ABC 123
+,Mazda,CX-5,,2021,,,
 ```
 
 Notes:
-- Do not include `garage` in the JSON for the web flow. The selected garage is applied by the UI.
-- The CLI also ignores any `garage` field in the JSON and uses `--garage` instead.
+- Do not include `garage` in the CSV for the web flow. The selected garage is applied by the UI.
+- The CLI also ignores any `garage` field in the CSV and uses `--garage` instead.
 
 ### Work job import schema
 
-Use this from a car page in the web UI or with `import_json WorkJob ...` in the CLI.
+Use this from a car page in the web UI or with `import_csv WorkJob ...` in the CLI.
 
 Required fields:
 - `title`: string
@@ -120,38 +108,25 @@ Optional fields:
 - `planned_date`: `YYYY-MM-DD`, `YYYY-MM`, or `YYYY`
 - `is_done`: boolean, or `true`/`false`-like string values
 - `done_date`: `YYYY-MM-DD`, `YYYY-MM`, or `YYYY`
-- `required_items`: JSON array of strings or newline-delimited string
+- `required_items`: newline-delimited string in quoted CSV cell
 - `urgency`: `ahead` or `soon`
 - `status`: `pending`, `in_progress`, `done`, or `cancelled`
 - `notes`: string
 
 Example for car-scoped web import:
 
-```json
-[
-	{
-		"title": "Oil change",
-		"maintenance_type": "Routine",
-		"planned_date": "2026-08-15",
-		"required_items": ["5W-30 oil", "Oil filter"],
-		"urgency": "soon",
-		"status": "pending",
-		"notes": "Use OEM filter."
-	}
-]
+```csv
+title,maintenance_type,planned_date,required_items,urgency,status,notes
+Oil change,Routine,2026-08-15,"5W-30 oil
+Oil filter",soon,pending,Use OEM filter.
 ```
 
 Example for CLI or non-car-scoped import:
 
-```json
-[
-	{
-		"car": "2T1BURHE5JC512345",
-		"title": "Brake inspection",
-		"planned_date": "2026-09",
-		"required_items": "Brake cleaner\nShop towels"
-	}
-]
+```csv
+car,title,planned_date,required_items
+2T1BURHE5JC512345,Brake inspection,2026-09,"Brake cleaner
+Shop towels"
 ```
 
 Notes:
@@ -160,7 +135,7 @@ Notes:
 
 ### Report import schema
 
-Use this from a car page in the web UI or with `import_json Report ...` in the CLI.
+Use this from a car page in the web UI or with `import_csv Report ...` in the CLI.
 
 Required fields:
 - `job_name`: string
@@ -171,36 +146,23 @@ Optional fields:
 - `mileage`: integer
 - `assigned_to`: mechanic username, mechanic email, or user id
 - `assigned_shop`: known shop name, known shop email, or shop id
-- `documents`: JSON array of strings or newline-delimited string
-- `photos`: JSON array of strings or newline-delimited string
+- `documents`: newline-delimited string in quoted CSV cell
+- `photos`: newline-delimited string in quoted CSV cell
 - `note`: string
 
 Example for car-scoped web import:
 
-```json
-[
-	{
-		"job_name": "Front brake service",
-		"date_done": "2026-08-03",
-		"mileage": 93120,
-		"documents": ["invoice-2026-08-03.pdf"],
-		"photos": "before.jpg\nafter.jpg",
-		"note": "Pads and rotors replaced."
-	}
-]
+```csv
+job_name,date_done,mileage,documents,photos,note
+Front brake service,2026-08-03,93120,invoice-2026-08-03.pdf,"before.jpg
+after.jpg",Pads and rotors replaced.
 ```
 
 Example for CLI or non-car-scoped import:
 
-```json
-[
-	{
-		"car": "Daily Driver",
-		"job_name": "Battery replacement",
-		"date_done": "2026-07-01",
-		"note": "Installed AGM battery."
-	}
-]
+```csv
+car,job_name,date_done,note
+Daily Driver,Battery replacement,2026-07-01,Installed AGM battery.
 ```
 
 Notes:

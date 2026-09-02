@@ -1,4 +1,5 @@
-import json
+import csv
+import io
 import re
 from dataclasses import dataclass, field
 from datetime import date
@@ -48,40 +49,65 @@ class ImportContext:
     car: Car | None = None
 
 
-class JSONImporter:
+class CSVImporter:
     model_map = {
         "car": Car,
         "workjob": WorkJob,
         "report": Report,
     }
 
-    def parse_json_file(self, json_file: str | Path) -> list[dict[str, Any]]:
-        path = Path(json_file)
+    def parse_csv_file(self, csv_file: str | Path) -> list[dict[str, Any]]:
+        path = Path(csv_file)
         if not path.exists():
-            raise ImportValidationError(f"JSON file not found: {path}")
+            raise ImportValidationError(f"CSV file not found: {path}")
 
         try:
-            raw_content = path.read_text(encoding="utf-8")
+            raw_content = path.read_text(encoding="utf-8-sig")
         except UnicodeDecodeError as exc:
-            raise ImportValidationError(f"Unable to decode JSON file '{path.name}' as UTF-8.") from exc
+            raise ImportValidationError(f"Unable to decode CSV file '{path.name}' as UTF-8.") from exc
 
-        return self.parse_json_content(raw_content, source_name=path.name)
+        return self.parse_csv_content(raw_content, source_name=path.name)
 
-    def parse_json_content(self, raw_content: str, *, source_name: str = "JSON") -> list[dict[str, Any]]:
+    def parse_csv_content(self, raw_content: str, *, source_name: str = "CSV") -> list[dict[str, Any]]:
+        if not raw_content or not raw_content.strip():
+            return []
+
         try:
-            raw_data = json.loads(raw_content)
-        except json.JSONDecodeError as exc:
-            raise ImportValidationError(f"Invalid JSON in {source_name}: {exc}") from exc
+            sample = raw_content[:4096]
+            try:
+                dialect = csv.Sniffer().sniff(sample)
+            except csv.Error:
+                dialect = csv.excel
 
-        return self._normalize_records(raw_data)
+            reader = csv.DictReader(io.StringIO(raw_content), dialect=dialect)
+            if reader.fieldnames is None:
+                return []
 
-    def parse_json_bytes(self, raw_bytes: bytes, *, source_name: str = "upload") -> list[dict[str, Any]]:
+            records: list[dict[str, Any]] = []
+            for row in reader:
+                record: dict[str, Any] = {}
+                for key, val in row.items():
+                    if key is None:
+                        continue
+                    cleaned_key = key.strip()
+                    if not cleaned_key:
+                        continue
+                    record[cleaned_key] = val.strip() if val is not None else None
+
+                if any(v for v in record.values() if v is not None and v != ""):
+                    records.append(record)
+
+            return records
+        except csv.Error as exc:
+            raise ImportValidationError(f"Invalid CSV format in {source_name}: {exc}") from exc
+
+    def parse_csv_bytes(self, raw_bytes: bytes, *, source_name: str = "upload") -> list[dict[str, Any]]:
         try:
-            raw_content = raw_bytes.decode("utf-8")
+            raw_content = raw_bytes.decode("utf-8-sig")
         except UnicodeDecodeError as exc:
             raise ImportValidationError(f"Unable to decode {source_name} as UTF-8.") from exc
 
-        return self.parse_json_content(raw_content, source_name=source_name)
+        return self.parse_csv_content(raw_content, source_name=source_name)
 
     def import_records(
         self,
@@ -150,13 +176,6 @@ class JSONImporter:
             )
         return model
 
-    def _normalize_records(self, raw_data: Any) -> list[dict[str, Any]]:
-        if isinstance(raw_data, dict):
-            return [raw_data]
-        if isinstance(raw_data, list):
-            return raw_data
-        raise ImportValidationError("JSON must be an object or an array of objects.")
-
     def _prepare_record(
         self,
         model: type[models.Model],
@@ -222,24 +241,34 @@ class JSONImporter:
         record: dict[str, Any],
         context: ImportContext,
     ) -> tuple[dict[str, Any], list[str]]:
+        job_name = self._clean_optional_text(record.get("job_name")) or self._clean_optional_text(record.get("description"))
+        if not job_name:
+            raise ImportValidationError("Field 'job_name' is required.")
+
+        date_done = self._parse_date_value(record.get("date_done")) or self._parse_date_value(record.get("date"))
+        if date_done is None:
+            raise ImportValidationError("Field 'date_done' is required.")
+
         data = {
             "car": self._resolve_car(record.get("car"), context),
             "mileage": self._coerce_optional_int(record.get("mileage"), field_name="mileage"),
-            "job_name": self._require_text(record, "job_name"),
+            "job_name": job_name,
             "assigned_to": self._resolve_mechanic(record.get("assigned_to")),
             "assigned_shop": self._resolve_shop(record.get("assigned_shop")),
-            "date_done": self._require_date(record, "date_done"),
+            "date_done": date_done,
             "documents": self._coerce_string_list(record.get("documents"), field_name="documents"),
             "photos": self._coerce_string_list(record.get("photos"), field_name="photos"),
             "note": self._clean_optional_text(record.get("note")) or "",
             "additional_information": (
                 self._clean_optional_text(record.get("additional_information"))
                 or self._clean_optional_text(record.get("extra_information"))
+                or self._clean_optional_text(record.get("details"))
                 or ""
             ),
         }
         self._validate_assignment_target(data["assigned_to"], data["assigned_shop"])
-        warnings = self._ignored_field_warnings(record, set(data.keys()))
+        used_keys = set(data.keys()) | {"description", "date", "details", "extra_information", "related_date", "completed"}
+        warnings = self._ignored_field_warnings(record, used_keys)
         return data, warnings
 
     def _resolve_car(self, raw_value: Any, context: ImportContext) -> Car:
