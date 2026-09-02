@@ -1,6 +1,7 @@
 from typing import Any
 
 from django import forms
+from django.utils.translation import gettext_lazy as _
 
 from shop.forms.base import AssignedToShopFormMixin, LineListFieldMixin
 from shop.models.report import Report
@@ -39,26 +40,26 @@ class ReportForm(LineListFieldMixin, AssignedToShopFormMixin, forms.ModelForm):
             'accept': 'image/*,video/*,.pdf,.doc,.docx',
             'capture': 'environment',
         }),
-        help_text='Upload one or more photos, videos, or documents.',
+        help_text=_('Upload one or more photos, videos, or documents.'),
     )
     external_links = forms.CharField(
         required=False,
         widget=forms.Textarea(attrs={
             'class': 'textarea',
             'rows': 3,
-            'placeholder': 'One external link per line (OneDrive, Google Drive, etc.)',
+            'placeholder': _('One external link per line (OneDrive, Google Drive, etc.)'),
         }),
-        help_text='Add one external link per line. OneDrive and Google Drive share links work well.',
+        help_text=_('Add one external link per line. OneDrive and Google Drive share links work well.'),
     )
     documents = forms.CharField(
         required=False,
-        widget=forms.Textarea(attrs={'class': 'textarea', 'rows': 3, 'placeholder': 'One document URL or path per line'}),
-        help_text='Add one document URL or path per line.',
+        widget=forms.Textarea(attrs={'class': 'textarea', 'rows': 3, 'placeholder': _('One document URL or path per line')}),
+        help_text=_('Add one document URL or path per line.'),
     )
     photos = forms.CharField(
         required=False,
-        widget=forms.Textarea(attrs={'class': 'textarea', 'rows': 3, 'placeholder': 'One photo URL or path per line'}),
-        help_text='Add one photo URL or path per line.',
+        widget=forms.Textarea(attrs={'class': 'textarea', 'rows': 3, 'placeholder': _('One photo URL or path per line')}),
+        help_text=_('Add one photo URL or path per line.'),
     )
 
     class Meta:
@@ -75,19 +76,19 @@ class ReportForm(LineListFieldMixin, AssignedToShopFormMixin, forms.ModelForm):
             'additional_information',
         ]
         widgets = {
-            'mileage': forms.NumberInput(attrs={'class': 'input', 'placeholder': 'Mileage at completion'}),
-            'job_name': forms.TextInput(attrs={'class': 'input', 'placeholder': 'Work performed'}),
+            'mileage': forms.NumberInput(attrs={'class': 'input', 'placeholder': _('Mileage at completion')}),
+            'job_name': forms.TextInput(attrs={'class': 'input', 'placeholder': _('Work performed')}),
             'assigned_to': forms.Select(attrs={'class': 'input'}),
             'assigned_shop': forms.Select(attrs={'class': 'input'}),
             'date_done': forms.DateInput(attrs={'class': 'input', 'type': 'date'}),
-            'note': forms.Textarea(attrs={'class': 'textarea', 'rows': 6, 'placeholder': 'Write the maintenance report details here'}),
+            'note': forms.Textarea(attrs={'class': 'textarea', 'rows': 6, 'placeholder': _('Write the maintenance report details here')}),
             'additional_information': forms.Textarea(
-                attrs={'class': 'textarea', 'rows': 3, 'placeholder': 'Extra information (parts, warranty notes, follow-up, etc.)'}
+                attrs={'class': 'textarea', 'rows': 3, 'placeholder': _('Extra information (parts, warranty notes, follow-up, etc.)')}
             ),
         }
         labels = {
-            'note': 'Maintenance report',
-            'additional_information': 'Additional information',
+            'note': _('Maintenance report'),
+            'additional_information': _('Additional information'),
         }
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:

@@ -98,7 +98,7 @@ class ReportAttachment(models.Model):
         if self.source_type == self.SOURCE_EXTERNAL and not self.kind:
             self.kind = self.KIND_LINK
         if self.source_type == self.SOURCE_UPLOAD and self.file and not self.mime_type:
-            self.mime_type = self.file.content_type or ''
+            self.mime_type = getattr(self.file, 'content_type', '') or ''
         if self.source_type == self.SOURCE_UPLOAD and self.file:
             if self.mime_type.startswith('image/'):
                 self.kind = self.KIND_IMAGE

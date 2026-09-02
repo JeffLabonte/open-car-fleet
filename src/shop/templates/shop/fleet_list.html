@@ -1,0 +1,72 @@
+{% extends 'shop/index.html' %}
+{% load i18n %}
+
+{% block content %}
+  <div class="page-header">
+    <div>
+      <h1 class="title page-title">{% translate 'My Fleets' %}</h1>
+      <p class="page-subtitle">{% translate 'Keep an eye on the spaces and vehicles you manage.' %}</p>
+    </div>
+    <div class="page-actions">
+      <a class="button is-primary" href="{% url 'shop-garage-create' %}">{% translate 'Create fleet' %}</a>
+    </div>
+  </div>
+
+  {% if garages %}
+    <div class="columns is-multiline">
+      {% for garage in garages %}
+        <div class="column is-half">
+          <div class="box content-card">
+            <h2 class="title is-4 mb-3">
+              <a href="{% url 'shop-garage-detail' garage.pk %}">{{ garage.name }}</a>
+            </h2>
+            {% if garage.description %}
+              <p class="mb-3">{{ garage.description }}</p>
+            {% endif %}
+            <div class="buttons are-small mt-4">
+              <span class="button is-light is-static">{{ garage.cars.count }} {% translate 'cars' %}</span>
+              <span class="button is-light is-static">{% translate 'Created' %} {{ garage.created_at|date:'M j, Y' }}</span>
+            </div>
+            {% with cars=garage.cars.all %}
+              {% if cars %}
+                <div class="table-container mt-4">
+                  <table class="table is-fullwidth is-striped is-hoverable">
+                    <thead>
+                      <tr>
+                        <th>{% translate 'Name' %}</th>
+                        <th>{% translate 'Make' %}</th>
+                        <th>{% translate 'Model' %}</th>
+                        <th>{% translate 'Year' %}</th>
+                        <th>{% translate 'VIN' %}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for car in cars %}
+                        <tr>
+                          <td><a href="{% url 'shop-car-detail' car.pk %}">{{ car.usual_name|default:car.make }}</a></td>
+                          <td>{{ car.make }}</td>
+                          <td>{{ car.model }}</td>
+                          <td>{{ car.year|default:'-' }}</td>
+                          <td>{{ car.vin|default:'-' }}</td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              {% endif %}
+            {% endwith %}
+            {% if garage.pk in manageable_garage_ids %}
+              <div class="mt-3">
+                <a class="button is-small is-success is-light" href="{% url 'shop-garage-export' garage.pk %}">{% translate 'Export to Excel' %}</a>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      {% translate 'You are not a member of any fleet yet.' %}
+    </div>
+  {% endif %}
+{% endblock %}

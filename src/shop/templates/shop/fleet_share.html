@@ -1,11 +1,12 @@
 {% extends 'shop/index.html' %}
+{% load i18n %}
 
 {% block content %}
   <div class="columns">
     <div class="column is-two-thirds">
       <div class="box">
-        <h1 class="title">Share Fleet: {{ garage.name }}</h1>
-        <p class="mb-4">Invite a member by email. They must sign in with that same email to accept.</p>
+        <h1 class="title">{% translate 'Share Fleet:' %} {{ garage.name }}</h1>
+        <p class="mb-4">{% translate 'Invite a member by email. They must sign in with that same email to accept.' %}</p>
 
         <form method="post" novalidate>
           {% csrf_token %}
@@ -32,10 +33,10 @@
 
           <div class="field is-grouped">
             <div class="control">
-              <button class="button is-primary" type="submit">Send invitation</button>
+              <button class="button is-primary" type="submit">{% translate 'Send invitation' %}</button>
             </div>
             <div class="control">
-              <a class="button is-light" href="{% url 'shop-garage-detail' garage.pk %}">Back</a>
+              <a class="button is-light" href="{% url 'shop-garage-detail' garage.pk %}">{% translate 'Back' %}</a>
             </div>
           </div>
         </form>
@@ -44,21 +45,21 @@
 
     <div class="column">
       <div class="box">
-        <h2 class="title is-5">Pending invitations</h2>
+        <h2 class="title is-5">{% translate 'Pending invitations' %}</h2>
         {% if pending_invitations %}
           <ul>
             {% for invite in pending_invitations %}
               <li class="mb-3">
                 <strong>{{ invite.invited_email }}</strong><br>
-                <small>Sent {{ invite.created_at|date:'F j, Y, g:i a' }}</small><br>
+                <small>{% translate 'Sent' %} {{ invite.created_at|date:'F j, Y, g:i a' }}</small><br>
                 {% if invite.expires_at %}
-                  <small>Expires {{ invite.expires_at|date:'F j, Y, g:i a' }}</small>
+                  <small>{% translate 'Expires' %} {{ invite.expires_at|date:'F j, Y, g:i a' }}</small>
                 {% endif %}
               </li>
             {% endfor %}
           </ul>
         {% else %}
-          <p>No pending invitations.</p>
+          <p>{% translate 'No pending invitations.' %}</p>
         {% endif %}
       </div>
     </div>

@@ -1,0 +1,35 @@
+{% extends 'shop/index.html' %}
+{% load i18n %}
+
+{% block content %}
+  <div class="page-header">
+    <div>
+      <h1 class="title page-title">{% translate 'Known shops' %}</h1>
+      <p class="page-subtitle">{% translate 'Keep trusted repair shops and their supporting proofs together.' %}</p>
+    </div>
+    <div class="page-actions">
+      <a class="button is-primary" href="{% url 'shop-known-shop-create' %}">{% translate 'Add shop' %}</a>
+    </div>
+  </div>
+
+  {% if shops %}
+    <div class="columns is-multiline">
+      {% for shop in shops %}
+        <div class="column is-half">
+          <div class="box content-card">
+            <h2 class="title is-4 mb-2"><a href="{% url 'shop-known-shop-detail' shop.pk %}">{{ shop.name }}</a></h2>
+            {% if shop.address %}<p>{{ shop.address }}</p>{% endif %}
+            {% if shop.phone or shop.email %}
+              <p class="has-text-grey mt-2">{{ shop.phone }}{% if shop.phone and shop.email %} · {% endif %}{{ shop.email }}</p>
+            {% endif %}
+            <p class="mt-4">{{ shop.proofs.count }} {% translate 'proofs' %}</p>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      {% translate 'No known shops have been added yet.' %}
+    </div>
+  {% endif %}
+{% endblock %}

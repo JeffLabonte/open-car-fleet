@@ -60,3 +60,6 @@ db-snapshot: db-up db-wait
 	outfile="db_backups/db_snapshot_$$timestamp.sql"; \
 	docker compose exec -T db sh -c 'pg_dump -U "$${POSTGRES_USER:-open_garage_user}" -d "$${POSTGRES_DB:-open_garage}"' > "$$outfile"; \
 	echo "Database snapshot written to $$outfile"
+
+translations: install
+	$(POETRY)T rue python src/manage.py makemessages -l en_CA -l fr_CA

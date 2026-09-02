@@ -1,19 +1,20 @@
 {% extends 'shop/index.html' %}
+{% load i18n %}
 
 {% block content %}
   <div class="page-header">
     <div>
       <h1 class="title page-title">{{ garage.name }}</h1>
-      <p class="page-subtitle">Review the vehicles in this fleet and manage access.</p>
+      <p class="page-subtitle">{% translate 'Review the vehicles in this fleet and manage access.' %}</p>
     </div>
     <div class="page-actions">
-      <a class="button is-light" href="{% url 'shop-index' %}">Back to fleets</a>
+      <a class="button is-light" href="{% url 'shop-index' %}">{% translate 'Back to fleets' %}</a>
       {% if can_manage_garage %}
-        <a class="button is-link is-light" href="{% url 'shop-garage-share' garage.pk %}">Share fleet</a>
-        <a class="button is-info is-light" href="{% url 'shop-garage-import' garage.pk %}">Import cars</a>
-        <a class="button is-success is-light" href="{% url 'shop-garage-export' garage.pk %}">Export to Excel</a>
+        <a class="button is-link is-light" href="{% url 'shop-garage-share' garage.pk %}">{% translate 'Share fleet' %}</a>
+        <a class="button is-info is-light" href="{% url 'shop-garage-import' garage.pk %}">{% translate 'Import cars' %}</a>
+        <a class="button is-success is-light" href="{% url 'shop-garage-export' garage.pk %}">{% translate 'Export to Excel' %}</a>
       {% endif %}
-      <a class="button is-primary" href="{% url 'shop-car-create' %}">Add car</a>
+      <a class="button is-primary" href="{% url 'shop-car-create' %}">{% translate 'Add car' %}</a>
     </div>
   </div>
 
@@ -28,11 +29,7 @@
       <table class="table is-fullwidth is-striped is-hoverable">
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Make</th>
-            <th>Model</th>
-            <th>Year</th>
-            <th>VIN</th>
+            <th>{% translate 'Name' %}</th><th>{% translate 'Make' %}</th><th>{% translate 'Model' %}</th><th>{% translate 'Year' %}</th><th>{% translate 'VIN' %}</th>
           </tr>
         </thead>
         <tbody>
@@ -50,7 +47,7 @@
     </div>
   {% else %}
     <div class="empty-state">
-      No cars in this fleet yet.
+      {% translate 'No cars in this fleet yet.' %}
     </div>
   {% endif %}
 {% endblock %}

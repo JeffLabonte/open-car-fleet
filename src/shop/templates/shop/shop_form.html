@@ -1,0 +1,24 @@
+{% extends 'shop/index.html' %}
+{% load i18n %}
+
+{% block content %}
+  <div class="box">
+    <h1 class="title">{% translate 'Add known shop' %}</h1>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="notification is-danger">{{ form.non_field_errors }}</div>{% endif %}
+      {% for field in form.visible_fields %}
+        <div class="field">
+          {{ field.label_tag }}
+          <div class="control">{{ field }}</div>
+          {% if field.help_text %}<p class="help">{{ field.help_text }}</p>{% endif %}
+          {% for error in field.errors %}<p class="help is-danger">{{ error }}</p>{% endfor %}
+        </div>
+      {% endfor %}
+      <div class="field is-grouped">
+        <div class="control"><button class="button is-primary" type="submit">{% translate 'Add shop' %}</button></div>
+        <div class="control"><a class="button is-light" href="{% url 'shop-known-shop-list' %}">{% translate 'Cancel' %}</a></div>
+      </div>
+    </form>
+  </div>
+{% endblock %}

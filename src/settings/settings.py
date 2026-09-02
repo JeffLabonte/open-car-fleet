@@ -58,6 +58,27 @@ DEBUG = os.environ.get('DEBUG', 'False').strip().lower() in ('1', 'true', 'yes')
 
 ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost 127.0.0.1 [::1] *').split()
 
+csrf_trusted_origins_raw = os.environ.get(
+    'CSRF_TRUSTED_ORIGINS',
+    os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS', '')
+)
+if csrf_trusted_origins_raw:
+    origins = []
+    for item in csrf_trusted_origins_raw.replace(',', ' ').split():
+        item = item.strip()
+        if not item:
+            continue
+        if item.startswith('http://') or item.startswith('https://'):
+            origins.append(item)
+        else:
+            origins.append(f'https://{item}')
+            origins.append(f'http://{item}')
+    CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(origins))
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = os.environ.get('DJANGO_USE_X_FORWARDED_HOST', 'True').strip().lower() in ('1', 'true', 'yes')
+USE_X_FORWARDED_PORT = os.environ.get('DJANGO_USE_X_FORWARDED_PORT', 'True').strip().lower() in ('1', 'true', 'yes')
+
 
 # Application definition
 
@@ -81,6 +102,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'shop.middleware.HankoAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -103,6 +125,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'shop.context_processors.theme',
+                'shop.context_processors.language_info',
             ],
         },
     },
@@ -156,11 +179,24 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+from django.utils.translation import gettext_lazy as _
+
+LANGUAGE_CODE = 'en-ca'
+
+LANGUAGES = [
+    ('en-ca', _('English')),
+    ('fr-ca', _('Français')),
+]
+
+LOCALE_PATHS = [
+    BASE_DIR / 'locale',
+]
 
 TIME_ZONE = 'UTC'
 
 USE_I18N = True
+
+USE_L10N = True
 
 USE_TZ = True
 

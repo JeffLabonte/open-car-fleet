@@ -1,0 +1,41 @@
+{% extends 'shop/index.html' %}
+{% load i18n %}
+
+{% block content %}
+  <div class="page-header">
+    <div>
+      <h1 class="title page-title">{{ shop.name }}</h1>
+      <p class="page-subtitle">{% translate 'Shop details and supporting proofs.' %}</p>
+    </div>
+    <div class="page-actions">
+      <a class="button is-primary" href="{% url 'shop-known-shop-proof-create' shop.pk %}">{% translate 'Add proof' %}</a>
+      <a class="button is-light" href="{% url 'shop-known-shop-list' %}">{% translate 'Back to shops' %}</a>
+    </div>
+  </div>
+
+  <div class="box content-card">
+    <h2 class="title is-4">{% translate 'Contact details' %}</h2>
+    {% if shop.address %}<p><strong>{% translate 'Address:' %}</strong> {{ shop.address }}</p>{% endif %}
+    {% if shop.phone %}<p><strong>{% translate 'Phone:' %}</strong> {{ shop.phone }}</p>{% endif %}
+    {% if shop.email %}<p><strong>{% translate 'Email:' %}</strong> <a href="mailto:{{ shop.email }}">{{ shop.email }}</a></p>{% endif %}
+    {% if shop.notes %}<p class="mt-4">{{ shop.notes|linebreaksbr }}</p>{% endif %}
+  </div>
+
+  <div class="box content-card">
+    <h2 class="title is-4">{% translate 'Proofs' %}</h2>
+    {% if shop.proofs.all %}
+      {% for proof in shop.proofs.all %}
+        <article class="message mb-4">
+          <div class="message-header"><p>{{ proof.title }}</p></div>
+          <div class="message-body">
+            {% if proof.content %}<p>{{ proof.content|linebreaksbr }}</p>{% endif %}
+            {% if proof.file %}<p class="mt-3"><a href="{{ proof.file.url }}" target="_blank" rel="noopener noreferrer">{% translate 'Open PDF proof' %}</a></p>{% endif %}
+            <p class="help mt-3">{{ proof.created_at|date:'M j, Y' }}</p>
+          </div>
+        </article>
+      {% endfor %}
+    {% else %}
+      <p>{% translate 'No proofs have been added yet.' %}</p>
+    {% endif %}
+  </div>
+{% endblock %}

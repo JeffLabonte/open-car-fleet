@@ -161,6 +161,23 @@ class KnownShop(models.Model):
         return self.name
 
 
+class KnownShopProof(models.Model):
+    """A document or note supporting a known shop record."""
+
+    shop = models.ForeignKey(KnownShop, on_delete=models.CASCADE, related_name='proofs')
+    title = models.CharField(max_length=255)
+    content = models.TextField(blank=True)
+    file = models.FileField(upload_to='known_shop_proofs/', blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at', '-created_at']
+
+    def __str__(self) -> str:
+        return f"{self.title} ({self.shop})"
+
+
 # Fleet terminology aliases that preserve current database model names.
 Fleet = Garage
 FleetMembership = GarageMembership

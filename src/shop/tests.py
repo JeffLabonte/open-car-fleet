@@ -27,8 +27,8 @@ from shop.exporters import export_garage_to_excel
 from shop.forms import CarCreateForm, CarUpdateForm, GarageCreateForm, ReportForm, WorkJobForm
 from shop.importers import ImportContext, JSONImporter
 from shop.middleware import HankoAuthenticationMiddleware
-from shop.models.car import Car
-from shop.models.garage import Garage, GarageInvitation, GarageMembership
+from shop.models.car import Car, CarPart, CarPartStatusHistory
+from shop.models.garage import Garage, GarageInvitation, GarageMembership, KnownShop, KnownShopProof
 from shop.models.job import WorkJob
 from shop.models.report import Report, ReportAttachment
 from shop.models.user import ShopUser
@@ -69,6 +69,7 @@ class HankoAuthenticationIntegrationTests(TestCase):
         self.assertEqual(user.hanko_id, 'hanko-user-123')
         self.assertEqual(user.display_name, 'Test Driver')
         self.assertTrue(user.is_active)
+        self.assertFalse(user.garages.exists())
 
         self.client.logout()
         self.client.session['hanko_session_token'] = 'session-token-123'
@@ -140,6 +141,41 @@ class HankoAuthenticationIntegrationTests(TestCase):
         self.assertEqual(first_login_page.context['logged_out'], True)
         self.assertEqual(second_login_page.context['logged_out'], False)
 
+    @override_settings(
+        ALLOWED_HOSTS=['xps-server.kanyu-bluegill.ts.net'],
+        CSRF_TRUSTED_ORIGINS=['https://xps-server.kanyu-bluegill.ts.net'],
+    )
+    def test_logout_with_trusted_origin_succeeds(self):
+        from django.test import Client
+        from django.middleware.csrf import get_token
+        client = Client(enforce_csrf_checks=True)
+        user = ShopUser.objects.create_user(username='csrf-user', email='csrf@example.com', password='pass1234')
+        client.force_login(user)
+
+        # login_view doesn't render a {% csrf_token %} tag, so no CSRF cookie
+        # is ever set by the response. Generate a token directly and seed it
+        # on the client so both the cookie and the submitted form field agree.
+        csrf_token = get_token(RequestFactory().get('/'))
+        client.cookies['csrftoken'] = csrf_token
+
+        # Untrusted origin fails CSRF check with 403
+        untrusted_resp = client.post(
+            reverse('shop-logout'),
+            {'csrfmiddlewaretoken': csrf_token},
+            HTTP_ORIGIN='https://untrusted-domain.com',
+            HTTP_HOST='xps-server.kanyu-bluegill.ts.net',
+        )
+        self.assertEqual(untrusted_resp.status_code, 403)
+
+        # Trusted origin succeeds with 302
+        trusted_resp = client.post(
+            reverse('shop-logout'),
+            {'csrfmiddlewaretoken': csrf_token},
+            HTTP_ORIGIN='https://xps-server.kanyu-bluegill.ts.net',
+            HTTP_HOST='xps-server.kanyu-bluegill.ts.net',
+        )
+        self.assertEqual(trusted_resp.status_code, 302)
+
     def test_theme_preference_sets_cookie_and_redirects(self):
         response = self.client.get(
             reverse('shop-theme', kwargs={'theme': 'dark'}),
@@ -202,6 +238,49 @@ class HankoAuthenticationIntegrationTests(TestCase):
         self.assertIn(b'Cars', response.content)
 
 
+class CarPartStatusTrackingTests(TestCase):
+    def setUp(self) -> None:
+        self.garage = Garage.objects.create(name='North Garage')
+        self.car = Car.objects.create(
+            garage=self.garage,
+            make='Toyota',
+            model='Corolla',
+            colour='Blue',
+            year=2022,
+            vin='1HGBH41JXMN109186',
+            license_plate='ABC123',
+        )
+
+    def test_part_status_changes_are_recorded_with_timestamps(self):
+        part = CarPart.objects.create(
+            car=self.car,
+            name='Brake pads',
+            status=CarPart.STATUS_NEW,
+            notes='Initial issue spotted on inspection.',
+        )
+
+        self.assertEqual(part.status, CarPart.STATUS_NEW)
+        self.assertEqual(part.status_history.count(), 1)
+
+        part.update_status(CarPart.STATUS_ORDERED, note='Ordered replacement set from supplier.')
+        part.refresh_from_db()
+
+        self.assertEqual(part.status, CarPart.STATUS_ORDERED)
+        self.assertEqual(part.status_history.count(), 2)
+
+        first_event = part.status_history.order_by('changed_at').first()
+        second_event = part.status_history.order_by('changed_at').last()
+
+        self.assertEqual(first_event.previous_status, '')
+        self.assertEqual(first_event.new_status, CarPart.STATUS_NEW)
+        self.assertIsNotNone(first_event.changed_at)
+
+        self.assertEqual(second_event.previous_status, CarPart.STATUS_NEW)
+        self.assertEqual(second_event.new_status, CarPart.STATUS_ORDERED)
+        self.assertEqual(second_event.note, 'Ordered replacement set from supplier.')
+        self.assertIsNotNone(second_event.changed_at)
+
+
 class GarageSharingTests(TestCase):
     def setUp(self) -> None:
         self.owner = ShopUser.objects.create_user(
@@ -225,6 +304,7 @@ class GarageSharingTests(TestCase):
             user=self.owner,
             role=GarageMembership.ROLE_OWNER,
         )
+
 
     def test_create_garage_adds_owner_membership(self):
         self.client.force_login(self.owner)
@@ -366,6 +446,46 @@ class GarageSharingTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response['Location'], reverse('shop-car-list'))
         self.assertFalse(Car.objects.filter(pk=car.pk).exists())
+
+
+class KnownShopTests(TestCase):
+    def setUp(self) -> None:
+        self.user = ShopUser.objects.create_user(
+            username='shop-user',
+            email='shop-user@example.com',
+            password='pass1234',
+        )
+
+    def test_user_can_add_shop_and_proof(self):
+        self.client.force_login(self.user)
+
+        shop_response = self.client.post(
+            reverse('shop-known-shop-create'),
+            data={
+                'name': 'Northside Auto',
+                'email': 'service@northside.example',
+                'phone': '555-0100',
+                'address': '10 Main Street',
+                'notes': 'Recommended by the fleet manager.',
+            },
+        )
+
+        self.assertEqual(shop_response.status_code, 302)
+        shop = KnownShop.objects.get(name='Northside Auto')
+        proof_response = self.client.post(
+            reverse('shop-known-shop-proof-create', args=[shop.pk]),
+            data={
+                'title': 'Business registration',
+                'content': 'Registration document received.',
+                'file': SimpleUploadedFile('registration.pdf', b'%PDF-1.4 proof', content_type='application/pdf'),
+            },
+        )
+
+        self.assertEqual(proof_response.status_code, 302)
+        proof = KnownShopProof.objects.get(shop=shop)
+        self.assertEqual(proof.title, 'Business registration')
+        self.assertIn('registration', proof.file.name)
+        self.assertTrue(proof.file.name.endswith('.pdf'))
 
 
 class FormEditableFieldsCoverageTests(TestCase):

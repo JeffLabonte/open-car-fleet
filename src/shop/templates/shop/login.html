@@ -1,12 +1,13 @@
 {% extends 'shop/index.html' %}
+{% load i18n %}
 
 {% block content %}
   <div class="box">
-    <h1 class="title">Sign in</h1>
-    <p class="subtitle">You must be signed in to view the shop.</p>
+    <h1 class="title">{% translate 'Sign in' %}</h1>
+    <p class="subtitle">{% translate 'You must be signed in to view the shop.' %}</p>
 
     <div id="hanko-auth-container">
-      <hanko-auth></hanko-auth>
+      <hanko-login></hanko-login>
     </div>
   </div>
 
