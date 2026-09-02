@@ -29,7 +29,7 @@ from shop.forms import (
     ReportForm,
     WorkJobForm,
 )
-from shop.importers import ImportContext, ImportValidationError, JSONImporter
+from shop.importers import CSVImporter, ImportContext, ImportValidationError
 from shop.middleware import hanko_login_required
 from shop.models.car import CarPart
 from shop.models.garage import GarageInvitation, GarageMembership, KnownShop
@@ -262,11 +262,11 @@ def garage_import(request: HttpRequest, pk: str) -> HttpResponse:
     if request.method == 'POST':
         form = GarageImportForm(request.POST, request.FILES)
         if form.is_valid():
-            importer = JSONImporter()
+            importer = CSVImporter()
             uploaded_file = form.cleaned_data['import_file']
             dry_run = form.cleaned_data['dry_run']
             try:
-                records = importer.parse_json_bytes(uploaded_file.read(), source_name=uploaded_file.name)
+                records = importer.parse_csv_bytes(uploaded_file.read(), source_name=uploaded_file.name)
                 result = importer.import_records(
                     importer.resolve_model('car'),
                     records,
@@ -305,7 +305,7 @@ def garage_import(request: HttpRequest, pk: str) -> HttpResponse:
             'form': form,
             'garage': garage,
             'title': f'Import cars into {garage.name}',
-            'subtitle': 'Upload normalized JSON for cars assigned to this fleet',
+            'subtitle': 'Upload normalized CSV for cars assigned to this fleet',
         },
     )
 
@@ -395,12 +395,12 @@ def car_import(request: HttpRequest, pk: str) -> HttpResponse:
     if request.method == 'POST':
         form = CarImportForm(request.POST, request.FILES)
         if form.is_valid():
-            importer = JSONImporter()
+            importer = CSVImporter()
             uploaded_file = form.cleaned_data['import_file']
             dry_run = form.cleaned_data['dry_run']
             try:
                 model = importer.resolve_model(form.cleaned_data['import_type'])
-                records = importer.parse_json_bytes(uploaded_file.read(), source_name=uploaded_file.name)
+                records = importer.parse_csv_bytes(uploaded_file.read(), source_name=uploaded_file.name)
                 result = importer.import_records(
                     model,
                     records,
@@ -442,7 +442,7 @@ def car_import(request: HttpRequest, pk: str) -> HttpResponse:
             'form': form,
             'car': car,
             'title': f'Import records for {car.usual_name or car.make}',
-            'subtitle': 'Upload normalized JSON for work jobs or reports tied to this car',
+            'subtitle': 'Upload normalized CSV for work jobs or reports tied to this car',
         },
     )
 
