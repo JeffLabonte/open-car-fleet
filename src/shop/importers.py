@@ -62,14 +62,8 @@ class CSVImporter:
             raise ImportValidationError(f"CSV file not found: {path}")
 
         try:
-           """
-               utf-8-sig and utf-8 decode identical for files without a BOM, but Excel's "CSV UTF-8" export    
-               prepends a UTF-8 BOM (EF BB BF). Decoding that with plain utf-8 leaves the BOM as a literal \ufeff 
-               character prepended to the first field, so the first header ends up as \ufeffvin instead of vin, 
-               breaking the header lookup for that column only. utf-8-sig strips the BOM if present (and does 
-               nothing if it's absent), so both plain UTF-8 and Excel-exported UTF-8 files parse consistently 
-               without extra handling.
-           """
+            # utf-8-sig strips the BOM Excel adds to "CSV UTF-8" exports, so headers
+            # like "\ufeffvin" don't break field matching; plain UTF-8 files are unaffected.
             raw_content = path.read_text(encoding="utf-8-sig")
         except UnicodeDecodeError as exc:
             raise ImportValidationError(f"Unable to decode CSV file '{path.name}' as UTF-8.") from exc
