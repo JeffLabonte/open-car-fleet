@@ -74,32 +74,29 @@ class CSVImporter:
 
         try:
             sample = raw_content[:4096]
-            try:
-                dialect = csv.Sniffer().sniff(sample)
-            except csv.Error:
-                dialect = csv.excel
-
-            reader = csv.DictReader(io.StringIO(raw_content), dialect=dialect)
+            reader = csv.DictReader(io.StringIO(raw_content), dialect=self._detect_dialect(sample))
             if reader.fieldnames is None:
                 return []
 
-            records: list[dict[str, Any]] = []
-            for row in reader:
-                record: dict[str, Any] = {}
-                for key, val in row.items():
-                    if key is None:
-                        continue
-                    cleaned_key = key.strip()
-                    if not cleaned_key:
-                        continue
-                    record[cleaned_key] = val.strip() if val is not None else None
-
-                if any(v for v in record.values() if v is not None and v != ""):
-                    records.append(record)
-
-            return records
+            records = (self._clean_csv_row(row) for row in reader)
+            return [record for record in records if any(record.values())]
         except csv.Error as exc:
             raise ImportValidationError(f"Invalid CSV format in {source_name}: {exc}") from exc
+
+    @staticmethod
+    def _detect_dialect(sample: str) -> type[csv.Dialect]:
+        try:
+            return csv.Sniffer().sniff(sample, delimiters=",;\t|")
+        except csv.Error:
+            return csv.excel
+
+    @staticmethod
+    def _clean_csv_row(row: dict[str | None, str | None]) -> dict[str, str | None]:
+        return {
+            key.strip(): value.strip() if value is not None else None
+            for key, value in row.items()
+            if key and key.strip()
+        }
 
     def parse_csv_bytes(self, raw_bytes: bytes, *, source_name: str = "upload") -> list[dict[str, Any]]:
         try:
