@@ -152,8 +152,11 @@ class HankoAuthenticationIntegrationTests(TestCase):
         user = ShopUser.objects.create_user(username='csrf-user', email='csrf@example.com', password='pass1234')
         client.force_login(user)
 
-        login_resp = client.get(reverse('shop-login'), HTTP_HOST='xps-server.kanyu-bluegill.ts.net')
-        csrf_token = login_resp.cookies['csrftoken'].value if 'csrftoken' in login_resp.cookies else get_token(login_resp.wsgi_request)
+        # login_view doesn't render a {% csrf_token %} tag, so no CSRF cookie
+        # is ever set by the response. Generate a token directly and seed it
+        # on the client so both the cookie and the submitted form field agree.
+        csrf_token = get_token(RequestFactory().get('/'))
+        client.cookies['csrftoken'] = csrf_token
 
         # Untrusted origin fails CSRF check with 403
         untrusted_resp = client.post(
