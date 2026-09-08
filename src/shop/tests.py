@@ -1,18 +1,21 @@
 import json
 import tempfile
 import uuid
-from datetime import timedelta
+from datetime import date, timedelta
 from io import BytesIO
 from io import StringIO
 from pathlib import Path
 from typing import cast
 from unittest.mock import patch
 
+import requests
 from django.contrib.auth import get_user_model
 from django.contrib.auth.middleware import AuthenticationMiddleware
+from django.contrib.auth.models import AnonymousUser
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.contrib.sessions.middleware import SessionMiddleware
+from django.core.mail import EmailMessage
 from django.db import models
 from django.http import HttpRequest, HttpResponse
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -23,10 +26,12 @@ from django.utils import timezone
 from openpyxl import load_workbook
 
 from shop import views
+from shop.auth import complete_hanko_login, sync_hanko_user
 from shop.exporters import export_garage_to_excel
-from shop.forms import CarCreateForm, CarUpdateForm, GarageCreateForm, ReportForm, WorkJobForm
-from shop.importers import ImportContext, JSONImporter
-from shop.middleware import HankoAuthenticationMiddleware
+from shop.forms import CarCreateForm, CarUpdateForm, GarageCreateForm, KnownShopProofForm, ReportForm, WorkJobForm
+from shop.importers import ImportContext, ImportValidationError, JSONImporter
+from shop.mailgun_backend import MailgunEmailBackend
+from shop.middleware import HankoAuthenticationMiddleware, hanko_login_required
 from shop.models.car import Car, CarPart, CarPartStatusHistory
 from shop.models.garage import Garage, GarageInvitation, GarageMembership, KnownShop, KnownShopProof
 from shop.models.job import WorkJob
@@ -1150,3 +1155,521 @@ class CarImportViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         report = Report.objects.get(job_name='Brake service')
         self.assertEqual(report.car, self.car)
+
+
+class AdditionalCoverageRegressionTests(TestCase):
+    def setUp(self) -> None:
+        self.owner = ShopUser.objects.create_user(
+            username='coverage-owner',
+            email='coverage-owner@example.com',
+            password='pass1234',
+            is_mechanic=True,
+        )
+        self.member = ShopUser.objects.create_user(
+            username='coverage-member',
+            email='coverage-member@example.com',
+            password='pass1234',
+        )
+        self.garage = Garage.objects.create(name='Coverage Garage', created_by=self.owner)
+        GarageMembership.objects.create(garage=self.garage, user=self.owner, role=GarageMembership.ROLE_OWNER)
+        GarageMembership.objects.create(garage=self.garage, user=self.member, role=GarageMembership.ROLE_MEMBER)
+        self.car = Car.objects.create(
+            garage=self.garage,
+            make='Honda',
+            model='Accord',
+            vin='1HGCM82633A004352',
+        )
+
+    def test_login_theme_and_hanko_callback_branches(self):
+        self.client.force_login(self.owner)
+        response = self.client.get(reverse('shop-login'))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], reverse('shop-index'))
+
+        self.client.logout()
+        session = self.client.session
+        session['logged_out'] = True
+        session.save()
+        login_response = self.client.get(reverse('shop-login'))
+        self.assertTrue(login_response.context['logged_out'])
+
+        invalid_theme = self.client.get(reverse('shop-theme', kwargs={'theme': 'banana'}), {'next': reverse('shop-login')})
+        self.assertEqual(invalid_theme.cookies['theme'].value, 'light')
+
+        dark_theme = self.client.get(reverse('shop-theme', kwargs={'theme': 'dark'}), {'next': reverse('shop-login')})
+        self.assertEqual(dark_theme.cookies['theme'].value, 'dark')
+
+        empty_payload = self.client.post(reverse('shop-hanko-callback'), data='not-json', content_type='application/json')
+        self.assertEqual(empty_payload.status_code, 400)
+        self.assertEqual(empty_payload.json()['error'], 'Missing user payload')
+
+        valid_payload = {
+            'user': {
+                'id': 'hanko-coverage',
+                'email': 'new-coverage@example.com',
+                'name': 'Coverage User',
+                'display_name': 'Coverage User',
+                'provider': 'hanko',
+            },
+            'session_token': 'token-coverage-123',
+        }
+        callback_response = self.client.post(reverse('shop-hanko-callback'), data=json.dumps(valid_payload), content_type='application/json')
+        self.assertEqual(callback_response.status_code, 200)
+        self.assertEqual(callback_response.json()['user']['email'], 'new-coverage@example.com')
+        self.assertEqual(self.client.session['hanko_session_token'], 'token-coverage-123')
+
+    def test_garage_share_and_invitation_branches(self):
+        self.client.force_login(self.member)
+        response = self.client.get(reverse('shop-garage-share', args=[self.garage.pk]))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], reverse('shop-garage-detail', args=[self.garage.pk]))
+
+        self.client.force_login(self.owner)
+        with patch('shop.models.garage.send_mail', side_effect=Exception('mail failed')):
+            response = self.client.post(
+                reverse('shop-garage-share', args=[self.garage.pk]),
+                data={
+                    'invited_email': 'someone@example.com',
+                    'message': 'Join us',
+                    'expires_in_days': 7,
+                },
+                follow=True,
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(GarageInvitation.objects.filter(invited_email='someone@example.com').exists())
+
+        invitation = GarageInvitation.objects.create(
+            garage=self.garage,
+            invited_email='coverage-member@example.com',
+            invited_by=self.owner,
+            status=GarageInvitation.STATUS_PENDING,
+            expires_at=timezone.now() - timedelta(days=1),
+        )
+        self.client.force_login(self.member)
+        response = self.client.get(reverse('shop-garage-invitation-accept', args=[invitation.token]), follow=True)
+        self.assertEqual(response.status_code, 200)
+        invitation.refresh_from_db()
+        self.assertEqual(invitation.status, GarageInvitation.STATUS_EXPIRED)
+
+        other_invitation = GarageInvitation.objects.create(
+            garage=self.garage,
+            invited_email='coverage-member@example.com',
+            invited_by=self.owner,
+            status=GarageInvitation.STATUS_PENDING,
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+        self.client.force_login(self.owner)
+        response = self.client.get(reverse('shop-garage-invitation-accept', args=[other_invitation.token]), follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.redirect_chain[-1][0], reverse('shop-index'))
+
+    def test_car_crud_and_report_workflow_views(self):
+        self.client.force_login(self.owner)
+        create_response = self.client.post(
+            reverse('shop-car-create'),
+            data={
+                'garage': str(self.garage.pk),
+                'usual_name': 'Roadster',
+                'make': 'Mazda',
+                'model': 'MX-5',
+                'colour': 'Red',
+                'year': '2024',
+                'vin': 'JM1NDAB77P0112345',
+                'license_plate': 'ABC 123',
+            },
+        )
+        self.assertEqual(create_response.status_code, 302)
+        created_car = Car.objects.get(vin='JM1NDAB77P0112345')
+
+        update_response = self.client.post(
+            reverse('shop-car-update', args=[created_car.pk]),
+            data={
+                'garage': str(self.garage.pk),
+                'usual_name': 'Roadster Updated',
+                'make': 'Mazda',
+                'model': 'MX-5',
+                'colour': 'Blue',
+                'year': '2024',
+                'vin': 'JM1NDAB77P0112345',
+                'license_plate': 'XYZ 999',
+            },
+        )
+        self.assertEqual(update_response.status_code, 302)
+        created_car.refresh_from_db()
+        self.assertEqual(created_car.usual_name, 'Roadster Updated')
+
+        part_response = self.client.post(
+            reverse('shop-part-create', args=[created_car.pk]),
+            data={'name': 'Brake pads', 'status': CarPart.STATUS_NEW, 'notes': 'Initial inspection'},
+        )
+        self.assertEqual(part_response.status_code, 302)
+        part = created_car.parts.get(name='Brake pads')
+
+        workjob_response = self.client.post(
+            reverse('shop-workjob-create', args=[created_car.pk]),
+            data={
+                'title': 'Oil service',
+                'maintenance_type': 'service',
+                'assigned_to': str(self.owner.pk),
+                'planned_date': '2026-08-11',
+                'status': 'pending',
+                'urgency': 'soon',
+                'required_items': 'Oil\nFilter',
+                'notes': 'Routine service',
+            },
+        )
+        self.assertEqual(workjob_response.status_code, 302)
+        work_job = WorkJob.objects.get(title='Oil service')
+
+        report_response = self.client.post(
+            reverse('shop-report-create', args=[created_car.pk]),
+            data={
+                'mileage': '10000',
+                'job_name': 'Oil service',
+                'date_done': '2026-08-12',
+                'documents': 'invoice.pdf',
+                'photos': 'before.jpg',
+                'external_links': 'https://example.com/invoice',
+                'note': 'Completed',
+                'additional_information': 'Used synthetic oil',
+            },
+        )
+        self.assertEqual(report_response.status_code, 302)
+        report = Report.objects.get(job_name='Oil service')
+
+        self.client.post(reverse('shop-logout'))
+        first_login = self.client.get(reverse('shop-login'))
+        self.assertTrue(first_login.context['logged_out'])
+
+        second_login = self.client.get(reverse('shop-login'))
+        self.assertFalse(second_login.context['logged_out'])
+
+        part_update_response = self.client.post(
+            reverse('shop-part-update', args=[created_car.pk, part.pk]),
+            data={'name': 'Brake pads', 'status': CarPart.STATUS_ORDERED, 'notes': 'Parts ordered'},
+        )
+        self.assertEqual(part_update_response.status_code, 302)
+
+        workjob_update_response = self.client.post(
+            reverse('shop-workjob-update', args=[created_car.pk, work_job.pk]),
+            data={
+                'title': 'Oil service',
+                'maintenance_type': 'service',
+                'assigned_to': str(self.owner.pk),
+                'planned_date': '2026-08-11',
+                'status': 'done',
+                'is_done': 'on',
+                'done_date': '2026-08-12',
+                'urgency': 'ahead',
+                'required_items': 'Oil\nFilter',
+                'notes': 'Routine service complete',
+            },
+        )
+        self.assertEqual(workjob_update_response.status_code, 302)
+
+        report_update_response = self.client.post(
+            reverse('shop-report-update', args=[created_car.pk, report.pk]),
+            data={
+                'mileage': '10001',
+                'job_name': 'Oil service',
+                'date_done': '2026-08-12',
+                'documents': 'invoice.pdf',
+                'photos': 'before.jpg',
+                'external_links': 'https://example.com/invoice',
+                'note': 'Completed and rechecked',
+                'additional_information': 'Used synthetic oil and filter',
+            },
+        )
+        self.assertEqual(report_update_response.status_code, 302)
+
+        self.client.force_login(self.owner)
+        car_delete_response = self.client.post(reverse('shop-car-delete', args=[created_car.pk]))
+        self.assertEqual(car_delete_response.status_code, 302)
+        self.assertFalse(Car.objects.filter(pk=created_car.pk).exists())
+
+    def test_importer_edge_cases_and_unknown_model_branches(self):
+        importer = JSONImporter()
+        with self.assertRaises(ImportValidationError):
+            importer.resolve_model('unknown_model')
+
+        self.assertEqual(importer._normalize_records({'make': 'Subaru'}), [{'make': 'Subaru'}])
+
+        result = importer.import_records(Car, [{'make': 'Nope'}], context=ImportContext(garage=self.garage))
+        self.assertTrue(result.has_errors)
+        self.assertIn("Field 'model' is required", result.errors[0].message)
+
+        result = importer.import_records(
+            WorkJob,
+            [{
+                'car': str(self.car.pk),
+                'title': 'Tire rotation',
+                'assigned_to': 'missing-user@example.com',
+                'assigned_shop': 'missing-shop@example.com',
+            }],
+            context=ImportContext(garage=self.garage),
+        )
+        self.assertTrue(result.has_errors)
+
+        result = importer.import_records(
+            Report,
+            [{
+                'car': str(self.car.pk),
+                'job_name': 'Inspection',
+                'date_done': '2026-08-13',
+                'assigned_to': 'not-a-mechanic@example.com',
+                'assigned_shop': 'not-a-shop@example.com',
+            }],
+            context=ImportContext(garage=self.garage),
+        )
+        self.assertTrue(result.has_errors)
+
+        self.assertTrue(importer._looks_like_uuid(str(self.car.pk)))
+        self.assertFalse(importer._looks_like_uuid('not-a-uuid'))
+        self.assertEqual(importer._parse_date_value('2026-08-15'), date(2026, 8, 15))
+
+class AuthAndInputCoverageTests(TestCase):
+    def test_sync_hanko_user_builds_unique_usernames_and_updates_existing_user(self):
+        existing = ShopUser.objects.create_user(username='alice', email='alice@example.com', password='pass1234')
+        existing.hanko_id = 'hanko-42'
+        existing.display_name = ''
+        existing.avatar_url = ''
+        existing.auth_provider = 'legacy'
+        existing.save(update_fields=['hanko_id', 'display_name', 'avatar_url', 'auth_provider'])
+
+        user = sync_hanko_user(hanko_id='hanko-42', email='alice@example.com', username='Alice', avatar_url='https://img.example.com/alice.png')
+        self.assertEqual(user.pk, existing.pk)
+        self.assertEqual(user.display_name, 'Alice')
+        self.assertEqual(user.avatar_url, 'https://img.example.com/alice.png')
+
+        created = sync_hanko_user(email='new@example.com', username='alice', hanko_id='hanko-99')
+        self.assertTrue(created.username.startswith('alice'))
+        self.assertNotEqual(created.username, 'alice')
+
+    def test_complete_hanko_login_sets_session_values(self):
+        factory = RequestFactory()
+        request = factory.get('/auth/hanko/callback/')
+        SessionMiddleware(lambda _request: None).process_request(request)
+
+        user = complete_hanko_login(
+            request,
+            {
+                'id': 'hanko-session-1',
+                'email': 'session-user@example.com',
+                'name': 'Session User',
+                'avatar_url': 'https://img.example.com/session.png',
+                'provider': 'hanko',
+            },
+        )
+
+        self.assertTrue(request.user.is_authenticated)
+        self.assertEqual(user.email, 'session-user@example.com')
+        self.assertEqual(request.session['hanko_user_id'], 'hanko-session-1')
+        self.assertEqual(request.session['hanko_email'], 'session-user@example.com')
+        self.assertEqual(request.session['hanko_provider'], 'hanko')
+
+    def test_car_form_validators_cover_invalid_ranges_and_duplicates(self):
+        self.user = ShopUser.objects.create_user(username='validator', email='validator@example.com', password='pass1234')
+        self.garage = Garage.objects.create(name='Validator Garage', created_by=self.user)
+        GarageMembership.objects.create(garage=self.garage, user=self.user, role=GarageMembership.ROLE_OWNER)
+
+        Car.objects.create(garage=self.garage, make='Toyota', model='Yaris', vin='JTDKB20U793512346')
+
+        invalid_year = CarCreateForm(data={
+            'garage': self.garage.pk,
+            'make': 'Honda',
+            'model': 'Civic',
+            'year': '1800',
+            'vin': 'JTDKB20U793512346',
+            'license_plate': 'ABC 123',
+        }, user=self.user)
+        self.assertFalse(invalid_year.is_valid())
+        self.assertIn('year', invalid_year.errors)
+
+        duplicate_vin = CarCreateForm(data={
+            'garage': self.garage.pk,
+            'make': 'Honda',
+            'model': 'Civic',
+            'year': '2024',
+            'vin': 'JTDKB20U793512346',
+            'license_plate': 'DEF456',
+        }, user=self.user)
+        self.assertFalse(duplicate_vin.is_valid())
+        self.assertIn('vin', duplicate_vin.errors)
+
+        invalid_chars = CarCreateForm(data={
+            'garage': self.garage.pk,
+            'make': 'Honda',
+            'model': 'Civic',
+            'year': '2024',
+            'vin': 'JTDKB20U7935I2346',
+            'license_plate': 'ABC123',
+        }, user=self.user)
+        self.assertFalse(invalid_chars.is_valid())
+        self.assertIn('vin', invalid_chars.errors)
+
+        invalid_plate = CarCreateForm(data={
+            'garage': self.garage.pk,
+            'make': 'Honda',
+            'model': 'Civic',
+            'year': '2024',
+            'vin': 'JTDKB20U793512350',
+            'license_plate': 'BAD@PLATE',
+        }, user=self.user)
+        self.assertFalse(invalid_plate.is_valid())
+        self.assertIn('license_plate', invalid_plate.errors)
+
+    def test_workjob_and_report_form_line_lists_and_assignment_guards(self):
+        user = ShopUser.objects.create_user(username='mechanic-form-user', email='mechanic@shop.test', password='pass1234', is_mechanic=True)
+        shop = KnownShop.objects.create(name='Northside Auto', email='shop@example.com')
+
+        workjob_form = WorkJobForm(data={
+            'title': 'Brake service',
+            'maintenance_type': 'inspection',
+            'assigned_to': str(user.pk),
+            'assigned_shop': str(shop.pk),
+            'planned_date': '2026-08-09',
+            'status': 'pending',
+            'urgency': 'soon',
+            'required_items': 'Pads\nFluid',
+            'notes': 'Inspect',
+        })
+        self.assertFalse(workjob_form.is_valid())
+        self.assertIn('__all__', workjob_form.errors)
+
+        cleaned = WorkJobForm(data={
+            'title': 'Brake service',
+            'maintenance_type': 'inspection',
+            'assigned_to': str(user.pk),
+            'planned_date': '2026-08-09',
+            'status': 'pending',
+            'urgency': 'soon',
+            'required_items': 'Pads\nFluid',
+            'notes': 'Inspect',
+        })
+        self.assertTrue(cleaned.is_valid())
+        self.assertEqual(cleaned.cleaned_data['required_items'], ['Pads', 'Fluid'])
+
+        report_form = ReportForm(data={
+            'mileage': '125000',
+            'job_name': 'Brake service',
+            'date_done': '2026-08-09',
+            'documents': 'invoice.pdf\nchecklist.pdf',
+            'photos': 'before.jpg\nafter.jpg',
+            'external_links': 'https://example.com/one\nhttps://example.com/two',
+            'note': 'Performed service.',
+            'additional_information': 'Used OEM parts',
+        })
+        self.assertTrue(report_form.is_valid())
+        self.assertEqual(report_form.cleaned_data['documents'], ['invoice.pdf', 'checklist.pdf'])
+        self.assertEqual(report_form.cleaned_data['photos'], ['before.jpg', 'after.jpg'])
+        self.assertEqual(report_form.cleaned_data['external_links'], ['https://example.com/one', 'https://example.com/two'])
+
+    def test_known_shop_proof_form_rejects_invalid_files(self):
+        form = KnownShopProofForm(data={'title': 'Proof', 'content': 'Valid proof'}, files={'file': SimpleUploadedFile('bad.txt', b'nope', content_type='text/plain')})
+        self.assertFalse(form.is_valid())
+        self.assertIn('file', form.errors)
+
+        pdf = SimpleUploadedFile('valid.pdf', b'%PDF-1.4', content_type='application/pdf')
+        valid_form = KnownShopProofForm(data={'title': 'Proof', 'content': 'Valid proof'}, files={'file': pdf})
+        self.assertTrue(valid_form.is_valid())
+
+    def test_importer_handles_missing_json_files_and_list_validation(self):
+        with self.assertRaises(ImportValidationError):
+            JSONImporter().parse_json_file('/tmp/not-a-real-file.json')
+
+        with self.assertRaises(ImportValidationError):
+            JSONImporter().parse_json_bytes(b'\xff\xfe', source_name='bad.json')
+
+        importer = JSONImporter()
+        self.assertEqual(importer._normalize_records({'make': 'Honda'}), [{'make': 'Honda'}])
+        with self.assertRaises(ImportValidationError):
+            importer._normalize_records('bad')
+
+        self.assertEqual(importer._coerce_bool('yes', field_name='flag'), True)
+        self.assertEqual(importer._coerce_bool('0', field_name='flag'), False)
+        with self.assertRaises(ImportValidationError):
+            importer._coerce_bool('maybe', field_name='flag')
+
+        self.assertEqual(importer._parse_date_value('2026-08'), date(2026, 8, 1))
+        self.assertEqual(importer._parse_date_value('2026'), date(2026, 1, 1))
+        with self.assertRaises(ImportValidationError):
+            importer._parse_date_value('not-a-date')
+
+        self.assertEqual(importer._coerce_string_list(['', 'fee', None], field_name='list'), ['fee'])
+        with self.assertRaises(ImportValidationError):
+            importer._coerce_string_list(123, field_name='list')
+
+    def test_mailgun_backend_success_and_error_paths(self):
+        settings_override = override_settings(MAILGUN_API_KEY='secret', MAILGUN_SANDBOX_DOMAIN='mg.example.com', MAILGUN_BASE_DOMAIN='https://api.mailgun.net')
+        with settings_override:
+            with patch('shop.mailgun_backend.requests.post') as mock_post:
+                mock_post.return_value.raise_for_status.return_value = None
+                backend = MailgunEmailBackend(fail_silently=False)
+                message = EmailMessage(subject='Test', body='Body', to=['one@example.com'], from_email='from@example.com')
+                self.assertEqual(backend.send_messages([message]), 1)
+
+            with patch('shop.mailgun_backend.requests.post', side_effect=requests.RequestException('boom')):
+                backend = MailgunEmailBackend(fail_silently=False)
+                message = EmailMessage(subject='Test', body='Body', to=['one@example.com'], from_email='from@example.com')
+                with self.assertRaises(requests.RequestException):
+                    backend.send_messages([message])
+
+        with override_settings(MAILGUN_API_KEY='', MAILGUN_SANDBOX_DOMAIN=''):
+            backend = MailgunEmailBackend(fail_silently=False)
+            with self.assertRaises(ValueError):
+                backend.send_messages([EmailMessage(subject='Test', body='Body', to=['one@example.com'])])
+
+    def test_convert_user_to_mechanic_command_handles_grant_and_revoke_branches(self):
+        user = ShopUser.objects.create_user(username='mechanic-cmd', email='mechanic-cmd@example.com', password='pass1234')
+
+        call_command('convert_user_to_mechanic', user.email)
+        user.refresh_from_db()
+        self.assertTrue(user.is_mechanic)
+        self.assertIsNotNone(user.mechanic_promoted_at)
+
+        call_command('convert_user_to_mechanic', user.email, '--revoke')
+        user.refresh_from_db()
+        self.assertFalse(user.is_mechanic)
+        self.assertIsNone(user.mechanic_promoted_at)
+
+        with self.assertRaises(CommandError):
+            call_command('convert_user_to_mechanic', '')
+
+    def test_hanko_auth_middleware_and_decorator_cover_redirect_and_rehydrate_paths(self):
+        factory = RequestFactory()
+
+        with override_settings(HANKO_API_URL='https://hanko.example.com'):
+            request = factory.get('/secure/route/')
+            SessionMiddleware(lambda _request: None).process_request(request)
+            request.session['hanko_session_token'] = 'session-token-ABC'
+            request.user = AnonymousUser()
+
+            with patch('shop.middleware.requests.get') as mock_get:
+                mock_get.return_value.raise_for_status.return_value = None
+                mock_get.return_value.json.return_value = {'email': 'recovered@example.com', 'name': 'Recovered User'}
+                response = HankoAuthenticationMiddleware(lambda _request: HttpResponse()).process_request(request)
+                self.assertIsNone(response)
+                self.assertTrue(request.user.is_authenticated)
+
+        public_request = factory.get('/login/')
+        SessionMiddleware(lambda _request: None).process_request(public_request)
+        public_request.user = AnonymousUser()
+        self.assertIsNone(HankoAuthenticationMiddleware(lambda _request: HttpResponse()).process_request(public_request))
+
+        no_session = factory.get('/private/')
+        SessionMiddleware(lambda _request: None).process_request(no_session)
+        no_session.user = AnonymousUser()
+        response = HankoAuthenticationMiddleware(lambda _request: HttpResponse()).process_request(no_session)
+        self.assertEqual(response.status_code, 302)
+
+        decorated = hanko_login_required(lambda _request: HttpResponse('ok'))
+        decorator_request = factory.get('/private/')
+        SessionMiddleware(lambda _request: None).process_request(decorator_request)
+        decorator_request.user = AnonymousUser()
+        result = decorated(decorator_request)
+        self.assertEqual(result.status_code, 302)
+
+        authenticated = factory.get('/private/')
+        SessionMiddleware(lambda _request: None).process_request(authenticated)
+        authenticated.user = ShopUser.objects.create_user(username='decorated-user', email='decorated@example.com', password='pass1234')
+        self.assertEqual(decorated(authenticated).status_code, 200)

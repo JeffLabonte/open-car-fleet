@@ -213,3 +213,16 @@ STATICFILES_DIRS = [
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+
+# Email (Mailgun HTTP API)
+# https://documentation.mailgun.com/en/latest/api-sending.html#sending
+
+EMAIL_BACKEND = 'shop.mailgun_backend.MailgunEmailBackend'
+MAILGUN_API_KEY = os.environ.get('MAILGUN_API_KEY', '')
+MAILGUN_SANDBOX_DOMAIN = os.environ.get('MAILGUN_SANDBOX_DOMAIN', '')
+MAILGUN_BASE_DOMAIN = os.environ.get('MAILGUN_BASE_DOMAIN', 'https://api.mailgun.net')
+DEFAULT_FROM_EMAIL = os.environ.get(
+    'DEFAULT_FROM_EMAIL',
+    f'Open Car Fleet <postmaster@{MAILGUN_SANDBOX_DOMAIN}>',
+)

@@ -9,6 +9,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.contrib import messages
 from django.contrib.auth import logout
+from django.middleware.csrf import get_token
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.utils import timezone
@@ -47,6 +48,11 @@ def get_theme_from_request(request: HttpRequest) -> str:
 
 @csrf_exempt
 def login_view(request: HttpRequest) -> HttpResponse:
+    # Always seed a CSRF cookie for the active session so POST-based logout
+    # requests from trusted origins can validate even when this page redirects a
+    # signed-in user away from the login form.
+    get_token(request)
+
     if request.user.is_authenticated:
         return redirect(reverse('shop-index'))
 
