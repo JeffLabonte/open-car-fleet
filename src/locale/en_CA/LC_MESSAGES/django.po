@@ -2,16 +2,16 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Open Car Fleet\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-27 23:19+0000\n"
+"POT-Creation-Date: 2026-09-02 02:52+0000\n"
 "Language: en_CA\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/settings/settings.py:166
+#: src/settings/settings.py:187
 msgid "English"
 msgstr ""
 
-#: src/settings/settings.py:167
+#: src/settings/settings.py:188
 msgid "Français"
 msgstr ""
 
@@ -130,7 +130,7 @@ msgstr ""
 
 #: src/shop/forms/import_data.py:11
 msgid ""
-"Upload a normalized UTF-8 JSON file. See the README for the exact schema and "
+"Upload a normalized UTF-8 CSV file. See the README for the exact schema and "
 "examples."
 msgstr ""
 
@@ -139,11 +139,11 @@ msgid "Validate the file without saving imported records."
 msgstr ""
 
 #: src/shop/forms/import_data.py:25
-msgid "Upload a JSON file ending in .json."
+msgid "Upload a CSV file ending in .csv."
 msgstr ""
 
 #: src/shop/forms/import_data.py:27
-msgid "Upload a JSON file smaller than 5 MB."
+msgid "Upload a CSV file smaller than 5 MB."
 msgstr ""
 
 #: src/shop/forms/import_data.py:37
@@ -464,6 +464,8 @@ msgstr ""
 #: src/shop/templates/shop/fleet_import.html:41
 #: src/shop/templates/shop/part_form.html:36
 #: src/shop/templates/shop/report_form.html:93
+#: src/shop/templates/shop/shop_form.html:20
+#: src/shop/templates/shop/shop_proof_form.html:21
 #: src/shop/templates/shop/workjob_form.html:36
 msgid "Cancel"
 msgstr ""
@@ -473,12 +475,12 @@ msgid "Import records for"
 msgstr ""
 
 #: src/shop/templates/shop/car_import.html:7
-msgid "Use normalized JSON to import work jobs or reports for this car."
+msgid "Use normalized CSV to import work jobs or reports for this car."
 msgstr ""
 
 #: src/shop/templates/shop/car_import.html:18
 msgid ""
-"The selected car is applied automatically. The JSON file does not need a car "
+"The selected car is applied automatically. The CSV file does not need a car "
 "field unless you want an explicit self-check."
 msgstr ""
 
@@ -550,7 +552,7 @@ msgstr ""
 
 #: src/shop/templates/shop/fleet_import.html:7
 msgid ""
-"Use one normalized JSON file per import. Every imported car will be assigned "
+"Use one normalized CSV file per import. Every imported car will be assigned "
 "to this fleet."
 msgstr ""
 
@@ -646,11 +648,16 @@ msgstr ""
 msgid "Menu"
 msgstr ""
 
-#: src/shop/templates/shop/index.html:566
+#: src/shop/templates/shop/index.html:563
+#: src/shop/templates/shop/shop_list.html:7
+msgid "Known shops"
+msgstr ""
+
+#: src/shop/templates/shop/index.html:567
 msgid "Hello,"
 msgstr ""
 
-#: src/shop/templates/shop/index.html:571
+#: src/shop/templates/shop/index.html:572
 msgid "Logout"
 msgstr ""
 
@@ -698,6 +705,73 @@ msgstr ""
 msgid "Clear selected files"
 msgstr ""
 
+#: src/shop/templates/shop/shop_detail.html:8
+msgid "Shop details and supporting proofs."
+msgstr ""
+
+#: src/shop/templates/shop/shop_detail.html:11
+#: src/shop/templates/shop/shop_proof_form.html:6
+#: src/shop/templates/shop/shop_proof_form.html:20
+msgid "Add proof"
+msgstr ""
+
+#: src/shop/templates/shop/shop_detail.html:12
+msgid "Back to shops"
+msgstr ""
+
+#: src/shop/templates/shop/shop_detail.html:17
+msgid "Contact details"
+msgstr ""
+
+#: src/shop/templates/shop/shop_detail.html:18
+msgid "Address:"
+msgstr ""
+
+#: src/shop/templates/shop/shop_detail.html:19
+msgid "Phone:"
+msgstr ""
+
+#: src/shop/templates/shop/shop_detail.html:20
+msgid "Email:"
+msgstr ""
+
+#: src/shop/templates/shop/shop_detail.html:25
+msgid "Proofs"
+msgstr ""
+
+#: src/shop/templates/shop/shop_detail.html:32
+msgid "Open PDF proof"
+msgstr ""
+
+#: src/shop/templates/shop/shop_detail.html:38
+msgid "No proofs have been added yet."
+msgstr ""
+
+#: src/shop/templates/shop/shop_form.html:6
+msgid "Add known shop"
+msgstr ""
+
+#: src/shop/templates/shop/shop_form.html:19
+#: src/shop/templates/shop/shop_list.html:11
+msgid "Add shop"
+msgstr ""
+
+#: src/shop/templates/shop/shop_list.html:8
+msgid "Keep trusted repair shops and their supporting proofs together."
+msgstr ""
+
+#: src/shop/templates/shop/shop_list.html:25
+msgid "proofs"
+msgstr ""
+
+#: src/shop/templates/shop/shop_list.html:32
+msgid "No known shops have been added yet."
+msgstr ""
+
+#: src/shop/templates/shop/shop_proof_form.html:7
+msgid "For"
+msgstr ""
+
 #: src/shop/templates/shop/workjob_form.html:6
 msgid "Add Planned Work"
 msgstr ""
@@ -706,107 +780,115 @@ msgstr ""
 msgid "Edit Planned Work"
 msgstr ""
 
-#: src/shop/views.py:56
+#: src/shop/views.py:58
 msgid "Login"
 msgstr ""
 
-#: src/shop/views.py:57
+#: src/shop/views.py:59
 msgid "Authenticate with Hanko to continue"
 msgstr ""
 
-#: src/shop/views.py:167
+#: src/shop/views.py:169
 msgid "Fleet created successfully."
 msgstr ""
 
-#: src/shop/views.py:188
+#: src/shop/views.py:190
 msgid "You do not have permission to share this fleet."
 msgstr ""
 
-#: src/shop/views.py:199
+#: src/shop/views.py:201
 #, python-format
 msgid "%(email)s is already a member of this fleet."
 msgstr ""
 
-#: src/shop/views.py:204
+#: src/shop/views.py:206
 #, python-format
 msgid "A pending invitation already exists for %(email)s."
 msgstr ""
 
-#: src/shop/views.py:222
+#: src/shop/views.py:224
 #, python-format
 msgid "Invitation sent to %(email)s."
 msgstr ""
 
-#: src/shop/views.py:257
+#: src/shop/views.py:259
 msgid "You do not have permission to import data into this fleet."
 msgstr ""
 
-#: src/shop/views.py:315
+#: src/shop/views.py:317
 msgid "You do not have permission to export data from this fleet."
 msgstr ""
 
-#: src/shop/views.py:331
+#: src/shop/views.py:345
+msgid "Shop added successfully."
+msgstr ""
+
+#: src/shop/views.py:376
+msgid "Proof added successfully."
+msgstr ""
+
+#: src/shop/views.py:392
 msgid "You do not have permission to import data into this car."
 msgstr ""
 
-#: src/shop/views.py:397
+#: src/shop/views.py:458
 msgid "This invitation is no longer active."
 msgstr ""
 
-#: src/shop/views.py:403
+#: src/shop/views.py:464
 msgid "This invitation has expired."
 msgstr ""
 
-#: src/shop/views.py:426
+#: src/shop/views.py:487
 #, python-format
 msgid "You have joined '%(fleet)s'."
 msgstr ""
 
-#: src/shop/views.py:428
+#: src/shop/views.py:489
 #, python-format
 msgid "You are already a member of '%(fleet)s'."
 msgstr ""
 
-#: src/shop/views.py:445
+#: src/shop/views.py:506
 msgid "You do not have permission to delete this car."
 msgstr ""
 
-#: src/shop/views.py:449
+#: src/shop/views.py:510
 msgid "Car deleted successfully."
 msgstr ""
 
-#: src/shop/views.py:488
+#: src/shop/views.py:549
 msgid "Car created successfully."
 msgstr ""
 
-#: src/shop/views.py:503
+#: src/shop/views.py:564
 msgid "Car updated successfully."
 msgstr ""
 
-#: src/shop/views.py:519
+#: src/shop/views.py:580
 msgid "Part status added successfully."
 msgstr ""
 
-#: src/shop/views.py:534
+#: src/shop/views.py:595
 msgid "Part status updated successfully."
 msgstr ""
 
-#: src/shop/views.py:550
+#: src/shop/views.py:611
 msgid "Planned work added successfully."
 msgstr ""
 
-#: src/shop/views.py:565
+#: src/shop/views.py:626
 msgid "Planned work updated successfully."
 msgstr ""
 
-#: src/shop/views.py:605
+#: src/shop/views.py:666
 msgid "Maintenance report added successfully."
 msgstr ""
 
-#: src/shop/views.py:622
+#: src/shop/views.py:683
 msgid "Maintenance report updated successfully."
 msgstr ""
 
-#: src/shop/views.py:633
+#: src/shop/views.py:694
 msgid "Logged out successfully."
 msgstr ""

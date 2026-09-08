@@ -7,8 +7,8 @@ from django.utils.translation import gettext_lazy as _
 
 class BaseImportForm(forms.Form):
     import_file = forms.FileField(
-        widget=forms.ClearableFileInput(attrs={"class": "input", "accept": ".json,application/json"}),
-        help_text=_("Upload a normalized UTF-8 JSON file. See the README for the exact schema and examples."),
+        widget=forms.ClearableFileInput(attrs={"class": "input", "accept": ".csv,text/csv"}),
+        help_text=_("Upload a normalized UTF-8 CSV file. See the README for the exact schema and examples."),
     )
     dry_run = forms.BooleanField(
         required=False,
@@ -21,10 +21,10 @@ class BaseImportForm(forms.Form):
     def clean_import_file(self) -> Any:
         uploaded_file = self.cleaned_data["import_file"]
         file_name = getattr(uploaded_file, "name", "")
-        if not file_name.lower().endswith(".json"):
-            raise ValidationError(_("Upload a JSON file ending in .json."))
+        if not file_name.lower().endswith(".csv"):
+            raise ValidationError(_("Upload a CSV file ending in .csv."))
         if uploaded_file.size > self.max_upload_size:
-            raise ValidationError(_("Upload a JSON file smaller than 5 MB."))
+            raise ValidationError(_("Upload a CSV file smaller than 5 MB."))
         return uploaded_file
 
 

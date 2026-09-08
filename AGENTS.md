@@ -18,9 +18,9 @@ poetry run python src/manage.py migrate
 poetry run pytest src/
 
 # Bulk import data
-poetry run python src/manage.py import_json Car src/imports/cars.json --app shop
-poetry run python src/manage.py import_json WorkJob src/imports/workjobs.json --app shop
-poetry run python src/manage.py import_json Report src/imports/reports_FMG3809.json --app shop
+poetry run python src/manage.py import_csv Car src/imports/cars.csv
+poetry run python src/manage.py import_csv WorkJob src/imports/workjobs.csv
+poetry run python src/manage.py import_csv Report src/imports/reports_FMG3809.csv
 
 # Promote a user to mechanic
 poetry run python src/manage.py convert_user_to_mechanic <email>
@@ -74,8 +74,8 @@ Never query `Car.objects.all()` or `Garage.objects.all()` in views.
 | New model | `src/shop/models/<name>.py`, export from `models/__init__.py`, create migration |
 | New view | `views.py` with `@hanko_login_required`, add URL in `shop/urls.py`, filter with `_user_*_queryset()` |
 | New form | `forms.py` as a `ModelForm`; list-valued fields use `<textarea>` + `clean_*()` |
-| New management command | `src/shop/management/commands/<name>.py` extending `BaseCommand` |
-| New bulk import type | Extend `import_json.py` or add a model-specific handler |
+| Management command | `src/shop/management/commands/import_csv.py` |
+| New bulk import type | Extend `import_csv.py` or add a model-specific handler |
 
 ## Testing
 

@@ -4,7 +4,7 @@
 {% block content %}
   <div class="box">
     <h1 class="title">{% translate 'Import records for' %} {{ car.usual_name|default:car.make }}</h1>
-    <p class="subtitle">{% translate 'Use normalized JSON to import work jobs or reports for this car.' %}</p>
+    <p class="subtitle">{% translate 'Use normalized CSV to import work jobs or reports for this car.' %}</p>
 
     <form method="post" enctype="multipart/form-data" novalidate>
       {% csrf_token %}
@@ -15,7 +15,7 @@
       {% endif %}
 
       <div class="notification is-info is-light">
-        {% translate 'The selected car is applied automatically. The JSON file does not need a car field unless you want an explicit self-check.' %}
+        {% translate 'The selected car is applied automatically. The CSV file does not need a car field unless you want an explicit self-check.' %}
       </div>
 
       {% for field in form.visible_fields %}

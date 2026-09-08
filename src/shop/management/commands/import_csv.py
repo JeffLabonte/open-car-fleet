@@ -2,13 +2,13 @@ from typing import Any
 
 from django.core.management.base import BaseCommand, CommandError
 
-from shop.importers import ImportContext, ImportValidationError, JSONImporter
+from shop.importers import CSVImporter, ImportContext, ImportValidationError
 from shop.models.garage import Garage
 
 
 class Command(BaseCommand):
     help = (
-        "Import normalized JSON objects into Car, WorkJob, or Report. "
+        "Import normalized CSV objects into Car, WorkJob, or Report. "
         "Cars require a target garage."
     )
 
@@ -18,8 +18,8 @@ class Command(BaseCommand):
             help="Model name to import into, e.g. Car, WorkJob, or Report.",
         )
         parser.add_argument(
-            "json_file",
-            help="Path to the JSON file containing a list of object dictionaries.",
+            "csv_file",
+            help="Path to the CSV file containing object rows.",
         )
         parser.add_argument(
             "--batch-size",
@@ -30,7 +30,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--dry-run",
             action="store_true",
-            help="Validate the JSON data without saving any objects.",
+            help="Validate the CSV data without saving any objects.",
         )
         parser.add_argument(
             "--garage",
@@ -38,11 +38,11 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args: Any, **options: Any) -> None:
-        importer = JSONImporter()
+        importer = CSVImporter()
 
         try:
             model = importer.resolve_model(options["model_name"])
-            records = importer.parse_json_file(options["json_file"])
+            records = importer.parse_csv_file(options["csv_file"])
             context = ImportContext(garage=self._resolve_garage(options.get("garage")))
             result = importer.import_records(
                 model,
@@ -81,5 +81,5 @@ class Command(BaseCommand):
             return None
         try:
             return Garage.objects.get(pk=raw_value)
-        except Garage.DoesNotExist as exc:
+        except (Garage.DoesNotExist, ValidationError, ValueError) as exc:
             raise ImportValidationError(f"Garage not found for id '{raw_value}'.") from exc
