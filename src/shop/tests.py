@@ -79,13 +79,13 @@ class HankoAuthenticationIntegrationTests(TestCase):
             "session_token": "session-token-123",
         }
 
-        with patch('shop.auth.requests.get', return_value=FakeHankoResponse({
-            'id': 'hanko-user-123',
-            'email': 'driver@example.com',
-            'name': 'Test Driver',
-            'display_name': 'Test Driver',
-            'avatar_url': 'https://example.com/avatar.png',
-            'provider': 'hanko',
+        with patch('shop.auth.requests.post', return_value=FakeHankoResponse({
+            'is_valid': True,
+            'claims': {
+                'sub': 'hanko-user-123',
+                'email': 'driver@example.com',
+                'username': 'Test Driver',
+            },
         })):
             response = self.client.post(
                 reverse('shop-hanko-callback'),
@@ -110,17 +110,17 @@ class HankoAuthenticationIntegrationTests(TestCase):
             def raise_for_status(self) -> None:
                 return None
 
-            def json(self) -> dict[str, str]:
+            def json(self) -> dict[str, object]:
                 return {
-                    'id': 'hanko-user-123',
-                    'email': 'driver@example.com',
-                    'name': 'Test Driver',
-                    'display_name': 'Test Driver',
-                    'avatar_url': 'https://example.com/avatar.png',
-                    'provider': 'hanko',
+                    'is_valid': True,
+                    'claims': {
+                        'sub': 'hanko-user-123',
+                        'email': 'driver@example.com',
+                        'username': 'Test Driver',
+                    },
                 }
 
-        with patch('shop.auth.requests.get', return_value=FakeResponse()):
+        with patch('shop.auth.requests.post', return_value=FakeResponse()):
             self.client.get(reverse('shop-index'))
 
         factory = RequestFactory()
@@ -134,7 +134,7 @@ class HankoAuthenticationIntegrationTests(TestCase):
         request.session.save()
         AuthenticationMiddleware(next_response).process_request(request)
 
-        with patch('shop.auth.requests.get', return_value=FakeResponse()):
+        with patch('shop.auth.requests.post', return_value=FakeResponse()):
             HankoAuthenticationMiddleware(next_response).process_request(request)
 
         self.assertTrue(request.user.is_authenticated)
@@ -253,17 +253,17 @@ class HankoAuthenticationIntegrationTests(TestCase):
             def raise_for_status(self) -> None:
                 return None
 
-            def json(self) -> dict[str, str]:
+            def json(self) -> dict[str, object]:
                 return {
-                    'id': 'hanko-user-123',
-                    'email': 'driver@example.com',
-                    'name': 'Test Driver',
-                    'display_name': 'Test Driver',
-                    'avatar_url': 'https://example.com/avatar.png',
-                    'provider': 'hanko',
+                    'is_valid': True,
+                    'claims': {
+                        'sub': 'hanko-user-123',
+                        'email': 'driver@example.com',
+                        'username': 'Test Driver',
+                    },
                 }
 
-        with patch('shop.auth.requests.get', return_value=FakeResponse()):
+        with patch('shop.auth.requests.post', return_value=FakeResponse()):
             response = views.car_list(request)
 
         self.assertEqual(response.status_code, 200)
@@ -293,11 +293,13 @@ class HankoCallbackSecurityTests(TestCase):
             'session_token': 'verified-session-token',
         }
 
-        with patch('shop.auth.requests.get', return_value=FakeHankoResponse({
-            'id': 'verified-hanko-id',
-            'email': 'verified@example.com',
-            'name': 'Verified User',
-            'provider': 'hanko',
+        with patch('shop.auth.requests.post', return_value=FakeHankoResponse({
+            'is_valid': True,
+            'claims': {
+                'sub': 'verified-hanko-id',
+                'email': 'verified@example.com',
+                'username': 'Verified User',
+            },
         })) as request:
             response = self.client.post(
                 reverse('shop-hanko-callback'),
@@ -310,13 +312,13 @@ class HankoCallbackSecurityTests(TestCase):
         self.assertFalse(ShopUser.objects.filter(email='victim@example.com').exists())
         self.assertTrue(ShopUser.objects.filter(email='verified@example.com').exists())
         request.assert_called_once_with(
-            'https://hanko.example.com/userinfo',
-            headers={'Authorization': 'Bearer verified-session-token'},
+            'https://hanko.example.com/sessions/validate',
+            json={'session_token': 'verified-session-token'},
             timeout=5,
         )
 
     def test_callback_fails_closed_when_hanko_rejects_the_token(self):
-        with patch('shop.auth.requests.get', side_effect=requests.HTTPError('invalid token')):
+        with patch('shop.auth.requests.post', side_effect=requests.HTTPError('invalid token')):
             response = self.client.post(
                 reverse('shop-hanko-callback'),
                 data=json.dumps({
@@ -1580,12 +1582,13 @@ class AdditionalCoverageRegressionTests(TestCase):
             },
             'session_token': 'token-coverage-123',
         }
-        with patch('shop.auth.requests.get', return_value=FakeHankoResponse({
-            'id': 'hanko-coverage',
-            'email': 'new-coverage@example.com',
-            'name': 'Coverage User',
-            'display_name': 'Coverage User',
-            'provider': 'hanko',
+        with patch('shop.auth.requests.post', return_value=FakeHankoResponse({
+            'is_valid': True,
+            'claims': {
+                'sub': 'hanko-coverage',
+                'email': 'new-coverage@example.com',
+                'username': 'Coverage User',
+            },
         })):
             callback_response = self.client.post(
                 reverse('shop-hanko-callback'),
@@ -2078,50 +2081,60 @@ class AuthAndInputCoverageTests(TestCase):
             with self.assertRaises(HankoAuthenticationError):
                 fetch_hanko_userinfo(123)  # type: ignore[arg-type]
 
-            with patch('shop.auth.requests.get', side_effect=requests.RequestException('network')):
+            with patch('shop.auth.requests.post', side_effect=requests.RequestException('network')):
                 with self.assertRaises(HankoAuthenticationError):
                     fetch_hanko_userinfo('token')
 
-            with patch('shop.auth.requests.get', return_value=FakeHankoResponse('not-a-dict')):
+            with patch('shop.auth.requests.post', return_value=FakeHankoResponse('not-a-dict')):
                 with self.assertRaises(HankoAuthenticationError):
                     fetch_hanko_userinfo('token')
 
-            with patch('shop.auth.requests.get', return_value=FakeHankoResponse({})):
+            with patch('shop.auth.requests.post', return_value=FakeHankoResponse({})):
                 with self.assertRaises(HankoAuthenticationError):
                     fetch_hanko_userinfo('token')
 
-            with patch('shop.auth.requests.get', return_value=FakeHankoResponse({
-                'id': '  hanko-id  ',
-                'email': 'user@example.com',
-                'emails': [{'address': 'ignored@example.com'}],
-                'name': 'User',
+            with patch('shop.auth.requests.post', return_value=FakeHankoResponse({
+                'is_valid': True,
+                'claims': {
+                    'sub': '  hanko-id  ',
+                    'email': {'address': 'user@example.com'},
+                    'username': 'User',
+                },
             })):
                 info = fetch_hanko_userinfo('token')
                 self.assertEqual(info['id'], 'hanko-id')
                 self.assertEqual(info['email'], 'user@example.com')
 
-            with patch('shop.auth.requests.get', return_value=FakeHankoResponse({
-                'id': 'fallback-id',
-                'emails': [{'address': 'fallback@example.com'}],
+            with patch('shop.auth.requests.post', return_value=FakeHankoResponse({
+                'is_valid': True,
+                'claims': {
+                    'sub': 'fallback-id',
+                    'email': 'fallback@example.com',
+                },
             })):
                 info = fetch_hanko_userinfo('token')
                 self.assertEqual(info['email'], 'fallback@example.com')
 
-            with patch('shop.auth.requests.get', return_value=FakeHankoResponse({
-                'id': 'invalid-field-id',
-                'email': 'valid@example.com',
-                'name': None,
-                'provider': 'hanko',
+            with patch('shop.auth.requests.post', return_value=FakeHankoResponse({
+                'is_valid': True,
+                'claims': {
+                    'sub': 'invalid-field-id',
+                    'email': 'valid@example.com',
+                    'username': None,
+                },
             })):
                 info = fetch_hanko_userinfo('token')
                 self.assertEqual(info['email'], 'valid@example.com')
 
-            with patch('shop.auth.requests.get', return_value=FakeHankoResponse({
-                'id': 'invalid-field-id',
-                'email': ['not', 'a', 'string'],
+            with patch('shop.auth.requests.post', return_value=FakeHankoResponse({
+                'is_valid': True,
+                'claims': {
+                    'sub': 'invalid-field-id',
+                    'email': ['not', 'a', 'string'],
+                },
             })):
-                with self.assertRaises(HankoAuthenticationError):
-                    fetch_hanko_userinfo('token')
+                info = fetch_hanko_userinfo('token')
+                self.assertEqual(info['email'], '')
 
     @override_settings(HANKO_API_URL='')
     def test_fetch_hanko_userinfo_requires_api_url(self):
@@ -2550,12 +2563,15 @@ class AuthAndInputCoverageTests(TestCase):
             request.session['hanko_session_token'] = 'session-token-ABC'
             request.user = AnonymousUser()
 
-            with patch('shop.auth.requests.get') as mock_get:
-                mock_get.return_value.raise_for_status.return_value = None
-                mock_get.return_value.json.return_value = {
-                    'id': 'recovered-hanko-id',
-                    'email': 'recovered@example.com',
-                    'name': 'Recovered User',
+            with patch('shop.auth.requests.post') as mock_post:
+                mock_post.return_value.raise_for_status.return_value = None
+                mock_post.return_value.json.return_value = {
+                    'is_valid': True,
+                    'claims': {
+                        'sub': 'recovered-hanko-id',
+                        'email': 'recovered@example.com',
+                        'username': 'Recovered User',
+                    },
                 }
                 response = HankoAuthenticationMiddleware(lambda _request: HttpResponse()).process_request(request)
                 self.assertIsNone(response)

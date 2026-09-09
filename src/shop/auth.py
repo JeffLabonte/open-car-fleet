@@ -15,6 +15,26 @@ class HankoAuthenticationError(ValueError):
     """Raised when a Hanko session cannot be verified or parsed safely."""
 
 
+def _extract_hanko_email(raw_email: Any) -> str:
+    if isinstance(raw_email, str) and raw_email.strip():
+        return raw_email.strip()
+    if isinstance(raw_email, dict):
+        address = raw_email.get('address')
+        if isinstance(address, str) and address.strip():
+            return address.strip()
+    return ''
+
+
+def _extract_hanko_username(raw_username: Any) -> str:
+    if isinstance(raw_username, str) and raw_username.strip():
+        return raw_username.strip()
+    if isinstance(raw_username, dict):
+        name = raw_username.get('username')
+        if isinstance(name, str) and name.strip():
+            return name.strip()
+    return ''
+
+
 def fetch_hanko_userinfo(session_token: str) -> dict[str, Any]:
     """Fetch and validate the identity bound to a Hanko session token."""
     if not isinstance(session_token, str) or not session_token.strip():
@@ -25,48 +45,53 @@ def fetch_hanko_userinfo(session_token: str) -> dict[str, Any]:
         raise HankoAuthenticationError('HANKO_API_URL is not configured.')
 
     try:
-        response = requests.get(
-            f"{api_url.rstrip('/')}/userinfo",
-            headers={'Authorization': f'Bearer {session_token.strip()}'},
+        response = requests.post(
+            f"{api_url.rstrip('/')}/sessions/validate",
+            json={'session_token': session_token.strip()},
             timeout=5,
         )
         response.raise_for_status()
-        raw_user_info = response.json()
+        data = response.json()
     except (requests.RequestException, ValueError, TypeError) as exc:
         raise HankoAuthenticationError('Unable to verify the Hanko session.') from exc
 
-    if not isinstance(raw_user_info, dict):
-        raise HankoAuthenticationError('Hanko returned an invalid user response.')
+    if not isinstance(data, dict):
+        raise HankoAuthenticationError('Hanko returned an invalid session response.')
 
-    user_info = dict(raw_user_info)
+    if not data.get('is_valid'):
+        raise HankoAuthenticationError('Hanko session is not valid.')
+
+    claims = data.get('claims')
+    if not isinstance(claims, dict):
+        raise HankoAuthenticationError('Hanko returned invalid session claims.')
+
     user_id = next(
         (
             value.strip()
-            for key in ('id', 'user_id', 'hanko_id')
-            for value in [user_info.get(key)]
+            for key in ('sub', 'subject', 'user_id', 'id')
+            for value in [claims.get(key)]
             if isinstance(value, str) and value.strip()
         ),
         '',
     )
     if not user_id:
         raise HankoAuthenticationError('Hanko returned no user identifier.')
-    user_info['id'] = user_id
 
-    email = user_info.get('email')
-    if not isinstance(email, str) or not email.strip():
-        emails = user_info.get('emails')
-        first_email = emails[0] if isinstance(emails, list) and emails else None
-        if isinstance(first_email, dict):
-            email = first_email.get('address')
-        if isinstance(email, str) and email.strip():
-            user_info['email'] = email.strip()
+    email = _extract_hanko_email(claims.get('email'))
+    username = _extract_hanko_username(claims.get('username'))
 
-    for key in ('email', 'email_address', 'name', 'display_name', 'username', 'avatar_url', 'avatar', 'provider'):
-        value = user_info.get(key)
-        if value is not None and not isinstance(value, str):
-            raise HankoAuthenticationError(f'Hanko returned an invalid {key} value.')
-
-    return user_info
+    return {
+        'id': user_id,
+        'user_id': user_id,
+        'hanko_id': user_id,
+        'email': email,
+        'email_address': email,
+        'name': username,
+        'display_name': username,
+        'avatar_url': '',
+        'avatar': '',
+        'provider': 'hanko',
+    }
 
 
 def _build_username(base_name: str, hanko_id: str | None = None) -> str:
