@@ -46,6 +46,12 @@
           return false;
         }
 
+        const sessionToken = hanko.getSessionToken();
+        if (!sessionToken) {
+          console.error('Hanko session is valid but no session token is available.');
+          return false;
+        }
+
         const user = await hanko.getCurrentUser();
         const payload = {
           id: user?.user_id || user?.id || '',
@@ -54,7 +60,7 @@
           display_name: user?.display_name || user?.name || user?.emails?.[0]?.address || '',
           avatar_url: user?.avatar_url || user?.avatar || '',
           provider: 'hanko',
-          session_token: session?.jwt || session?.access_token || session?.token || '',
+          session_token: sessionToken,
         };
 
         const csrfToken = document.cookie
