@@ -18,7 +18,7 @@ from django.core.management.base import CommandError
 from django.core.exceptions import ValidationError
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.core.mail import EmailMessage
-from django.db import models
+from django.db import IntegrityError, models, transaction
 from django.http import HttpRequest, HttpResponse
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import RequestFactory, TestCase
@@ -28,9 +28,24 @@ from django.utils import timezone
 from openpyxl import load_workbook
 
 from shop import views
-from shop.auth import complete_hanko_login, sync_hanko_user
+from shop.auth import (
+    HankoAuthenticationError,
+    _build_username,
+    complete_hanko_login,
+    fetch_hanko_userinfo,
+    sync_hanko_user,
+)
 from shop.exporters import export_garage_to_excel
-from shop.forms import CarCreateForm, CarUpdateForm, GarageCreateForm, KnownShopProofForm, ReportForm, WorkJobForm
+from shop.forms import (
+    CarCreateForm,
+    CarImportForm,
+    CarUpdateForm,
+    GarageCreateForm,
+    GarageImportForm,
+    KnownShopProofForm,
+    ReportForm,
+    WorkJobForm,
+)
 from shop.importers import CSVImporter, ImportContext, ImportValidationError
 from shop.mailgun_backend import MailgunEmailBackend
 from shop.middleware import HankoAuthenticationMiddleware, hanko_login_required
@@ -60,14 +75,23 @@ class HankoAuthenticationIntegrationTests(TestCase):
                 "display_name": "Test Driver",
                 "avatar_url": "https://example.com/avatar.png",
                 "provider": "hanko",
-            }
+            },
+            "session_token": "session-token-123",
         }
 
-        response = self.client.post(
-            reverse('shop-hanko-callback'),
-            data=json.dumps(payload),
-            content_type='application/json',
-        )
+        with patch('shop.auth.requests.get', return_value=FakeHankoResponse({
+            'id': 'hanko-user-123',
+            'email': 'driver@example.com',
+            'name': 'Test Driver',
+            'display_name': 'Test Driver',
+            'avatar_url': 'https://example.com/avatar.png',
+            'provider': 'hanko',
+        })):
+            response = self.client.post(
+                reverse('shop-hanko-callback'),
+                data=json.dumps(payload),
+                content_type='application/json',
+            )
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()['ok'])
@@ -96,7 +120,7 @@ class HankoAuthenticationIntegrationTests(TestCase):
                     'provider': 'hanko',
                 }
 
-        with patch('shop.middleware.requests.get', return_value=FakeResponse()):
+        with patch('shop.auth.requests.get', return_value=FakeResponse()):
             self.client.get(reverse('shop-index'))
 
         factory = RequestFactory()
@@ -110,7 +134,7 @@ class HankoAuthenticationIntegrationTests(TestCase):
         request.session.save()
         AuthenticationMiddleware(next_response).process_request(request)
 
-        with patch('shop.middleware.requests.get', return_value=FakeResponse()):
+        with patch('shop.auth.requests.get', return_value=FakeResponse()):
             HankoAuthenticationMiddleware(next_response).process_request(request)
 
         self.assertTrue(request.user.is_authenticated)
@@ -121,6 +145,7 @@ class HankoAuthenticationIntegrationTests(TestCase):
 
         refreshed_user = get_user_model().objects.get(pk=user.pk)
         self.assertEqual(refreshed_user.email, 'driver@example.com')
+
 
     def test_logout_clears_hanko_session_and_redirects(self):
         user = ShopUser.objects.create_user(username='logout-user', email='logout@example.com', password='pass1234')
@@ -238,11 +263,122 @@ class HankoAuthenticationIntegrationTests(TestCase):
                     'provider': 'hanko',
                 }
 
-        with patch('shop.middleware.requests.get', return_value=FakeResponse()):
+        with patch('shop.auth.requests.get', return_value=FakeResponse()):
             response = views.car_list(request)
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'Cars', response.content)
+
+
+class HankoCallbackSecurityTests(TestCase):
+    def test_callback_requires_a_session_token(self):
+        response = self.client.post(
+            reverse('shop-hanko-callback'),
+            data=json.dumps({'user': {'id': 'forged-user', 'email': 'forged@example.com'}}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Missing session token')
+        self.assertFalse(ShopUser.objects.exists())
+
+    @override_settings(HANKO_API_URL='https://hanko.example.com')
+    def test_callback_uses_verified_hanko_identity_instead_of_client_payload(self):
+        payload = {
+            'user': {
+                'id': 'attacker-controlled-id',
+                'email': 'victim@example.com',
+                'name': 'Attacker supplied name',
+            },
+            'session_token': 'verified-session-token',
+        }
+
+        with patch('shop.auth.requests.get', return_value=FakeHankoResponse({
+            'id': 'verified-hanko-id',
+            'email': 'verified@example.com',
+            'name': 'Verified User',
+            'provider': 'hanko',
+        })) as request:
+            response = self.client.post(
+                reverse('shop-hanko-callback'),
+                data=json.dumps(payload),
+                content_type='application/json',
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['user']['email'], 'verified@example.com')
+        self.assertFalse(ShopUser.objects.filter(email='victim@example.com').exists())
+        self.assertTrue(ShopUser.objects.filter(email='verified@example.com').exists())
+        request.assert_called_once_with(
+            'https://hanko.example.com/userinfo',
+            headers={'Authorization': 'Bearer verified-session-token'},
+            timeout=5,
+        )
+
+    def test_callback_fails_closed_when_hanko_rejects_the_token(self):
+        with patch('shop.auth.requests.get', side_effect=requests.HTTPError('invalid token')):
+            response = self.client.post(
+                reverse('shop-hanko-callback'),
+                data=json.dumps({
+                    'user': {'id': 'forged-id', 'email': 'forged@example.com'},
+                    'session_token': 'invalid-token',
+                }),
+                content_type='application/json',
+            )
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json()['error'], 'Invalid Hanko session')
+        self.assertFalse(ShopUser.objects.exists())
+        self.assertNotIn('hanko_session_token', self.client.session)
+
+    def test_callback_requires_csrf_protection(self):
+        from django.test import Client
+
+        client = Client(enforce_csrf_checks=True)
+        response = client.post(
+            reverse('shop-hanko-callback'),
+            data=json.dumps({'session_token': 'token'}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+
+class FakeHankoResponse:
+    def __init__(self, payload: object):
+        self.payload = payload
+
+    def raise_for_status(self) -> None:
+        return None
+
+    def json(self) -> object:
+        return self.payload
+
+
+class ShopUserIdentityTests(TestCase):
+    def test_non_empty_emails_are_unique_case_insensitively(self):
+        ShopUser.objects.create_user(
+            username='identity-one',
+            email='Identity@example.com',
+            password='pass1234',
+        )
+
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                ShopUser.objects.create_user(
+                    username='identity-two',
+                    email='identity@example.com',
+                    password='pass1234',
+                )
+
+    def test_hanko_email_is_normalized_before_account_creation(self):
+        user = sync_hanko_user(
+            hanko_id='normalized-hanko-id',
+            email='  User@Example.COM ',
+            username='Normalized User',
+        )
+
+        self.assertEqual(user.email, 'user@example.com')
 
 
 class CarPartStatusTrackingTests(TestCase):
@@ -462,6 +598,11 @@ class KnownShopTests(TestCase):
             email='shop-user@example.com',
             password='pass1234',
         )
+        self.other_user = ShopUser.objects.create_user(
+            username='other-shop-user',
+            email='other-shop-user@example.com',
+            password='pass1234',
+        )
 
     def test_user_can_add_shop_and_proof(self):
         self.client.force_login(self.user)
@@ -479,6 +620,7 @@ class KnownShopTests(TestCase):
 
         self.assertEqual(shop_response.status_code, 302)
         shop = KnownShop.objects.get(name='Northside Auto')
+        self.assertEqual(shop.created_by, self.user)
         proof_response = self.client.post(
             reverse('shop-known-shop-proof-create', args=[shop.pk]),
             data={
@@ -493,6 +635,96 @@ class KnownShopTests(TestCase):
         self.assertEqual(proof.title, 'Business registration')
         self.assertIn('registration', proof.file.name)
         self.assertTrue(proof.file.name.endswith('.pdf'))
+
+    def test_other_user_cannot_view_or_add_proof_to_owned_shop(self):
+        shop = KnownShop.objects.create(name='Private Shop', created_by=self.user)
+        self.client.force_login(self.other_user)
+
+        detail_response = self.client.get(reverse('shop-known-shop-detail', args=[shop.pk]))
+        proof_response = self.client.get(reverse('shop-known-shop-proof-create', args=[shop.pk]))
+
+        self.assertEqual(detail_response.status_code, 404)
+        self.assertEqual(proof_response.status_code, 404)
+
+    def test_known_shop_model_str_and_invitation_methods(self):
+        shop = KnownShop.objects.create(name='Str Shop', created_by=self.user)
+        self.assertEqual(str(shop), 'Str Shop')
+
+        proof = KnownShopProof.objects.create(shop=shop, title='Str Proof')
+        self.assertEqual(str(proof), 'Str Proof (Str Shop)')
+
+        garage = Garage.objects.create(name='Str Garage', created_by=self.user)
+        membership = GarageMembership.objects.create(
+            garage=garage,
+            user=self.user,
+            role=GarageMembership.ROLE_OWNER,
+        )
+        self.assertIn('owner', str(membership))
+
+        invitation = GarageInvitation.objects.create(
+            garage=garage,
+            invited_email='invite@example.com',
+            invited_by=self.user,
+        )
+        self.assertIn('invite@example.com', str(invitation))
+
+        with patch('shop.models.garage.send_mail', return_value=1):
+            sent_count = invitation.send_invitation_email(
+                accept_base_url='https://example.com/accept',
+                sender_email='from@example.com',
+            )
+        self.assertEqual(sent_count, 1)
+
+        invitation_with_message = GarageInvitation.objects.create(
+            garage=garage,
+            invited_email='invite-message@example.com',
+            invited_by=self.user,
+            message='Please join our fleet.',
+        )
+        with patch('shop.models.garage.send_mail', return_value=1) as mock_send:
+            invitation_with_message.send_invitation_email(accept_base_url='https://example.com/accept')
+            self.assertIn('Please join our fleet.', mock_send.call_args[1]['message'])
+
+    def test_known_shop_proof_file_deleted_on_model_delete(self):
+        shop = KnownShop.objects.create(name='Delete Proof Shop', created_by=self.user)
+        proof = KnownShopProof.objects.create(
+            shop=shop,
+            title='Delete proof',
+            file=SimpleUploadedFile('delete.pdf', b'%PDF-1.4 delete', content_type='application/pdf'),
+        )
+        file_path = proof.file.path
+        self.assertTrue(Path(file_path).exists())
+        proof.delete()
+        self.assertFalse(Path(file_path).exists())
+
+    def test_known_shop_proof_file_requires_authentication(self):
+        self.client.force_login(self.user)
+        shop = KnownShop.objects.create(name='Proof Shop', created_by=self.user)
+        proof = KnownShopProof.objects.create(
+            shop=shop,
+            title='Insurance proof',
+            file=SimpleUploadedFile(
+                'insurance.pdf',
+                b'%PDF-1.4 shop proof',
+                content_type='application/pdf',
+            ),
+        )
+
+        try:
+            response = self.client.get(
+                reverse('shop-known-shop-proof-file', args=[shop.pk, proof.pk]),
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response['Content-Type'], 'application/pdf')
+            self.assertEqual(b''.join(response.streaming_content), b'%PDF-1.4 shop proof')
+
+            self.client.logout()
+            anonymous_response = self.client.get(
+                reverse('shop-known-shop-proof-file', args=[shop.pk, proof.pk]),
+            )
+            self.assertEqual(anonymous_response.status_code, 302)
+        finally:
+            proof.file.delete(save=False)
 
 
 class FormEditableFieldsCoverageTests(TestCase):
@@ -616,6 +848,11 @@ class ReportAttachmentTests(TestCase):
             password='pass1234',
             is_mechanic=True,
         )
+        self.stranger = ShopUser.objects.create_user(
+            username='report-stranger',
+            email='report-stranger@example.com',
+            password='pass1234',
+        )
         self.garage = Garage.objects.create(name='Report Garage', created_by=self.user)
         GarageMembership.objects.create(
             garage=self.garage,
@@ -660,6 +897,68 @@ class ReportAttachmentTests(TestCase):
         attachment_urls = {attachment.url for attachment in report.attachments.all()}
         self.assertIn('https://onedrive.example.com/share/abc', attachment_urls)
         self.assertIn('https://drive.google.com/file/d/123/view', attachment_urls)
+
+    def test_report_form_rejects_unsafe_links_and_upload_types(self):
+        unsafe_link_form = ReportForm(data={
+            'job_name': 'Unsafe link',
+            'date_done': '2026-08-10',
+            'external_links': 'javascript:alert(1)',
+        })
+        self.assertFalse(unsafe_link_form.is_valid())
+        self.assertIn('external_links', unsafe_link_form.errors)
+
+        unsafe_file_form = ReportForm(
+            data={
+                'job_name': 'Executable attachment',
+                'date_done': '2026-08-10',
+            },
+            files={
+                'attachments': SimpleUploadedFile(
+                    'payload.exe',
+                    b'MZ executable',
+                    content_type='application/x-msdownload',
+                ),
+            },
+        )
+        self.assertFalse(unsafe_file_form.is_valid())
+        self.assertIn('attachments', unsafe_file_form.errors)
+
+    def test_uploaded_report_attachment_is_streamed_only_to_car_members(self):
+        report = Report.objects.create(
+            car=self.car,
+            job_name='Uploaded invoice',
+            date_done='2026-08-10',
+        )
+        attachment = ReportAttachment.objects.create(
+            report=report,
+            file=SimpleUploadedFile(
+                'invoice.pdf',
+                b'%PDF-1.4 invoice',
+                content_type='application/pdf',
+            ),
+        )
+
+        try:
+            self.client.force_login(self.user)
+            response = self.client.get(
+                reverse(
+                    'shop-report-attachment-file',
+                    args=[self.car.pk, report.pk, attachment.pk],
+                ),
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(b''.join(response.streaming_content), b'%PDF-1.4 invoice')
+
+            self.client.force_login(self.stranger)
+            forbidden_response = self.client.get(
+                reverse(
+                    'shop-report-attachment-file',
+                    args=[self.car.pk, report.pk, attachment.pk],
+                ),
+            )
+            self.assertEqual(forbidden_response.status_code, 404)
+        finally:
+            attachment.file.delete(save=False)
 
     def test_car_detail_renders_attachment_preview_links(self):
         self.client.force_login(self.user)
@@ -745,6 +1044,35 @@ class CSVImporterTests(TestCase):
         self.assertTrue(result.has_errors)
         self.assertIn('Car not found', result.errors[0].message)
 
+    def test_workjob_import_requires_garage_scope(self):
+        car = Car.objects.create(
+            garage=self.garage,
+            make='Honda',
+            model='Civic',
+            vin='2HGFG12698H512345',
+        )
+
+        result = self.importer.import_records(
+            WorkJob,
+            [{'car': str(car.pk), 'title': 'Oil change'}],
+            context=ImportContext(),
+            dry_run=True,
+        )
+
+        self.assertTrue(result.has_errors)
+        self.assertIn('target garage or car context', result.errors[0].message)
+
+    def test_car_resolver_handles_malformed_uuid_without_leaking_validation_error(self):
+        result = self.importer.import_records(
+            WorkJob,
+            [{'car': '00000000-0000-0000-0000-invalid', 'title': 'Oil change'}],
+            context=ImportContext(garage=self.garage),
+            dry_run=True,
+        )
+
+        self.assertTrue(result.has_errors)
+        self.assertIn('Car not found', result.errors[0].message)
+
 
 class ImportCsvCommandTests(TestCase):
     def setUp(self) -> None:
@@ -782,6 +1110,36 @@ class ImportCsvCommandTests(TestCase):
         self.assertIn('Dry run complete', output.getvalue())
         self.assertEqual(Car.objects.count(), 0)
 
+    def test_import_command_rejects_invalid_garage_uuid(self):
+        with tempfile.NamedTemporaryFile('w', suffix='.csv', delete=False) as handle:
+            handle.write('make,model,vin\nMazda,3,JM1BK323171512345\n')
+            temp_path = handle.name
+
+        try:
+            with self.assertRaises(CommandError):
+                call_command('import_csv', 'Car', temp_path, '--garage', 'not-a-uuid')
+        finally:
+            Path(temp_path).unlink(missing_ok=True)
+
+    def test_import_command_rejects_non_positive_batch_size(self):
+        with tempfile.NamedTemporaryFile('w', suffix='.csv', delete=False) as handle:
+            handle.write('make,model,vin\nMazda,3,JM1BK323171512345\n')
+            temp_path = handle.name
+
+        try:
+            with self.assertRaises(CommandError):
+                call_command(
+                    'import_csv',
+                    'Car',
+                    temp_path,
+                    '--garage',
+                    str(self.garage.pk),
+                    '--batch-size',
+                    '0',
+                )
+        finally:
+            Path(temp_path).unlink(missing_ok=True)
+
     def test_export_garage_command_writes_excel_file(self):
         Car.objects.create(
             garage=self.garage,
@@ -817,6 +1175,10 @@ class ImportCsvCommandTests(TestCase):
     def test_export_garage_command_errors_for_unknown_garage(self):
         with self.assertRaises(CommandError):
             call_command('export_garage', str(uuid.uuid4()))
+
+    def test_export_garage_command_rejects_invalid_garage_uuid(self):
+        with self.assertRaises(CommandError):
+            call_command('export_garage', 'not-a-uuid')
 
 
 class GarageExportServiceTests(TestCase):
@@ -1218,7 +1580,18 @@ class AdditionalCoverageRegressionTests(TestCase):
             },
             'session_token': 'token-coverage-123',
         }
-        callback_response = self.client.post(reverse('shop-hanko-callback'), data=json.dumps(valid_payload), content_type='application/json')
+        with patch('shop.auth.requests.get', return_value=FakeHankoResponse({
+            'id': 'hanko-coverage',
+            'email': 'new-coverage@example.com',
+            'name': 'Coverage User',
+            'display_name': 'Coverage User',
+            'provider': 'hanko',
+        })):
+            callback_response = self.client.post(
+                reverse('shop-hanko-callback'),
+                data=json.dumps(valid_payload),
+                content_type='application/json',
+            )
         self.assertEqual(callback_response.status_code, 200)
         self.assertEqual(callback_response.json()['user']['email'], 'new-coverage@example.com')
         self.assertEqual(self.client.session['hanko_session_token'], 'token-coverage-123')
@@ -1435,6 +1808,229 @@ class AdditionalCoverageRegressionTests(TestCase):
         self.assertFalse(importer._looks_like_uuid('not-a-uuid'))
         self.assertEqual(importer._parse_date_value('2026-08-15'), date(2026, 8, 15))
 
+class ImporterCoverageTests(TestCase):
+    def setUp(self) -> None:
+        self.user = ShopUser.objects.create_user(
+            username='importer-owner',
+            email='importer-owner@example.com',
+            password='pass1234',
+            is_mechanic=True,
+        )
+        self.garage = Garage.objects.create(name='Importer Garage', created_by=self.user)
+        GarageMembership.objects.create(
+            garage=self.garage,
+            user=self.user,
+            role=GarageMembership.ROLE_OWNER,
+        )
+        self.car = Car.objects.create(
+            garage=self.garage,
+            make='Honda',
+            model='Civic',
+            vin='2HGFG12698H512348',
+            year=2022,
+        )
+
+    def test_parse_csv_file_handles_missing_and_undecodable_files(self):
+        importer = CSVImporter()
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+            f.write('make,model,vin\nToyota,Yaris,JTDKB20U793512346\n')
+            path = Path(f.name)
+        try:
+            records = importer.parse_csv_file(path)
+            self.assertEqual(len(records), 1)
+            self.assertEqual(records[0]['make'], 'Toyota')
+        finally:
+            path.unlink()
+
+        with self.assertRaises(ImportValidationError):
+            importer.parse_csv_file('/nonexistent/path.csv')
+
+        with tempfile.NamedTemporaryFile(mode='wb', suffix='.csv', delete=False) as f:
+            f.write(b'\xff\xfe')
+            bad_path = Path(f.name)
+        try:
+            with self.assertRaises(ImportValidationError):
+                importer.parse_csv_file(bad_path)
+        finally:
+            bad_path.unlink()
+
+    def test_import_records_validates_batch_size_and_skips_empty_records(self):
+        importer = CSVImporter()
+
+        with self.assertRaises(ImportValidationError):
+            importer.import_records(Car, [], batch_size=0)
+
+        result = importer.import_records(
+            Car,
+            [{'make': 'Honda', 'model': 'Civic', 'vin': 'JTDKB20U793512300'}],
+            context=ImportContext(garage=self.garage),
+            dry_run=True,
+        )
+        self.assertEqual(result.created_count, 1)
+
+    def test_prepare_record_raises_for_unsupported_model(self):
+        importer = CSVImporter()
+        with self.assertRaises(ImportValidationError):
+            importer._prepare_record(KnownShop, {}, ImportContext())
+
+    def test_car_import_requires_garage(self):
+        importer = CSVImporter()
+        with self.assertRaises(ImportValidationError):
+            importer._prepare_record(Car, {'make': 'Honda', 'model': 'Civic', 'vin': 'JTDKB20U793512301'}, ImportContext())
+
+    def test_resolve_car_with_context_car_and_uuid(self):
+        importer = CSVImporter()
+        resolved = importer._resolve_car(str(self.car.pk), ImportContext(car=self.car))
+        self.assertEqual(resolved.pk, self.car.pk)
+
+        empty_context = ImportContext(car=self.car)
+        with self.assertRaises(ImportValidationError):
+            importer._resolve_car('not-the-car-uuid', empty_context)
+
+    def test_resolve_car_without_context_raises(self):
+        importer = CSVImporter()
+        with self.assertRaises(ImportValidationError):
+            importer._resolve_car(str(self.car.pk), ImportContext())
+
+    def test_resolve_car_by_garage_only(self):
+        importer = CSVImporter()
+        resolved = importer._resolve_car(str(self.car.pk), ImportContext(garage=self.garage))
+        self.assertEqual(resolved.pk, self.car.pk)
+
+        with self.assertRaises(ImportValidationError):
+            importer._resolve_car('', ImportContext(garage=self.garage))
+
+    def test_resolve_car_by_vin_and_license_plate_and_usual_name(self):
+        importer = CSVImporter()
+        self.car.license_plate = 'ABC 123'
+        self.car.usual_name = 'Daily Driver'
+        self.car.save(update_fields=['license_plate', 'usual_name'])
+
+        context = ImportContext(garage=self.garage)
+        self.assertEqual(importer._resolve_car('ABC 123', context).pk, self.car.pk)
+        self.assertEqual(importer._resolve_car('Daily Driver', context).pk, self.car.pk)
+
+    def test_resolve_car_ambiguous_reference_raises(self):
+        Car.objects.create(
+            garage=self.garage,
+            make='Honda',
+            model='Civic',
+            vin='2HGFG12698H512349',
+            usual_name='Same Name',
+        )
+        Car.objects.create(
+            garage=self.garage,
+            make='Honda',
+            model='Accord',
+            vin='1HGCM82633A123456',
+            usual_name='Same Name',
+        )
+
+        importer = CSVImporter()
+        with self.assertRaises(ImportValidationError):
+            importer._resolve_car('Same Name', ImportContext(garage=self.garage))
+
+    def test_resolve_car_by_non_uuid_pk(self):
+        importer = CSVImporter()
+        resolved = importer._resolve_car(self.car.pk, ImportContext(garage=self.garage))
+        self.assertEqual(resolved.pk, self.car.pk)
+
+    def test_resolve_mechanic_and_shop_branches(self):
+        importer = CSVImporter()
+        self.assertIsNone(importer._resolve_mechanic(''))
+        self.assertIsNone(importer._resolve_mechanic(None))
+        self.assertIsNone(importer._resolve_mechanic('   '))
+
+        with self.assertRaises(ImportValidationError):
+            importer._resolve_mechanic('no-such-mechanic@example.com')
+
+        with self.assertRaises(ImportValidationError):
+            importer._resolve_mechanic(uuid.uuid4())
+
+        shop = KnownShop.objects.create(name='Test Shop', email='shop@example.com')
+        self.assertEqual(importer._resolve_shop('Test Shop').pk, shop.pk)
+        self.assertEqual(importer._resolve_shop('shop@example.com').pk, shop.pk)
+        self.assertEqual(importer._resolve_shop(shop.pk).pk, shop.pk)
+
+        with self.assertRaises(ImportValidationError):
+            importer._resolve_shop('Missing Shop')
+
+        with self.assertRaises(ImportValidationError):
+            importer._resolve_shop(uuid.uuid4())
+
+    def test_prepare_workjob_record_with_car_context(self):
+        importer = CSVImporter()
+        data, warnings = importer._prepare_workjob_record(
+            {'title': 'Brake job', 'assigned_to': self.user.email, 'unknown_field': 'x'},
+            ImportContext(car=self.car),
+        )
+        self.assertEqual(data['car'].pk, self.car.pk)
+        self.assertEqual(data['assigned_to'].pk, self.user.pk)
+        self.assertIn("Ignored fields", warnings[0])
+
+    def test_prepare_report_record_with_description_alias(self):
+        importer = CSVImporter()
+        data, warnings = importer._prepare_report_record(
+            {'description': 'Annual service', 'date': '2026-08-20'},
+            ImportContext(car=self.car),
+        )
+        self.assertEqual(data['job_name'], 'Annual service')
+        self.assertEqual(data['date_done'], date(2026, 8, 20))
+        self.assertEqual(data['additional_information'], '')
+
+    def test_prepare_report_record_requires_job_name_and_date(self):
+        importer = CSVImporter()
+        with self.assertRaises(ImportValidationError):
+            importer._prepare_report_record({}, ImportContext(car=self.car))
+
+        with self.assertRaises(ImportValidationError):
+            importer._prepare_report_record({'job_name': 'Missing date'}, ImportContext(car=self.car))
+
+    def test_coerce_bool_and_int_and_string_list_edge_cases(self):
+        importer = CSVImporter()
+
+        self.assertTrue(importer._coerce_bool(True, field_name='flag'))
+        self.assertFalse(importer._coerce_bool(False, field_name='flag'))
+        self.assertTrue(importer._coerce_bool('Y', field_name='flag'))
+        self.assertFalse(importer._coerce_bool('N', field_name='flag'))
+
+        with self.assertRaises(ImportValidationError):
+            importer._coerce_optional_int(-5, field_name='mileage')
+        with self.assertRaises(ImportValidationError):
+            importer._coerce_optional_int('abc', field_name='mileage')
+
+        self.assertEqual(
+            importer._coerce_string_list(['a', '', 'b'], field_name='list'),
+            ['a', 'b'],
+        )
+        with self.assertRaises(ImportValidationError):
+            importer._coerce_string_list({'not': 'list'}, field_name='list')
+
+    def test_parse_date_value_branches(self):
+        importer = CSVImporter()
+        self.assertIsNone(importer._parse_date_value(None))
+        self.assertEqual(importer._parse_date_value(date(2026, 8, 20)), date(2026, 8, 20))
+
+        with self.assertRaises(ImportValidationError):
+            importer._parse_date_value(12345)
+
+    def test_normalize_license_plate_and_vin(self):
+        importer = CSVImporter()
+        self.assertEqual(importer._normalize_license_plate('abc 123'), 'ABC 123')
+
+        with self.assertRaises(ImportValidationError):
+            importer._normalize_vin('1HGBH41JXMN10918!')
+
+    def test_ignored_field_warnings(self):
+        importer = CSVImporter()
+        self.assertEqual(
+            importer._ignored_field_warnings({'a': 1, 'b': 2}, {'a'}),
+            ["Ignored fields: ['b']"],
+        )
+        self.assertEqual(importer._ignored_field_warnings({'a': 1}, {'a'}), [])
+
+
 class AuthAndInputCoverageTests(TestCase):
     def test_sync_hanko_user_builds_unique_usernames_and_updates_existing_user(self):
         existing = ShopUser.objects.create_user(username='alice', email='alice@example.com', password='pass1234')
@@ -1474,6 +2070,230 @@ class AuthAndInputCoverageTests(TestCase):
         self.assertEqual(request.session['hanko_user_id'], 'hanko-session-1')
         self.assertEqual(request.session['hanko_email'], 'session-user@example.com')
         self.assertEqual(request.session['hanko_provider'], 'hanko')
+
+    def test_fetch_hanko_userinfo_validates_token_and_response(self):
+        with override_settings(HANKO_API_URL='https://hanko.example.com'):
+            with self.assertRaises(HankoAuthenticationError):
+                fetch_hanko_userinfo('')
+            with self.assertRaises(HankoAuthenticationError):
+                fetch_hanko_userinfo(123)  # type: ignore[arg-type]
+
+            with patch('shop.auth.requests.get', side_effect=requests.RequestException('network')):
+                with self.assertRaises(HankoAuthenticationError):
+                    fetch_hanko_userinfo('token')
+
+            with patch('shop.auth.requests.get', return_value=FakeHankoResponse('not-a-dict')):
+                with self.assertRaises(HankoAuthenticationError):
+                    fetch_hanko_userinfo('token')
+
+            with patch('shop.auth.requests.get', return_value=FakeHankoResponse({})):
+                with self.assertRaises(HankoAuthenticationError):
+                    fetch_hanko_userinfo('token')
+
+            with patch('shop.auth.requests.get', return_value=FakeHankoResponse({
+                'id': '  hanko-id  ',
+                'email': 'user@example.com',
+                'emails': [{'address': 'ignored@example.com'}],
+                'name': 'User',
+            })):
+                info = fetch_hanko_userinfo('token')
+                self.assertEqual(info['id'], 'hanko-id')
+                self.assertEqual(info['email'], 'user@example.com')
+
+            with patch('shop.auth.requests.get', return_value=FakeHankoResponse({
+                'id': 'fallback-id',
+                'emails': [{'address': 'fallback@example.com'}],
+            })):
+                info = fetch_hanko_userinfo('token')
+                self.assertEqual(info['email'], 'fallback@example.com')
+
+            with patch('shop.auth.requests.get', return_value=FakeHankoResponse({
+                'id': 'invalid-field-id',
+                'email': 'valid@example.com',
+                'name': None,
+                'provider': 'hanko',
+            })):
+                info = fetch_hanko_userinfo('token')
+                self.assertEqual(info['email'], 'valid@example.com')
+
+            with patch('shop.auth.requests.get', return_value=FakeHankoResponse({
+                'id': 'invalid-field-id',
+                'email': ['not', 'a', 'string'],
+            })):
+                with self.assertRaises(HankoAuthenticationError):
+                    fetch_hanko_userinfo('token')
+
+    @override_settings(HANKO_API_URL='')
+    def test_fetch_hanko_userinfo_requires_api_url(self):
+        with patch.dict('os.environ', {'HANKO_API_URL': ''}):
+            with self.assertRaises(HankoAuthenticationError):
+                fetch_hanko_userinfo('token')
+
+    def test_build_username_handles_collision_and_special_characters(self):
+        base = _build_username('valid user!')
+        self.assertEqual(base, 'valid-user-')
+
+        ShopUser.objects.create_user(username='collider', email='collider@example.com', password='pass1234')
+
+        first = _build_username('collider', hanko_id='id-1')
+        self.assertEqual(first, 'collider1')
+
+        second = _build_username('collider', hanko_id='id-2')
+        self.assertEqual(second, 'collider1')
+
+        empty = _build_username('', hanko_id='id-3')
+        self.assertEqual(empty, 'hanko-id-3')
+
+    def test_build_username_very_long_base_is_truncated(self):
+        long_name = 'a' * 200
+        result = _build_username(long_name)
+        self.assertEqual(len(result), 150)
+        self.assertTrue(result.startswith('a' * 140))
+
+    def test_sync_hanko_user_falls_back_to_email_lookup_and_creates_user(self):
+        email_user = ShopUser.objects.create_user(
+            username='email-user',
+            email='lookup@example.com',
+            password='pass1234',
+        )
+        linked = sync_hanko_user(hanko_id='new-hanko-id', email='LOOKUP@EXAMPLE.COM', username='Linked User')
+        self.assertEqual(linked.pk, email_user.pk)
+        self.assertEqual(linked.hanko_id, 'new-hanko-id')
+        self.assertEqual(linked.display_name, 'Linked User')
+
+        created_no_email = sync_hanko_user()
+        self.assertTrue(created_no_email.username.startswith('hanko-user'))
+        self.assertEqual(created_no_email.email, '')
+
+    def test_sync_hanko_user_only_backfills_empty_fields_for_existing_hanko_user(self):
+        user = ShopUser.objects.create_user(
+            username='backfill',
+            email='backfill@example.com',
+            password='pass1234',
+        )
+        user.hanko_id = 'backfill-hanko-id'
+        user.email = ''
+        user.display_name = ''
+        user.avatar_url = ''
+        user.auth_provider = ''
+        user.save(update_fields=['hanko_id', 'email', 'display_name', 'avatar_url', 'auth_provider'])
+
+        updated = sync_hanko_user(
+            hanko_id='backfill-hanko-id',
+            email='new@example.com',
+            username='New Name',
+            avatar_url='https://example.com/new.png',
+            provider='hanko',
+        )
+        self.assertEqual(updated.email, 'new@example.com')
+        self.assertEqual(updated.display_name, 'New Name')
+        self.assertEqual(updated.avatar_url, 'https://example.com/new.png')
+        self.assertEqual(updated.auth_provider, 'hanko')
+
+    def test_sync_hanko_user_preserves_populated_fields_for_existing_users(self):
+        user = ShopUser.objects.create_user(
+            username='preserve',
+            email='preserve@example.com',
+            password='pass1234',
+        )
+        user.hanko_id = 'preserve-hanko-id'
+        user.display_name = 'Existing Name'
+        user.avatar_url = 'https://example.com/existing.png'
+        user.auth_provider = 'hanko'
+        user.save(update_fields=['hanko_id', 'display_name', 'avatar_url', 'auth_provider'])
+
+        updated_by_hanko_id = sync_hanko_user(
+            hanko_id='preserve-hanko-id',
+            email='new@example.com',
+            username='Ignored Name',
+            avatar_url='https://example.com/ignored.png',
+            provider='legacy',
+        )
+        self.assertEqual(updated_by_hanko_id.display_name, 'Existing Name')
+        self.assertEqual(updated_by_hanko_id.avatar_url, 'https://example.com/existing.png')
+        self.assertEqual(updated_by_hanko_id.auth_provider, 'legacy')
+
+        updated_by_hanko_id_no_provider = sync_hanko_user(
+            hanko_id='preserve-hanko-id',
+            email='new2@example.com',
+            username='Ignored Name 2',
+            avatar_url='https://example.com/ignored2.png',
+        )
+        self.assertEqual(updated_by_hanko_id_no_provider.display_name, 'Existing Name')
+        self.assertEqual(updated_by_hanko_id_no_provider.avatar_url, 'https://example.com/existing.png')
+
+        email_user_no_avatar = ShopUser.objects.create_user(
+            username='preserve-email-empty-avatar',
+            email='preserve-email-empty-avatar@example.com',
+            password='pass1234',
+        )
+        email_user_no_avatar.display_name = 'Email Existing Name'
+        email_user_no_avatar.save(update_fields=['display_name'])
+
+        updated_email_no_avatar = sync_hanko_user(
+            hanko_id='new-hanko-empty-avatar',
+            email='preserve-email-empty-avatar@example.com',
+            username='Ignored Email Name',
+            avatar_url='https://example.com/new-avatar.png',
+        )
+        self.assertEqual(updated_email_no_avatar.display_name, 'Ignored Email Name')
+        self.assertEqual(updated_email_no_avatar.avatar_url, 'https://example.com/new-avatar.png')
+
+        other_email = ShopUser.objects.create_user(
+            username='preserve-email',
+            email='emailpreserve@example.com',
+            password='pass1234',
+        )
+        other_email.display_name = 'Email Existing'
+        other_email.avatar_url = 'https://example.com/email-existing.png'
+        other_email.auth_provider = 'hanko'
+        other_email.save(update_fields=['display_name', 'avatar_url', 'auth_provider'])
+
+        updated_by_email = sync_hanko_user(
+            hanko_id='new-hanko-for-email',
+            email='emailpreserve@example.com',
+            username='Ignored Email Name',
+            avatar_url='https://example.com/ignored-email.png',
+            provider='legacy',
+        )
+        self.assertEqual(updated_by_email.hanko_id, 'new-hanko-for-email')
+        self.assertEqual(updated_by_email.display_name, 'Ignored Email Name')
+        self.assertEqual(updated_by_email.avatar_url, 'https://example.com/ignored-email.png')
+        self.assertEqual(updated_by_email.auth_provider, 'legacy')
+
+    def test_sync_hanko_user_with_empty_provider_does_not_overwrite_existing_provider(self):
+        user = ShopUser.objects.create_user(
+            username='provider-test',
+            email='provider@example.com',
+            password='pass1234',
+        )
+        user.hanko_id = 'provider-hanko-id'
+        user.auth_provider = 'hanko'
+        user.save(update_fields=['hanko_id', 'auth_provider'])
+
+        updated_by_hanko_id = sync_hanko_user(
+            hanko_id='provider-hanko-id',
+            email='provider@example.com',
+            username='Provider User',
+            provider='',
+        )
+        self.assertEqual(updated_by_hanko_id.auth_provider, 'hanko')
+
+        email_user = ShopUser.objects.create_user(
+            username='provider-email-test',
+            email='provider-email@example.com',
+            password='pass1234',
+        )
+        email_user.auth_provider = 'hanko'
+        email_user.save(update_fields=['auth_provider'])
+
+        updated_by_email = sync_hanko_user(
+            hanko_id='new-provider-hanko-id',
+            email='provider-email@example.com',
+            username='Provider Email User',
+            provider='',
+        )
+        self.assertEqual(updated_by_email.auth_provider, 'hanko')
 
     def test_car_form_validators_cover_invalid_ranges_and_duplicates(self):
         self.user = ShopUser.objects.create_user(username='validator', email='validator@example.com', password='pass1234')
@@ -1526,6 +2346,32 @@ class AuthAndInputCoverageTests(TestCase):
         self.assertFalse(invalid_plate.is_valid())
         self.assertIn('license_plate', invalid_plate.errors)
 
+    def test_car_orm_validation_rejects_invalid_vin_and_license_plate(self):
+        user = ShopUser.objects.create_user(
+            username='orm-car-validator',
+            email='orm-car-validator@example.com',
+            password='pass1234',
+        )
+        garage = Garage.objects.create(name='ORM Car Garage', created_by=user)
+        GarageMembership.objects.create(garage=garage, user=user, role=GarageMembership.ROLE_OWNER)
+
+        with self.assertRaises(ValidationError):
+            Car.objects.create(
+                garage=garage,
+                make='Honda',
+                model='Civic',
+                vin='SHORT',
+            )
+
+        with self.assertRaises(ValidationError):
+            Car.objects.create(
+                garage=garage,
+                make='Honda',
+                model='Civic',
+                vin='JTDKB20U793512351',
+                license_plate='BAD@PLATE',
+            )
+
     def test_workjob_and_report_form_line_lists_and_assignment_guards(self):
         user = ShopUser.objects.create_user(username='mechanic-form-user', email='mechanic@shop.test', password='pass1234', is_mechanic=True)
         shop = KnownShop.objects.create(name='Northside Auto', email='shop@example.com')
@@ -1577,9 +2423,43 @@ class AuthAndInputCoverageTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn('file', form.errors)
 
+        spoofed_pdf = SimpleUploadedFile('spoofed.pdf', b'not a pdf', content_type='application/pdf')
+        spoofed_form = KnownShopProofForm(data={'title': 'Proof', 'content': 'Invalid proof'}, files={'file': spoofed_pdf})
+        self.assertFalse(spoofed_form.is_valid())
+        self.assertIn('file', spoofed_form.errors)
+
         pdf = SimpleUploadedFile('valid.pdf', b'%PDF-1.4', content_type='application/pdf')
         valid_form = KnownShopProofForm(data={'title': 'Proof', 'content': 'Valid proof'}, files={'file': pdf})
         self.assertTrue(valid_form.is_valid())
+
+    def test_orm_assignment_guards_reject_non_mechanics(self):
+        non_mechanic = ShopUser.objects.create_user(
+            username='orm-non-mechanic',
+            email='orm-non-mechanic@example.com',
+            password='pass1234',
+        )
+        garage = Garage.objects.create(name='ORM Guard Garage', created_by=non_mechanic)
+        GarageMembership.objects.create(
+            garage=garage,
+            user=non_mechanic,
+            role=GarageMembership.ROLE_OWNER,
+        )
+        car = Car.objects.create(
+            garage=garage,
+            make='Honda',
+            model='Civic',
+            vin='2HGFG12698H512346',
+        )
+
+        with self.assertRaises(ValidationError):
+            WorkJob.objects.create(car=car, title='Invalid assignment', assigned_to=non_mechanic)
+        with self.assertRaises(ValidationError):
+            Report.objects.create(
+                car=car,
+                job_name='Invalid assignment',
+                date_done='2026-08-09',
+                assigned_to=non_mechanic,
+            )
 
     def test_importer_list_and_type_validations(self):
         importer = CSVImporter()
@@ -1670,9 +2550,13 @@ class AuthAndInputCoverageTests(TestCase):
             request.session['hanko_session_token'] = 'session-token-ABC'
             request.user = AnonymousUser()
 
-            with patch('shop.middleware.requests.get') as mock_get:
+            with patch('shop.auth.requests.get') as mock_get:
                 mock_get.return_value.raise_for_status.return_value = None
-                mock_get.return_value.json.return_value = {'email': 'recovered@example.com', 'name': 'Recovered User'}
+                mock_get.return_value.json.return_value = {
+                    'id': 'recovered-hanko-id',
+                    'email': 'recovered@example.com',
+                    'name': 'Recovered User',
+                }
                 response = HankoAuthenticationMiddleware(lambda _request: HttpResponse()).process_request(request)
                 self.assertIsNone(response)
                 self.assertTrue(request.user.is_authenticated)
@@ -1699,3 +2583,372 @@ class AuthAndInputCoverageTests(TestCase):
         SessionMiddleware(lambda _request: None).process_request(authenticated)
         authenticated.user = ShopUser.objects.create_user(username='decorated-user', email='decorated@example.com', password='pass1234')
         self.assertEqual(decorated(authenticated).status_code, 200)
+
+
+class ViewCoverageTests(TestCase):
+    def setUp(self) -> None:
+        self.owner = ShopUser.objects.create_user(
+            username='view-owner',
+            email='view-owner@example.com',
+            password='pass1234',
+            is_mechanic=True,
+        )
+        self.member = ShopUser.objects.create_user(
+            username='view-member',
+            email='view-member@example.com',
+            password='pass1234',
+        )
+        self.stranger = ShopUser.objects.create_user(
+            username='view-stranger',
+            email='view-stranger@example.com',
+            password='pass1234',
+        )
+        self.garage = Garage.objects.create(name='View Garage', created_by=self.owner)
+        GarageMembership.objects.create(
+            garage=self.garage,
+            user=self.owner,
+            role=GarageMembership.ROLE_OWNER,
+        )
+        GarageMembership.objects.create(
+            garage=self.garage,
+            user=self.member,
+            role=GarageMembership.ROLE_MEMBER,
+        )
+        self.car = Car.objects.create(
+            garage=self.garage,
+            make='Honda',
+            model='Civic',
+            vin='2HGFG12698H512347',
+            year=2022,
+        )
+
+    def test_garage_create_renders_form_and_handles_invalid_post(self):
+        self.client.force_login(self.owner)
+
+        get_response = self.client.get(reverse('shop-garage-create'))
+        self.assertEqual(get_response.status_code, 200)
+
+        post_response = self.client.post(reverse('shop-garage-create'), data={'name': ''})
+        self.assertEqual(post_response.status_code, 200)
+        self.assertFalse(Garage.objects.filter(name='').exists())
+
+    def test_garage_detail_and_index_render_for_member(self):
+        self.client.force_login(self.owner)
+
+        detail_response = self.client.get(reverse('shop-garage-detail', args=[self.garage.pk]))
+        self.assertEqual(detail_response.status_code, 200)
+
+        index_response = self.client.get(reverse('shop-index'))
+        self.assertEqual(index_response.status_code, 200)
+
+    def test_garage_share_branches(self):
+        self.client.force_login(self.owner)
+
+        # Already a member
+        member_response = self.client.post(
+            reverse('shop-garage-share', args=[self.garage.pk]),
+            data={
+                'invited_email': self.member.email,
+                'message': 'Already member',
+                'expires_in_days': 14,
+            },
+        )
+        self.assertEqual(member_response.status_code, 302)
+
+        # Invalid form
+        invalid_response = self.client.post(
+            reverse('shop-garage-share', args=[self.garage.pk]),
+            data={
+                'invited_email': 'not-an-email',
+                'message': 'Bad',
+                'expires_in_days': 14,
+            },
+        )
+        self.assertEqual(invalid_response.status_code, 200)
+
+        # Successful invitation renders GET form
+        with patch('shop.models.garage.send_mail', side_effect=Exception('SMTP down')):
+            send_failure_response = self.client.post(
+                reverse('shop-garage-share', args=[self.garage.pk]),
+                data={
+                    'invited_email': 'new-invite@example.com',
+                    'message': 'Join us',
+                    'expires_in_days': 14,
+                },
+            )
+        self.assertEqual(send_failure_response.status_code, 302)
+
+    def test_garage_import_branches(self):
+        self.client.force_login(self.owner)
+
+        csv_content = b'make,model,vin\nFord,F-150,1FTFW1ET5DFC12345\n'
+        valid_response = self.client.post(
+            reverse('shop-garage-import', args=[self.garage.pk]),
+            data={
+                'import_file': SimpleUploadedFile('cars.csv', csv_content, content_type='text/csv'),
+                'dry_run': 'on',
+            },
+        )
+        self.assertEqual(valid_response.status_code, 200)
+
+        invalid_response = self.client.post(
+            reverse('shop-garage-import', args=[self.garage.pk]),
+            data={
+                'import_file': SimpleUploadedFile('bad.txt', b'garbage', content_type='text/plain'),
+                'dry_run': '',
+            },
+        )
+        self.assertEqual(invalid_response.status_code, 200)
+        self.assertIn('import_file', invalid_response.context['form'].errors)
+
+        get_response = self.client.get(reverse('shop-garage-import', args=[self.garage.pk]))
+        self.assertEqual(get_response.status_code, 200)
+
+        self.client.force_login(self.member)
+        forbidden_response = self.client.get(reverse('shop-garage-import', args=[self.garage.pk]))
+        self.assertEqual(forbidden_response.status_code, 302)
+
+    def test_garage_export_forbidden_to_non_managers(self):
+        self.client.force_login(self.member)
+        response = self.client.get(reverse('shop-garage-export', args=[self.garage.pk]))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], reverse('shop-garage-detail', args=[self.garage.pk]))
+
+    def test_known_shop_create_and_detail_and_proof_branches(self):
+        self.client.force_login(self.owner)
+
+        create_response = self.client.post(
+            reverse('shop-known-shop-create'),
+            data={
+                'name': 'Branch Shop',
+                'email': 'branch@example.com',
+                'phone': '555-0200',
+                'address': '20 Side Street',
+                'notes': 'Note',
+            },
+        )
+        self.assertEqual(create_response.status_code, 302)
+        shop = KnownShop.objects.get(name='Branch Shop')
+
+        detail_response = self.client.get(reverse('shop-known-shop-detail', args=[shop.pk]))
+        self.assertEqual(detail_response.status_code, 200)
+
+        invalid_proof_response = self.client.post(
+            reverse('shop-known-shop-proof-create', args=[shop.pk]),
+            data={
+                'title': 'Bad proof',
+                'content': 'No file',
+                'file': SimpleUploadedFile('not-pdf.txt', b'not a pdf', content_type='text/plain'),
+            },
+        )
+        self.assertEqual(invalid_proof_response.status_code, 200)
+        self.assertIn('file', invalid_proof_response.context['form'].errors)
+
+        # Non-manager cannot add proof
+        self.client.force_login(self.stranger)
+        forbidden_proof_response = self.client.get(
+            reverse('shop-known-shop-proof-create', args=[shop.pk]),
+        )
+        self.assertEqual(forbidden_proof_response.status_code, 404)
+
+    def test_known_shop_proof_file_missing_file_raises_404(self):
+        self.client.force_login(self.owner)
+        shop = KnownShop.objects.create(name='No Proof Shop', created_by=self.owner)
+        proof = KnownShopProof.objects.create(shop=shop, title='No file')
+
+        response = self.client.get(reverse('shop-known-shop-proof-file', args=[shop.pk, proof.pk]))
+        self.assertEqual(response.status_code, 404)
+
+    def test_car_import_branches(self):
+        self.client.force_login(self.owner)
+
+        csv_content = b'title,maintenance_type,planned_date,status,urgency\nTire rotation,service,2026-08-20,pending,soon\n'
+        valid_response = self.client.post(
+            reverse('shop-car-import', args=[self.car.pk]),
+            data={
+                'import_file': SimpleUploadedFile('workjobs.csv', csv_content, content_type='text/csv'),
+                'import_type': 'workjob',
+                'dry_run': '',
+            },
+        )
+        self.assertEqual(valid_response.status_code, 302)
+
+        invalid_response = self.client.post(
+            reverse('shop-car-import', args=[self.car.pk]),
+            data={
+                'import_file': SimpleUploadedFile('bad.txt', b'garbage', content_type='text/plain'),
+                'import_type': 'workjob',
+                'dry_run': '',
+            },
+        )
+        self.assertEqual(invalid_response.status_code, 200)
+        self.assertIn('import_file', invalid_response.context['form'].errors)
+
+        get_response = self.client.get(
+            reverse('shop-car-import', args=[self.car.pk]),
+            {'type': 'report'},
+        )
+        self.assertEqual(get_response.status_code, 200)
+
+        invalid_type_response = self.client.get(
+            reverse('shop-car-import', args=[self.car.pk]),
+            {'type': 'invalid'},
+        )
+        self.assertEqual(invalid_type_response.status_code, 200)
+
+    def test_part_create_and_update_branches(self):
+        self.client.force_login(self.owner)
+
+        create_response = self.client.post(
+            reverse('shop-part-create', args=[self.car.pk]),
+                data={'name': 'Brake pads', 'status': CarPart.STATUS_NEW, 'notes': 'Good'},
+        )
+        self.assertEqual(create_response.status_code, 302)
+        part = CarPart.objects.get(car=self.car, name='Brake pads')
+
+        get_update_response = self.client.get(reverse('shop-part-update', args=[self.car.pk, part.pk]))
+        self.assertEqual(get_update_response.status_code, 200)
+
+        update_response = self.client.post(
+            reverse('shop-part-update', args=[self.car.pk, part.pk]),
+            data={'name': 'Brake pads', 'status': CarPart.STATUS_ORDERED, 'notes': 'Ordered'},
+        )
+        self.assertEqual(update_response.status_code, 302)
+        part.refresh_from_db()
+        self.assertEqual(part.status, CarPart.STATUS_ORDERED)
+
+    def test_workjob_create_and_update_branches(self):
+        self.client.force_login(self.owner)
+
+        create_response = self.client.post(
+            reverse('shop-workjob-create', args=[self.car.pk]),
+            data={
+                'title': 'Oil change',
+                'maintenance_type': 'service',
+                'planned_date': '2026-08-20',
+                'status': 'pending',
+                'urgency': 'soon',
+            },
+        )
+        self.assertEqual(create_response.status_code, 302)
+        work_job = WorkJob.objects.get(car=self.car, title='Oil change')
+
+        get_update_response = self.client.get(reverse('shop-workjob-update', args=[self.car.pk, work_job.pk]))
+        self.assertEqual(get_update_response.status_code, 200)
+
+        update_response = self.client.post(
+            reverse('shop-workjob-update', args=[self.car.pk, work_job.pk]),
+            data={
+                'title': 'Oil change updated',
+                'maintenance_type': 'service',
+                'planned_date': '2026-08-21',
+                'status': 'done',
+                'urgency': 'soon',
+            },
+        )
+        self.assertEqual(update_response.status_code, 302)
+
+    def test_report_create_and_update_branches(self):
+        self.client.force_login(self.owner)
+
+        create_response = self.client.post(
+            reverse('shop-report-create', args=[self.car.pk]),
+            data={
+                'mileage': '50000',
+                'job_name': 'Inspection',
+                'date_done': '2026-08-20',
+                'external_links': 'https://example.com/invoice',
+            },
+        )
+        self.assertEqual(create_response.status_code, 302)
+        report = Report.objects.get(car=self.car, job_name='Inspection')
+        self.assertTrue(report.attachments.exists())
+
+        get_update_response = self.client.get(reverse('shop-report-update', args=[self.car.pk, report.pk]))
+        self.assertEqual(get_update_response.status_code, 200)
+
+        update_response = self.client.post(
+            reverse('shop-report-update', args=[self.car.pk, report.pk]),
+            data={
+                'mileage': '50001',
+                'job_name': 'Inspection updated',
+                'date_done': '2026-08-21',
+            },
+        )
+        self.assertEqual(update_response.status_code, 302)
+
+    def test_report_attachment_file_branches(self):
+        self.client.force_login(self.owner)
+        report = Report.objects.create(car=self.car, job_name='Attachment test', date_done='2026-08-20')
+        attachment = ReportAttachment.objects.create(
+            report=report,
+            source_type=ReportAttachment.SOURCE_UPLOAD,
+            file=SimpleUploadedFile('report.pdf', b'%PDF-1.4 report', content_type='application/pdf'),
+        )
+
+        try:
+            response = self.client.get(
+                reverse('shop-report-attachment-file', args=[self.car.pk, report.pk, attachment.pk]),
+            )
+            self.assertEqual(response.status_code, 200)
+        finally:
+            attachment.file.delete(save=False)
+
+        empty_attachment = ReportAttachment.objects.create(
+            report=report,
+            source_type=ReportAttachment.SOURCE_UPLOAD,
+        )
+        response = self.client.get(
+            reverse('shop-report-attachment-file', args=[self.car.pk, report.pk, empty_attachment.pk]),
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_hanko_callback_branches(self):
+        response = self.client.get(reverse('shop-hanko-callback'))
+        self.assertEqual(response.status_code, 405)
+
+        empty_response = self.client.post(
+            reverse('shop-hanko-callback'),
+            data='',
+            content_type='application/json',
+        )
+        self.assertEqual(empty_response.status_code, 400)
+
+        invalid_json_response = self.client.post(
+            reverse('shop-hanko-callback'),
+            data='not-json',
+            content_type='application/json',
+        )
+        self.assertEqual(invalid_json_response.status_code, 400)
+
+    def test_login_view_redirects_authenticated_users(self):
+        self.client.force_login(self.owner)
+        response = self.client.get(reverse('shop-login'))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], reverse('shop-index'))
+
+    def test_theme_view_rejects_unknown_theme(self):
+        response = self.client.get(reverse('shop-theme', args=['pink']), {'next': reverse('shop-login')})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.cookies['theme'].value, 'light')
+
+    def test_logout_view_ignores_get(self):
+        self.client.force_login(self.owner)
+        response = self.client.get(reverse('shop-logout'))
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(self.client.session.get('_auth_user_id'))
+
+    def test_car_create_and_update_invalid_forms(self):
+        self.client.force_login(self.owner)
+
+        invalid_create = self.client.post(
+            reverse('shop-car-create'),
+            data={'make': '', 'model': '', 'garage': str(self.garage.pk)},
+        )
+        self.assertEqual(invalid_create.status_code, 200)
+
+        invalid_update = self.client.post(
+            reverse('shop-car-update', args=[self.car.pk]),
+            data={'make': '', 'model': ''},
+        )
+        self.assertEqual(invalid_update.status_code, 200)

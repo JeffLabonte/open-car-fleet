@@ -15,8 +15,8 @@ poetry run pytest src/shop/tests.py::TestClass::test_name    # single test
 
 # Management commands
 poetry run python src/manage.py import_csv Car src/imports/cars.csv --garage <garage-uuid>  # --garage REQUIRED for Car
-poetry run python src/manage.py import_csv WorkJob src/imports/workjobs.csv
-poetry run python src/manage.py import_csv Report src/imports/reports_FMG3809.csv
+poetry run python src/manage.py import_csv WorkJob src/imports/workjobs.csv --garage <garage-uuid>
+poetry run python src/manage.py import_csv Report src/imports/reports_FMG3809.csv --garage <garage-uuid>
 poetry run python src/manage.py export_garage <garage-uuid> [--output path.xlsx]
 poetry run python src/manage.py convert_user_to_mechanic <email>
 
@@ -25,15 +25,15 @@ poetry run python src/manage.py makemessages -l en_CA -l fr_CA
 poetry run python src/manage.py compilemessages
 ```
 
-`make translations` is currently broken (typo in the Makefile) — call `makemessages` directly. Other useful targets: `make db-snapshot` (pg_dump to `db_backups/`), `make db-reset` (destructive: drops the Postgres volume).
+Other useful targets: `make db-snapshot` (pg_dump to `db_backups/`), `make db-reset` (destructive: drops the Postgres volume), and `make test-e2e` (headless Firefox).
 
 ## Testing
 
-- **`make test` / bare `pytest` / CI only collect `src/shop/tests.py`** — `pytest.ini` sets `testpaths = src/shop`. `src/car_docs/tests.py` is silently skipped; run it explicitly: `poetry run pytest src/car_docs/tests.py`.
-- Tests need no Postgres or Docker: root `conftest.py` clears `POSTGRES_*` env vars (forcing sqlite) and sets up Django databases via a `DiscoverRunner` session fixture — not pytest-django.
-- Auth mocking: `@patch('shop.middleware.requests.get', ...)` for the Hanko API; authenticate test clients via `self.client.session['hanko_session_token'] = '...'` + `.save()`.
+- **`make test` / bare `pytest` / CI collect both Django apps and `tests/bdd`** — pytest-django is configured through `pytest.ini`; Selenium tests remain separate under `make test-e2e`.
+- Tests need no Postgres or Docker: pytest-env clears `POSTGRES_*` variables before pytest-django initializes the settings module, forcing SQLite.
+- Auth mocking: `@patch('shop.auth.requests.get', ...)` for the Hanko API; authenticate test clients via `self.client.session['hanko_session_token'] = '...'` + `.save()`.
 - Email mocking: `@patch('shop.models.garage.send_mail')` for invitations, `@patch('shop.mailgun_backend.requests.post')` for the Mailgun backend.
-- CI is `.github/workflows/test.yml`: Fedora container, `poetry install --no-root`, `pytest -q` (same car_docs blind spot).
+- CI is `.github/workflows/test.yml`: the unit suite runs in Fedora and a separate PR job installs Firefox with `browser-actions/setup-firefox@v1` before running `make test-e2e`.
 
 ## Environment & Database
 
