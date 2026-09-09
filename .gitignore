@@ -88,3 +88,4 @@ src/db.sqlite3
 # Database snapshots
 db_backups/*
 !db_backups/.gitkeep
+.env.*
