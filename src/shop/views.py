@@ -1,21 +1,20 @@
 import json
-import os
+import mimetypes
 from datetime import timedelta
 from typing import Any, cast
 
 from django.conf import settings
-from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.http import FileResponse, Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.middleware.csrf import get_token
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
-from shop.auth import complete_hanko_login
+from shop.auth import HankoAuthenticationError, complete_hanko_login, fetch_hanko_userinfo
 from shop.exporters import export_garage_to_excel
 from shop.forms import (
     CarImportForm,
@@ -33,10 +32,16 @@ from shop.forms import (
 from shop.importers import CSVImporter, ImportContext, ImportValidationError
 from shop.middleware import hanko_login_required
 from shop.models.car import CarPart
-from shop.models.garage import GarageInvitation, GarageMembership, KnownShop
+from shop.models.garage import GarageInvitation, GarageMembership, KnownShop, KnownShopProof
 from shop.models.job import WorkJob
 from shop.models.report import Report, ReportAttachment
-from shop.view_helpers import user_can_manage_garage, user_cars_queryset, user_garages_queryset
+from shop.view_helpers import (
+    user_can_manage_garage,
+    user_can_manage_known_shop,
+    user_cars_queryset,
+    user_garages_queryset,
+    user_known_shops_queryset,
+)
 
 
 def get_theme_from_request(request: HttpRequest) -> str:
@@ -46,7 +51,6 @@ def get_theme_from_request(request: HttpRequest) -> str:
     return 'light'
 
 
-@csrf_exempt
 def login_view(request: HttpRequest) -> HttpResponse:
     # Always seed a CSRF cookie for the active session so POST-based logout
     # requests from trusted origins can validate even when this page redirects a
@@ -63,7 +67,7 @@ def login_view(request: HttpRequest) -> HttpResponse:
     return render(request, 'shop/login.html', {
         'title': _('Login'),
         'subtitle': _('Authenticate with Hanko to continue'),
-        'hanko_api_url': os.environ.get('HANKO_API_URL', ''),
+            'hanko_api_url': getattr(settings, 'HANKO_API_URL', ''),
         'next_url': request.GET.get('next', '/'),
         'logged_out': logged_out,
         'theme': get_theme_from_request(request),
@@ -81,7 +85,6 @@ def theme_view(request: HttpRequest, theme: str) -> HttpResponse:
     return response
 
 
-@csrf_exempt
 def hanko_callback(request: HttpRequest) -> JsonResponse:
     if request.method != 'POST':
         return JsonResponse({'ok': False, 'error': 'Method not allowed'}, status=405)
@@ -93,18 +96,21 @@ def hanko_callback(request: HttpRequest) -> JsonResponse:
         raw_payload = {}
 
     payload: dict[str, Any] = cast(dict[str, Any], raw_payload) if isinstance(raw_payload, dict) else {}
-    nested_user_data = payload.get('user')
-    user_data: dict[str, Any] = cast(dict[str, Any], nested_user_data) if isinstance(nested_user_data, dict) else payload
     raw_session_token = payload.get('session_token')
-    session_token = raw_session_token if isinstance(raw_session_token, str) else ''
+    session_token = raw_session_token.strip() if isinstance(raw_session_token, str) else ''
 
-    if not user_data:
+    if not payload:
         return JsonResponse({'ok': False, 'error': 'Missing user payload'}, status=400)
+    if not session_token:
+        return JsonResponse({'ok': False, 'error': 'Missing session token'}, status=400)
+
+    try:
+        user_data = fetch_hanko_userinfo(session_token)
+    except HankoAuthenticationError:
+        return JsonResponse({'ok': False, 'error': 'Invalid Hanko session'}, status=401)
 
     user = complete_hanko_login(request, user_data)
-    if session_token:
-        request.session['hanko_session_token'] = session_token
-    request.session['hanko_user_payload'] = user_data
+    request.session['hanko_session_token'] = session_token
     request.session.save()
 
     return JsonResponse({
@@ -334,7 +340,7 @@ def garage_export(request: HttpRequest, pk: str) -> HttpResponse:
 
 @hanko_login_required
 def known_shop_list(request: HttpRequest) -> HttpResponse:
-    shops = KnownShop.objects.prefetch_related('proofs').order_by('name')
+    shops = user_known_shops_queryset(request.user).prefetch_related('proofs').order_by('name')
     return render(request, 'shop/shop_list.html', {
         'shops': shops,
         'title': 'Known shops',
@@ -345,9 +351,11 @@ def known_shop_list(request: HttpRequest) -> HttpResponse:
 @hanko_login_required
 def known_shop_create(request: HttpRequest) -> HttpResponse:
     if request.method == 'POST':
-        form = KnownShopForm(request.POST)
-        if form.is_valid():
-            shop = form.save()
+            form = KnownShopForm(request.POST)
+            if form.is_valid():
+                shop = form.save(commit=False)
+                shop.created_by = request.user
+                shop.save()
             messages.success(request, _('Shop added successfully.'))
             return redirect(reverse('shop-known-shop-detail', args=[shop.pk]))
     else:
@@ -362,7 +370,7 @@ def known_shop_create(request: HttpRequest) -> HttpResponse:
 
 @hanko_login_required
 def known_shop_detail(request: HttpRequest, pk: int) -> HttpResponse:
-    shop = get_object_or_404(KnownShop.objects.prefetch_related('proofs'), pk=pk)
+    shop = get_object_or_404(user_known_shops_queryset(request.user).prefetch_related('proofs'), pk=pk)
     return render(request, 'shop/shop_detail.html', {
         'shop': shop,
         'title': shop.name,
@@ -372,7 +380,10 @@ def known_shop_detail(request: HttpRequest, pk: int) -> HttpResponse:
 
 @hanko_login_required
 def known_shop_proof_create(request: HttpRequest, shop_pk: int) -> HttpResponse:
-    shop = get_object_or_404(KnownShop, pk=shop_pk)
+    shop = get_object_or_404(user_known_shops_queryset(request.user), pk=shop_pk)
+    if not user_can_manage_known_shop(request.user, shop):
+        messages.error(request, _('You do not have permission to add proof for this shop.'))
+        return redirect(reverse('shop-known-shop-list'))
     if request.method == 'POST':
         form = KnownShopProofForm(request.POST, request.FILES)
         if form.is_valid():
@@ -389,6 +400,16 @@ def known_shop_proof_create(request: HttpRequest, shop_pk: int) -> HttpResponse:
         'title': f'Add proof for {shop.name}',
         'subtitle': 'Add a document or notes supporting this shop',
     })
+
+
+@hanko_login_required
+@require_GET
+def known_shop_proof_file(request: HttpRequest, shop_pk: int, pk: int) -> FileResponse:
+    shop = get_object_or_404(user_known_shops_queryset(request.user), pk=shop_pk)
+    proof = get_object_or_404(KnownShopProof, pk=pk, shop=shop)
+    if not proof.file:
+        raise Http404('Proof has no file.')
+    return FileResponse(proof.file.open('rb'), content_type='application/pdf')
 
 
 @hanko_login_required
@@ -609,7 +630,7 @@ def part_update(request: HttpRequest, car_pk: str, pk: str) -> HttpResponse:
 def workjob_create(request: HttpRequest, car_pk: str) -> HttpResponse:
     car = get_object_or_404(user_cars_queryset(request.user), pk=car_pk)
     if request.method == 'POST':
-        form = WorkJobForm(request.POST)
+        form = WorkJobForm(request.POST, user=request.user, garage=car.garage)
         if form.is_valid():
             work_job = form.save(commit=False)
             work_job.car = car
@@ -617,7 +638,7 @@ def workjob_create(request: HttpRequest, car_pk: str) -> HttpResponse:
             messages.success(request, _('Planned work added successfully.'))
             return redirect(reverse('shop-car-detail', args=[car.pk]))
     else:
-        form = WorkJobForm()
+        form = WorkJobForm(user=request.user, garage=car.garage)
     return render(request, 'shop/workjob_form.html', {'form': form, 'is_create': True, 'car': car})
 
 
@@ -626,13 +647,13 @@ def workjob_update(request: HttpRequest, car_pk: str, pk: str) -> HttpResponse:
     car = get_object_or_404(user_cars_queryset(request.user), pk=car_pk)
     work_job = get_object_or_404(WorkJob, pk=pk, car=car)
     if request.method == 'POST':
-        form = WorkJobForm(request.POST, instance=work_job)
+        form = WorkJobForm(request.POST, instance=work_job, user=request.user, garage=car.garage)
         if form.is_valid():
             form.save()
             messages.success(request, _('Planned work updated successfully.'))
             return redirect(reverse('shop-car-detail', args=[car.pk]))
     else:
-        form = WorkJobForm(instance=work_job)
+        form = WorkJobForm(instance=work_job, user=request.user, garage=car.garage)
     return render(request, 'shop/workjob_form.html', {'form': form, 'is_create': False, 'car': car, 'work_job': work_job})
 
 
@@ -659,10 +680,27 @@ def _persist_report_attachments(report: Report, uploaded_files: list[Any], exter
 
 
 @hanko_login_required
+@require_GET
+def report_attachment_file(request: HttpRequest, car_pk: str, report_pk: int, pk: int) -> FileResponse:
+    car = get_object_or_404(user_cars_queryset(request.user), pk=car_pk)
+    report = get_object_or_404(Report, pk=report_pk, car=car)
+    attachment = get_object_or_404(
+        ReportAttachment,
+        pk=pk,
+        report=report,
+        source_type=ReportAttachment.SOURCE_UPLOAD,
+    )
+    if not attachment.file:
+        raise Http404('Attachment has no file.')
+    content_type = mimetypes.guess_type(attachment.file.name)[0] or 'application/octet-stream'
+    return FileResponse(attachment.file.open('rb'), content_type=content_type)
+
+
+@hanko_login_required
 def report_create(request: HttpRequest, car_pk: str) -> HttpResponse:
     car = get_object_or_404(user_cars_queryset(request.user), pk=car_pk)
     if request.method == 'POST':
-        form = ReportForm(request.POST, request.FILES)
+        form = ReportForm(request.POST, request.FILES, user=request.user, garage=car.garage)
         if form.is_valid():
             report = form.save(commit=False)
             report.car = car
@@ -672,7 +710,7 @@ def report_create(request: HttpRequest, car_pk: str) -> HttpResponse:
             messages.success(request, _('Maintenance report added successfully.'))
             return redirect(reverse('shop-car-detail', args=[car.pk]))
     else:
-        form = ReportForm()
+        form = ReportForm(user=request.user, garage=car.garage)
     return render(request, 'shop/report_form.html', {'form': form, 'is_create': True, 'car': car})
 
 
@@ -681,7 +719,7 @@ def report_update(request: HttpRequest, car_pk: str, pk: str) -> HttpResponse:
     car = get_object_or_404(user_cars_queryset(request.user), pk=car_pk)
     report = get_object_or_404(Report, pk=pk, car=car)
     if request.method == 'POST':
-        form = ReportForm(request.POST, request.FILES, instance=report)
+        form = ReportForm(request.POST, request.FILES, instance=report, user=request.user, garage=car.garage)
         if form.is_valid():
             form.save()
             uploaded_files = form.cleaned_data.get('attachments', [])
@@ -689,7 +727,7 @@ def report_update(request: HttpRequest, car_pk: str, pk: str) -> HttpResponse:
             messages.success(request, _('Maintenance report updated successfully.'))
             return redirect(reverse('shop-car-detail', args=[car.pk]))
     else:
-        form = ReportForm(instance=report)
+        form = ReportForm(instance=report, user=request.user, garage=car.garage)
     return render(request, 'shop/report_form.html', {'form': form, 'is_create': False, 'car': car, 'report': report})
 
 

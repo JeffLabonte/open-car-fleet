@@ -1,4 +1,6 @@
 from django.db import models
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 
 from shop.models.car import Car
 
@@ -18,3 +20,9 @@ class CarDoc(models.Model):
 
     def __str__(self) -> str:
         return f"{self.title} ({self.car})"
+
+
+@receiver(post_delete, sender=CarDoc)
+def delete_car_doc_file(sender: type[CarDoc], instance: CarDoc, **kwargs: object) -> None:
+    if instance.file:
+        instance.file.delete(save=False)

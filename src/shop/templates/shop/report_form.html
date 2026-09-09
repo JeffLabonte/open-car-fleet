@@ -22,7 +22,7 @@
                 {% if attachment.source_type == 'external' %}
                   <a href="{{ attachment.url }}" target="_blank" rel="noopener noreferrer">{{ attachment.display_name|default:attachment.url }}</a>
                 {% else %}
-                  <a href="{{ attachment.file.url }}" target="_blank" rel="noopener noreferrer">{{ attachment.display_name|default:attachment.file.name }}</a>
+                  <a href="{% url 'shop-report-attachment-file' car.pk report.pk attachment.pk %}" target="_blank" rel="noopener noreferrer">{{ attachment.display_name|default:attachment.file.name }}</a>
                 {% endif %}
               </li>
             {% endfor %}

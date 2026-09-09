@@ -202,20 +202,20 @@
                         {% if attachment.source_type == 'external' %}
                           <a href="{{ attachment.url }}" target="_blank" rel="noopener noreferrer">{{ attachment.display_name|default:attachment.url }}</a>
                         {% elif attachment.kind == 'image' and attachment.file %}
-                          <a href="{{ attachment.file.url }}" target="_blank" rel="noopener noreferrer">{{ attachment.display_name|default:attachment.file.name }}</a>
+                          <a href="{% url 'shop-report-attachment-file' car.pk report.pk attachment.pk %}" target="_blank" rel="noopener noreferrer">{{ attachment.display_name|default:attachment.file.name }}</a>
                           <div class="mt-2">
-                            <img src="{{ attachment.file.url }}" alt="{{ attachment.display_name|default:attachment.file.name }}" style="max-width: 220px; height: auto; border-radius: 0.5rem;" />
+                            <img src="{% url 'shop-report-attachment-file' car.pk report.pk attachment.pk %}" alt="{{ attachment.display_name|default:attachment.file.name }}" style="max-width: 220px; height: auto; border-radius: 0.5rem;" />
                           </div>
                         {% elif attachment.kind == 'video' and attachment.file %}
-                          <a href="{{ attachment.file.url }}" target="_blank" rel="noopener noreferrer">{{ attachment.display_name|default:attachment.file.name }}</a>
-                          <div class="mt-2">
-                            <video controls preload="metadata" style="max-width: 320px; width: 100%; border-radius: 0.5rem;">
-                              <source src="{{ attachment.file.url }}" type="{{ attachment.mime_type|default:'video/mp4' }}" />
+                           <a href="{% url 'shop-report-attachment-file' car.pk report.pk attachment.pk %}" target="_blank" rel="noopener noreferrer">{{ attachment.display_name|default:attachment.file.name }}</a>
+                           <div class="mt-2">
+                             <video controls preload="metadata" style="max-width: 320px; width: 100%; border-radius: 0.5rem;">
+                               <source src="{% url 'shop-report-attachment-file' car.pk report.pk attachment.pk %}" type="{{ attachment.mime_type|default:'video/mp4' }}" />
                               {% translate 'Your browser does not support embedded videos.' %}
                             </video>
                           </div>
                         {% else %}
-                          <a href="{{ attachment.file.url }}" target="_blank" rel="noopener noreferrer">{{ attachment.display_name|default:attachment.file.name }}</a>
+                           <a href="{% url 'shop-report-attachment-file' car.pk report.pk attachment.pk %}" target="_blank" rel="noopener noreferrer">{{ attachment.display_name|default:attachment.file.name }}</a>
                         {% endif %}
                       </li>
                     {% endfor %}

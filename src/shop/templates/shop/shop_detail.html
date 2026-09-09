@@ -29,7 +29,7 @@
           <div class="message-header"><p>{{ proof.title }}</p></div>
           <div class="message-body">
             {% if proof.content %}<p>{{ proof.content|linebreaksbr }}</p>{% endif %}
-            {% if proof.file %}<p class="mt-3"><a href="{{ proof.file.url }}" target="_blank" rel="noopener noreferrer">{% translate 'Open PDF proof' %}</a></p>{% endif %}
+            {% if proof.file %}<p class="mt-3"><a href="{% url 'shop-known-shop-proof-file' shop.pk proof.pk %}" target="_blank" rel="noopener noreferrer">{% translate 'Open PDF proof' %}</a></p>{% endif %}
             <p class="help mt-3">{{ proof.created_at|date:'M j, Y' }}</p>
           </div>
         </article>

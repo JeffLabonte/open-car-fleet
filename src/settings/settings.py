@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -47,16 +49,23 @@ for env_path in env_paths:
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get(
-    'DJANGO_SECRET_KEY',
-    'django-insecure-f=#l4j^rp-1v+1gxjsc*=-=&+5l44p=z*ls*lr5exy%ip%_cxr',
-)
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False').strip().lower() in ('1', 'true', 'yes')
 
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost 127.0.0.1 [::1] *').split()
+
+# SECURITY WARNING: keep the secret key out of source control.
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '').strip()
+if not SECRET_KEY:
+    raise ImproperlyConfigured('DJANGO_SECRET_KEY must be configured.')
+if not DEBUG and SECRET_KEY in {'django-insecure-change-me', 'change-me'}:
+    raise ImproperlyConfigured('DJANGO_SECRET_KEY must not use a development placeholder.')
+
+HANKO_API_URL = os.environ.get('HANKO_API_URL', '').strip()
+
+allowed_hosts_raw = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost 127.0.0.1 [::1]').strip()
+ALLOWED_HOSTS = allowed_hosts_raw.split() if allowed_hosts_raw else ['localhost', '127.0.0.1', '[::1]']
+if '*' in ALLOWED_HOSTS and not DEBUG:
+    raise ImproperlyConfigured('DJANGO_ALLOWED_HOSTS must not contain * when DEBUG is disabled.')
 
 csrf_trusted_origins_raw = os.environ.get(
     'CSRF_TRUSTED_ORIGINS',
@@ -72,12 +81,29 @@ if csrf_trusted_origins_raw:
             origins.append(item)
         else:
             origins.append(f'https://{item}')
-            origins.append(f'http://{item}')
+            if item.startswith(('localhost', '127.0.0.1', '[::1]')):
+                origins.append(f'http://{item}')
     CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(origins))
+else:
+    CSRF_TRUSTED_ORIGINS = []
 
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-USE_X_FORWARDED_HOST = os.environ.get('DJANGO_USE_X_FORWARDED_HOST', 'True').strip().lower() in ('1', 'true', 'yes')
-USE_X_FORWARDED_PORT = os.environ.get('DJANGO_USE_X_FORWARDED_PORT', 'True').strip().lower() in ('1', 'true', 'yes')
+trusted_proxy = os.environ.get('DJANGO_TRUSTED_PROXY', 'False').strip().lower() in ('1', 'true', 'yes')
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https') if trusted_proxy else None
+USE_X_FORWARDED_HOST = trusted_proxy and os.environ.get('DJANGO_USE_X_FORWARDED_HOST', 'False').strip().lower() in ('1', 'true', 'yes')
+USE_X_FORWARDED_PORT = trusted_proxy and os.environ.get('DJANGO_USE_X_FORWARDED_PORT', 'False').strip().lower() in ('1', 'true', 'yes')
+
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', str(not DEBUG)).strip().lower() in ('1', 'true', 'yes')
+CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', str(not DEBUG)).strip().lower() in ('1', 'true', 'yes')
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = 'same-origin'
+SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'False').strip().lower() in ('1', 'true', 'yes')
+SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', '0'))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_HSTS_SECONDS > 0
+SECURE_HSTS_PRELOAD = SECURE_HSTS_SECONDS > 0
+X_FRAME_OPTIONS = 'DENY'
 
 
 # Application definition
@@ -143,7 +169,7 @@ if os.environ.get('POSTGRES_DB'):
             'ENGINE': 'django.db.backends.postgresql',
             'NAME': os.environ.get('POSTGRES_DB'),
             'USER': os.environ.get('POSTGRES_USER', 'open_garage_user'),
-            'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'change-me'),
+            'PASSWORD': os.environ.get('POSTGRES_PASSWORD', ''),
             'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
             'PORT': os.environ.get('POSTGRES_PORT', '5432'),
         }
@@ -224,5 +250,5 @@ MAILGUN_SANDBOX_DOMAIN = os.environ.get('MAILGUN_SANDBOX_DOMAIN', '')
 MAILGUN_BASE_DOMAIN = os.environ.get('MAILGUN_BASE_DOMAIN', 'https://api.mailgun.net')
 DEFAULT_FROM_EMAIL = os.environ.get(
     'DEFAULT_FROM_EMAIL',
-    f'Open Car Fleet <postmaster@{MAILGUN_SANDBOX_DOMAIN}>',
+    f'Open Car Fleet <postmaster@{MAILGUN_SANDBOX_DOMAIN or "localhost"}>',
 )

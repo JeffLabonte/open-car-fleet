@@ -1,6 +1,7 @@
 from django import forms
 
 from car_docs.models import CarDoc
+from shop.file_validation import validate_pdf_upload
 
 
 class CarDocForm(forms.ModelForm):
@@ -15,13 +16,7 @@ class CarDocForm(forms.ModelForm):
 
     def clean_file(self):
         uploaded_file = self.cleaned_data.get('file')
-        if uploaded_file is None:
-            return uploaded_file
-
-        if uploaded_file.content_type and uploaded_file.content_type != 'application/pdf':
-            raise forms.ValidationError('Only PDF files can be uploaded for car documents.')
-
-        if uploaded_file.name.lower().endswith('.pdf'):
-            return uploaded_file
-
-        raise forms.ValidationError('Only PDF files can be uploaded for car documents.')
+        return validate_pdf_upload(
+            uploaded_file,
+            message='Only valid PDF files can be uploaded for car documents.',
+        )

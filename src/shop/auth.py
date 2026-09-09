@@ -1,18 +1,80 @@
 import re
+import os
 from typing import Any, Optional
 
+import requests
 from django.contrib.auth import login
+from django.conf import settings
 from django.http import HttpRequest
 from django.utils import timezone
 
 from shop.models.user import ShopUser
 
 
+class HankoAuthenticationError(ValueError):
+    """Raised when a Hanko session cannot be verified or parsed safely."""
+
+
+def fetch_hanko_userinfo(session_token: str) -> dict[str, Any]:
+    """Fetch and validate the identity bound to a Hanko session token."""
+    if not isinstance(session_token, str) or not session_token.strip():
+        raise HankoAuthenticationError('A Hanko session token is required.')
+
+    api_url = getattr(settings, 'HANKO_API_URL', '') or os.environ.get('HANKO_API_URL', '')
+    if not api_url:
+        raise HankoAuthenticationError('HANKO_API_URL is not configured.')
+
+    try:
+        response = requests.get(
+            f"{api_url.rstrip('/')}/userinfo",
+            headers={'Authorization': f'Bearer {session_token.strip()}'},
+            timeout=5,
+        )
+        response.raise_for_status()
+        raw_user_info = response.json()
+    except (requests.RequestException, ValueError, TypeError) as exc:
+        raise HankoAuthenticationError('Unable to verify the Hanko session.') from exc
+
+    if not isinstance(raw_user_info, dict):
+        raise HankoAuthenticationError('Hanko returned an invalid user response.')
+
+    user_info = dict(raw_user_info)
+    user_id = next(
+        (
+            value.strip()
+            for key in ('id', 'user_id', 'hanko_id')
+            for value in [user_info.get(key)]
+            if isinstance(value, str) and value.strip()
+        ),
+        '',
+    )
+    if not user_id:
+        raise HankoAuthenticationError('Hanko returned no user identifier.')
+    user_info['id'] = user_id
+
+    email = user_info.get('email')
+    if not isinstance(email, str) or not email.strip():
+        emails = user_info.get('emails')
+        first_email = emails[0] if isinstance(emails, list) and emails else None
+        if isinstance(first_email, dict):
+            email = first_email.get('address')
+        if isinstance(email, str) and email.strip():
+            user_info['email'] = email.strip()
+
+    for key in ('email', 'email_address', 'name', 'display_name', 'username', 'avatar_url', 'avatar', 'provider'):
+        value = user_info.get(key)
+        if value is not None and not isinstance(value, str):
+            raise HankoAuthenticationError(f'Hanko returned an invalid {key} value.')
+
+    return user_info
+
+
 def _build_username(base_name: str, hanko_id: str | None = None) -> str:
-    candidate = re.sub(r'[^\w.@+-]', '-', (base_name or '').strip()) or f"hanko-{hanko_id or 'user'}"
+    fallback = f"hanko-{hanko_id or 'user'}"
+    candidate = re.sub(r'[^\w.@+-]', '-', (base_name or '').strip()) or fallback
     candidate = candidate[:150]
     if not candidate:
-        candidate = f"hanko-{hanko_id or 'user'}"
+        candidate = fallback
 
     existing = ShopUser.objects.filter(username=candidate).exists()
     if not existing:
@@ -34,7 +96,7 @@ def sync_hanko_user(
     provider: str = 'hanko',
 ) -> ShopUser:
     hanko_id = hanko_id or ''
-    email = (email or '').strip()
+    email = (email or '').strip().lower()
     username = (username or '').strip()
 
     if hanko_id:
@@ -99,7 +161,6 @@ def complete_hanko_login(request: HttpRequest, user_data: dict[str, Any]) -> Sho
     )
     login(request, user, backend='django.contrib.auth.backends.ModelBackend')
     request.user = user
-    request._cached_user = user
     request.session['hanko_user_id'] = user.hanko_id or str(user.pk)
     request.session['hanko_email'] = user.email
     request.session['hanko_username'] = user.display_name or user.username

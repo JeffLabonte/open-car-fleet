@@ -19,6 +19,7 @@ urlpatterns = [
     path('shops/add/', views.known_shop_create, name='shop-known-shop-create'),
     path('shops/<int:pk>/', views.known_shop_detail, name='shop-known-shop-detail'),
     path('shops/<int:shop_pk>/proofs/add/', views.known_shop_proof_create, name='shop-known-shop-proof-create'),
+    path('shops/<int:shop_pk>/proofs/<int:pk>/file/', views.known_shop_proof_file, name='shop-known-shop-proof-file'),
     path('cars/', views.car_list, name='shop-car-list'),
     path('cars/add/', views.car_create, name='shop-car-create'),
     path('cars/<uuid:pk>/delete/', views.car_delete, name='shop-car-delete'),
@@ -31,5 +32,6 @@ urlpatterns = [
     path('cars/<uuid:car_pk>/work-jobs/<int:pk>/edit/', views.workjob_update, name='shop-workjob-update'),
     path('cars/<uuid:car_pk>/reports/add/', views.report_create, name='shop-report-create'),
     path('cars/<uuid:car_pk>/reports/<int:pk>/edit/', views.report_update, name='shop-report-update'),
+    path('cars/<uuid:car_pk>/reports/<int:report_pk>/attachments/<int:pk>/file/', views.report_attachment_file, name='shop-report-attachment-file'),
     path('cars/<uuid:car_pk>/docs/', include('car_docs.urls')),
 ]

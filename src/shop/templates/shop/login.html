@@ -57,9 +57,17 @@
           session_token: session?.jwt || session?.access_token || session?.token || '',
         };
 
+        const csrfToken = document.cookie
+          .split('; ')
+          .find((row) => row.startsWith('csrftoken='))
+          ?.split('=')[1] || '';
+
         const response = await fetch('/auth/hanko/callback/', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': decodeURIComponent(csrfToken),
+          },
           body: JSON.stringify(payload),
         });
 
