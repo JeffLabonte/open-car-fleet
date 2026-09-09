@@ -1,6 +1,5 @@
 import csv
 import io
-import json
 import re
 from dataclasses import dataclass, field
 from datetime import date
@@ -475,47 +474,3 @@ class CSVImporter:
                 for field, messages in exc.message_dict.items()
             )
         return "; ".join(exc.messages)
-
-
-class JSONImporter(CSVImporter):
-    def parse_json_file(self, json_file: str | Path) -> list[dict[str, Any]]:
-        path = Path(json_file)
-        if not path.exists():
-            raise ImportValidationError(f"JSON file not found: {path}")
-
-        try:
-            raw_content = path.read_text(encoding="utf-8")
-        except UnicodeDecodeError as exc:
-            raise ImportValidationError(f"Unable to decode JSON file '{path.name}' as UTF-8.") from exc
-
-        return self.parse_json_content(raw_content, source_name=path.name)
-
-    def parse_json_bytes(self, raw_bytes: bytes, *, source_name: str = "upload") -> list[dict[str, Any]]:
-        try:
-            raw_content = raw_bytes.decode("utf-8")
-        except UnicodeDecodeError as exc:
-            raise ImportValidationError(f"Unable to decode {source_name} as UTF-8.") from exc
-
-        return self.parse_json_content(raw_content, source_name=source_name)
-
-    def parse_json_content(self, raw_content: str, *, source_name: str = "JSON") -> list[dict[str, Any]]:
-        if not raw_content or not raw_content.strip():
-            return []
-
-        try:
-            payload = json.loads(raw_content)
-        except json.JSONDecodeError as exc:
-            raise ImportValidationError(f"Invalid JSON format in {source_name}: {exc.msg}") from exc
-
-        return self._normalize_records(payload)
-
-    def _normalize_records(self, payload: Any) -> list[dict[str, Any]]:
-        if isinstance(payload, dict):
-            return [payload]
-
-        if isinstance(payload, list):
-            if all(isinstance(record, dict) for record in payload):
-                return payload
-            raise ImportValidationError("JSON arrays must contain only objects.")
-
-        raise ImportValidationError("Expected a JSON object or array of objects.")

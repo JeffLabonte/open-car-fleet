@@ -29,7 +29,7 @@ from shop import views
 from shop.auth import complete_hanko_login, sync_hanko_user
 from shop.exporters import export_garage_to_excel
 from shop.forms import CarCreateForm, CarUpdateForm, GarageCreateForm, KnownShopProofForm, ReportForm, WorkJobForm
-from shop.importers import CSVImporter, ImportContext, ImportValidationError, JSONImporter
+from shop.importers import CSVImporter, ImportContext, ImportValidationError
 from shop.mailgun_backend import MailgunEmailBackend
 from shop.middleware import HankoAuthenticationMiddleware, hanko_login_required
 from shop.models.car import Car, CarPart, CarPartStatusHistory
@@ -1391,11 +1391,9 @@ class AdditionalCoverageRegressionTests(TestCase):
         self.assertFalse(Car.objects.filter(pk=created_car.pk).exists())
 
     def test_importer_edge_cases_and_unknown_model_branches(self):
-        importer = JSONImporter()
+        importer = CSVImporter()
         with self.assertRaises(ImportValidationError):
             importer.resolve_model('unknown_model')
-
-        self.assertEqual(importer._normalize_records({'make': 'Subaru'}), [{'make': 'Subaru'}])
 
         result = importer.import_records(Car, [{'make': 'Nope'}], context=ImportContext(garage=self.garage))
         self.assertTrue(result.has_errors)
@@ -1576,17 +1574,8 @@ class AuthAndInputCoverageTests(TestCase):
         valid_form = KnownShopProofForm(data={'title': 'Proof', 'content': 'Valid proof'}, files={'file': pdf})
         self.assertTrue(valid_form.is_valid())
 
-    def test_importer_handles_missing_json_files_and_list_validation(self):
-        with self.assertRaises(ImportValidationError):
-            JSONImporter().parse_json_file('/tmp/not-a-real-file.json')
-
-        with self.assertRaises(ImportValidationError):
-            JSONImporter().parse_json_bytes(b'\xff\xfe', source_name='bad.json')
-
-        importer = JSONImporter()
-        self.assertEqual(importer._normalize_records({'make': 'Honda'}), [{'make': 'Honda'}])
-        with self.assertRaises(ImportValidationError):
-            importer._normalize_records('bad')
+    def test_importer_list_and_type_validations(self):
+        importer = CSVImporter()
 
         self.assertEqual(importer._coerce_bool('yes', field_name='flag'), True)
         self.assertEqual(importer._coerce_bool('0', field_name='flag'), False)
