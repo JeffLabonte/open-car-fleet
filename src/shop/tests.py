@@ -29,7 +29,7 @@ from shop import views
 from shop.auth import complete_hanko_login, sync_hanko_user
 from shop.exporters import export_garage_to_excel
 from shop.forms import CarCreateForm, CarUpdateForm, GarageCreateForm, KnownShopProofForm, ReportForm, WorkJobForm
-from shop.importers import ImportContext, ImportValidationError, JSONImporter
+from shop.importers import CSVImporter, ImportContext, ImportValidationError, JSONImporter
 from shop.mailgun_backend import MailgunEmailBackend
 from shop.middleware import HankoAuthenticationMiddleware, hanko_login_required
 from shop.models.car import Car, CarPart, CarPartStatusHistory
