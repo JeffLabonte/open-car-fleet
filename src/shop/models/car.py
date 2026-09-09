@@ -1,5 +1,6 @@
 import uuid
-from django.core.validators import MinLengthValidator
+import re
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from shop.models.garage import Garage
@@ -104,7 +105,7 @@ class Car(models.Model):
     mileage = models.PositiveIntegerField(null=True, blank=True)
     usual_name = models.CharField(max_length=200, blank=True)
     make = models.CharField(max_length=100)
-    colour = models.CharField(max_length=50, blank=True, validators=[MinLengthValidator(1)])
+    colour = models.CharField(max_length=50, blank=True)
     model = models.CharField(max_length=100)
     year = models.PositiveSmallIntegerField(null=True, blank=True)
     vin = models.CharField(max_length=50, unique=True, null=True, blank=True)
@@ -112,6 +113,22 @@ class Car(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def clean(self) -> None:
+        super().clean()
+        if self.vin:
+            vin = re.sub(r'\s+', '', self.vin).upper()
+            if any(character in {'I', 'O', 'Q'} for character in vin):
+                raise ValidationError({'vin': 'VIN contains invalid characters (I, O, Q are not allowed).'})
+            if not re.fullmatch(r'[A-HJ-NPR-Z0-9]{11,17}', vin):
+                raise ValidationError({'vin': 'VIN must be 11-17 alphanumeric characters (no I/O/Q).'})
+
+        if self.license_plate and not re.fullmatch(r'[A-Za-z0-9 -]{1,20}', self.license_plate):
+            raise ValidationError({'license_plate': 'License plate contains invalid characters.'})
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        return super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return f"{self.usual_name or self.make} ({self.license_plate or self.vin or self.id})"

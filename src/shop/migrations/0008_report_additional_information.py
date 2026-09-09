@@ -11,6 +11,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="report",
             name="additional_information",
-            field=models.TextField(blank=True),
+            field=models.TextField(blank=True, default=""),
+            preserve_default=False,
         ),
     ]

@@ -1,5 +1,7 @@
 from django.conf import settings
 from django.db import models
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 
 from shop.models.car import Car
 from shop.models.garage import KnownShop
@@ -54,6 +56,10 @@ class Report(models.Model):
             from django.core.exceptions import ValidationError
 
             raise ValidationError({"assigned_to": "Assigned user must be a mechanic."})
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        return super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return f"{self.job_name} on {self.date_done} for {self.car}"
@@ -110,3 +116,9 @@ class ReportAttachment(models.Model):
 
     def __str__(self) -> str:
         return self.display_name or self.url or str(self.pk)
+
+
+@receiver(post_delete, sender=ReportAttachment)
+def delete_report_attachment_file(sender: type[ReportAttachment], instance: ReportAttachment, **kwargs: object) -> None:
+    if instance.file:
+        instance.file.delete(save=False)

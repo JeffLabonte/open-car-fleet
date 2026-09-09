@@ -65,15 +65,9 @@ class WorkJob(models.Model):
 
             raise ValidationError({"assigned_to": "Assigned user must be a mechanic."})
 
-    def mark_done(self) -> None:
-        """Convenience helper to mark job done and set done_date/status."""
-        if not self.is_done:
-            self.is_done = True
-            from django.utils import timezone
-
-            self.done_date = timezone.now().date()
-            self.status = "done"
-            self.save()
+    def save(self, *args, **kwargs):
+        self.clean()
+        return super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return f"{self.title} [{self.get_urgency_display()}] for {self.car}"

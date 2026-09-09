@@ -1,6 +1,7 @@
 from django import forms
 
 from shop.models.garage import KnownShop, KnownShopProof
+from shop.file_validation import validate_pdf_upload
 
 
 class KnownShopForm(forms.ModelForm):
@@ -28,10 +29,7 @@ class KnownShopProofForm(forms.ModelForm):
 
     def clean_file(self):
         uploaded_file = self.cleaned_data.get('file')
-        if uploaded_file is None:
-            return uploaded_file
-        if uploaded_file.content_type and uploaded_file.content_type != 'application/pdf':
-            raise forms.ValidationError('Only PDF files can be uploaded as shop proofs.')
-        if not uploaded_file.name.lower().endswith('.pdf'):
-            raise forms.ValidationError('Only PDF files can be uploaded as shop proofs.')
-        return uploaded_file
+        return validate_pdf_upload(
+            uploaded_file,
+            message='Only valid PDF files can be uploaded as shop proofs.',
+        )

@@ -17,3 +17,10 @@ class ShopUser(AbstractUser):
 
     class Meta:
         db_table = 'shop_user'
+        constraints = [
+            models.UniqueConstraint(
+                models.functions.Lower('email'),
+                condition=~models.Q(email=''),
+                name='shop_user_unique_nonempty_email_ci',
+            ),
+        ]

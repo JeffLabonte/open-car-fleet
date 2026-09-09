@@ -3,6 +3,8 @@ import uuid
 from django.conf import settings
 from django.core.mail import send_mail
 from django.db import models
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 from django.utils import timezone
 
 
@@ -147,6 +149,13 @@ class GarageInvitation(models.Model):
 class KnownShop(models.Model):
     """Directory of known shops available for assignment."""
 
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='created_known_shops',
+    )
     name = models.CharField(max_length=200)
     email = models.EmailField(blank=True, db_index=True)
     phone = models.CharField(max_length=50, blank=True)
@@ -178,7 +187,7 @@ class KnownShopProof(models.Model):
         return f"{self.title} ({self.shop})"
 
 
-# Fleet terminology aliases that preserve current database model names.
-Fleet = Garage
-FleetMembership = GarageMembership
-FleetInvitation = GarageInvitation
+@receiver(post_delete, sender=KnownShopProof)
+def delete_known_shop_proof_file(sender: type[KnownShopProof], instance: KnownShopProof, **kwargs: object) -> None:
+    if instance.file:
+        instance.file.delete(save=False)

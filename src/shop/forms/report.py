@@ -1,4 +1,5 @@
 from typing import Any
+from urllib.parse import urlparse
 
 from django import forms
 from django.utils.translation import gettext_lazy as _
@@ -17,6 +18,19 @@ class MultipleFileInput(forms.FileInput):
 
 class MultipleFileField(forms.FileField):
     widget = MultipleFileInput
+    max_upload_bytes = 25 * 1024 * 1024
+    allowed_content_types = {
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'video/mp4',
+        'video/webm',
+        'video/quicktime',
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    }
 
     def clean(self, data: Any, initial: Any = None) -> list[Any]:
         if not data:
@@ -26,11 +40,21 @@ class MultipleFileField(forms.FileField):
             cleaned_files: list[Any] = []
             for item in data:
                 if item:
-                    cleaned_files.append(super().clean(item, initial))
+                    cleaned_files.append(self._clean_upload(item, initial))
             return cleaned_files
 
-        cleaned_file = super().clean(data, initial)
+        cleaned_file = self._clean_upload(data, initial)
         return [cleaned_file] if cleaned_file else []
+
+    def _clean_upload(self, data: Any, initial: Any = None) -> Any:
+        cleaned_file = super().clean(data, initial)
+        if cleaned_file is None:
+            return None
+        if cleaned_file.size > self.max_upload_bytes:
+            raise forms.ValidationError('Uploaded attachments must be no larger than 25 MB.')
+        if cleaned_file.content_type not in self.allowed_content_types:
+            raise forms.ValidationError('Unsupported attachment file type.')
+        return cleaned_file
 
 
 class ReportForm(LineListFieldMixin, AssignedToShopFormMixin, forms.ModelForm):
@@ -93,14 +117,18 @@ class ReportForm(LineListFieldMixin, AssignedToShopFormMixin, forms.ModelForm):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self.configure_assigned_fields()
         if self.instance and self.instance.pk:
             self.fields['documents'].initial = '\n'.join(self.instance.documents or [])
             self.fields['photos'].initial = '\n'.join(self.instance.photos or [])
 
     def clean_external_links(self) -> list[str]:
         raw = self.cleaned_data.get('external_links', '')
-        return [item.strip() for item in raw.splitlines() if item.strip()]
+        links = [item.strip() for item in raw.splitlines() if item.strip()]
+        for link in links:
+            parsed = urlparse(link)
+            if parsed.scheme not in {'http', 'https'} or not parsed.netloc:
+                raise forms.ValidationError(_('External links must use http:// or https://.'))
+        return links
 
     def clean_documents(self) -> list[str]:
         return self._clean_line_list_field('documents')

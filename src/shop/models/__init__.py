@@ -1,9 +1,6 @@
 from car_docs.models import CarDoc
 from shop.models.car import Car, CarPart, CarPartStatusHistory
 from shop.models.garage import (
-    Fleet,
-    FleetInvitation,
-    FleetMembership,
     Garage,
     GarageInvitation,
     GarageMembership,
@@ -22,9 +19,6 @@ __all__ = [
     "Garage",
     "GarageInvitation",
     "GarageMembership",
-    "Fleet",
-    "FleetInvitation",
-    "FleetMembership",
     "KnownShop",
     "KnownShopProof",
     "WorkJob",
