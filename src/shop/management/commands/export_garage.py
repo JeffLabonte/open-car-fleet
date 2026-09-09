@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Any
 
+from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand, CommandError
 
 from shop.exporters import export_garage_to_excel
@@ -35,5 +36,5 @@ class Command(BaseCommand):
     def _resolve_garage(self, raw_value: str) -> Garage:
         try:
             return Garage.objects.get(pk=raw_value)
-        except Garage.DoesNotExist as exc:
+        except (Garage.DoesNotExist, ValidationError, ValueError) as exc:
             raise CommandError(f"Garage not found for id '{raw_value}'.") from exc

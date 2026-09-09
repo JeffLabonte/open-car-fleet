@@ -1,6 +1,7 @@
 import csv
 import io
 import re
+import uuid
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
@@ -119,6 +120,9 @@ class CSVImporter:
         batch_size: int = 100,
         dry_run: bool = False,
     ) -> ImportResult:
+        if batch_size <= 0:
+            raise ImportValidationError('batch_size must be greater than zero.')
+
         normalized_context = context or ImportContext()
         result = ImportResult(
             model_label=f"{model._meta.app_label}.{model.__name__}",
@@ -277,10 +281,10 @@ class CSVImporter:
             if raw_value in (None, ""):
                 return context.car
             queryset = Car.objects.filter(pk=context.car.pk)
+        elif context.garage is not None:
+            queryset = Car.objects.filter(garage=context.garage)
         else:
-            queryset = Car.objects.all()
-            if context.garage is not None:
-                queryset = queryset.filter(garage=context.garage)
+            raise ImportValidationError('A target garage or car context is required.')
 
         if raw_value in (None, ""):
             raise ImportValidationError("Car reference is required.")
@@ -292,15 +296,19 @@ class CSVImporter:
             if self._looks_like_uuid(value):
                 try:
                     return queryset.get(pk=value)
-                except Car.DoesNotExist as exc:
+                except (Car.DoesNotExist, ValidationError, ValueError) as exc:
                     raise ImportValidationError(f"Car not found for id '{value}'.") from exc
 
             lookup_fields = ("vin", "license_plate", "usual_name")
             for field_name in lookup_fields:
                 try:
                     return queryset.get(**{field_name: value})
-                except Car.DoesNotExist:
+                except (Car.DoesNotExist, ValidationError, ValueError):
                     continue
+                except Car.MultipleObjectsReturned as exc:
+                    raise ImportValidationError(
+                        f"Car reference '{value}' matches multiple cars by {field_name}."
+                    ) from exc
 
             raise ImportValidationError(
                 f"Car not found for reference '{value}'. Use car id, VIN, license plate, or usual name."
@@ -308,7 +316,7 @@ class CSVImporter:
 
         try:
             return queryset.get(pk=raw_value)
-        except Car.DoesNotExist as exc:
+        except (Car.DoesNotExist, ValidationError, ValueError) as exc:
             raise ImportValidationError(f"Car not found for id '{raw_value}'.") from exc
 
     def _resolve_mechanic(self, raw_value: Any):
@@ -323,14 +331,14 @@ class CSVImporter:
                 return None
             try:
                 return queryset.get(models.Q(email__iexact=value) | models.Q(username__iexact=value))
-            except user_model.DoesNotExist as exc:
+            except (user_model.DoesNotExist, user_model.MultipleObjectsReturned) as exc:
                 raise ImportValidationError(
                     f"Mechanic not found for reference '{value}'. Use username or email for an existing mechanic."
                 ) from exc
 
         try:
             return queryset.get(pk=raw_value)
-        except user_model.DoesNotExist as exc:
+        except (user_model.DoesNotExist, user_model.MultipleObjectsReturned, ValidationError, ValueError) as exc:
             raise ImportValidationError(f"Mechanic not found for id '{raw_value}'.") from exc
 
     def _resolve_shop(self, raw_value: Any):
@@ -344,14 +352,14 @@ class CSVImporter:
                 return None
             try:
                 return queryset.get(models.Q(name__iexact=value) | models.Q(email__iexact=value))
-            except KnownShop.DoesNotExist as exc:
+            except (KnownShop.DoesNotExist, KnownShop.MultipleObjectsReturned) as exc:
                 raise ImportValidationError(
                     f"Known shop not found for reference '{value}'. Use an existing shop name or email."
                 ) from exc
 
         try:
             return queryset.get(pk=raw_value)
-        except KnownShop.DoesNotExist as exc:
+        except (KnownShop.DoesNotExist, KnownShop.MultipleObjectsReturned, ValidationError, ValueError) as exc:
             raise ImportValidationError(f"Known shop not found for id '{raw_value}'.") from exc
 
     def _validate_assignment_target(self, assigned_to: Any, assigned_shop: Any) -> None:
@@ -374,9 +382,12 @@ class CSVImporter:
         if value in (None, ""):
             return None
         try:
-            return int(str(value).strip())
+            number = int(str(value).strip())
         except (TypeError, ValueError) as exc:
             raise ImportValidationError(f"Field '{field_name}' must be an integer.") from exc
+        if number < 0:
+            raise ImportValidationError(f"Field '{field_name}' must not be negative.")
+        return number
 
     def _coerce_bool(self, value: Any, *, field_name: str) -> bool:
         if isinstance(value, bool):
@@ -415,12 +426,6 @@ class CSVImporter:
                     raise ImportValidationError(f"Unsupported date format: {value!r}") from exc
 
         raise ImportValidationError(f"Unsupported date format: {value!r}")
-
-    def _require_date(self, record: dict[str, Any], field_name: str) -> date:
-        parsed = self._parse_date_value(record.get(field_name))
-        if parsed is None:
-            raise ImportValidationError(f"Field '{field_name}' is required.")
-        return parsed
 
     def _coerce_string_list(self, value: Any, *, field_name: str) -> list[str]:
         if value in (None, ""):
@@ -465,7 +470,11 @@ class CSVImporter:
         return [f"Ignored fields: {sorted(excluded_keys)}"]
 
     def _looks_like_uuid(self, value: str) -> bool:
-        return bool(re.match(r"^[0-9a-fA-F\-]{32,36}$", value))
+        try:
+            uuid.UUID(value)
+        except ValueError:
+            return False
+        return True
 
     def _format_validation_error(self, exc: ValidationError) -> str:
         if hasattr(exc, "message_dict"):

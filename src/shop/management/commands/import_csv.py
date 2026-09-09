@@ -1,5 +1,6 @@
 from typing import Any
 
+from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand, CommandError
 
 from shop.importers import CSVImporter, ImportContext, ImportValidationError
@@ -9,7 +10,7 @@ from shop.models.garage import Garage
 class Command(BaseCommand):
     help = (
         "Import normalized CSV objects into Car, WorkJob, or Report. "
-        "Cars require a target garage."
+        "All command-line imports require a target garage."
     )
 
     def add_arguments(self, parser: Any) -> None:
@@ -34,7 +35,7 @@ class Command(BaseCommand):
         )
         parser.add_argument(
             "--garage",
-            help="Required for Car imports. Garage UUID to assign all imported records to.",
+            help="Required for every command-line import. Garage UUID used to scope records.",
         )
 
     def handle(self, *args: Any, **options: Any) -> None:
@@ -43,7 +44,10 @@ class Command(BaseCommand):
         try:
             model = importer.resolve_model(options["model_name"])
             records = importer.parse_csv_file(options["csv_file"])
-            context = ImportContext(garage=self._resolve_garage(options.get("garage")))
+            garage = self._resolve_garage(options.get("garage"))
+            if garage is None:
+                raise ImportValidationError('A target garage is required for command-line imports.')
+            context = ImportContext(garage=garage)
             result = importer.import_records(
                 model,
                 records,

@@ -11,6 +11,14 @@ logger = logging.getLogger(__name__)
 class MailgunEmailBackend(BaseEmailBackend):
     """Django email backend that sends messages through the Mailgun HTTP API."""
 
+    def __init__(self, fail_silently: bool = False, **kwargs: object) -> None:
+        self.fail_silently = fail_silently
+        super().__init__(
+            fail_silently=fail_silently,
+            _ignore_unknown_kwargs={'fail_silently'},
+            **kwargs,
+        )
+
     def send_messages(self, email_messages: list[EmailMessage]) -> int:
         if not email_messages:
             return 0
