@@ -8,12 +8,14 @@ from pathlib import Path
 from typing import cast
 from unittest.mock import patch
 
+import csv
 import requests
 from django.contrib.auth import get_user_model
 from django.contrib.auth.middleware import AuthenticationMiddleware
 from django.contrib.auth.models import AnonymousUser
 from django.core.management import call_command
 from django.core.management.base import CommandError
+from django.core.exceptions import ValidationError
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.core.mail import EmailMessage
 from django.db import models
@@ -1399,6 +1401,11 @@ class AdditionalCoverageRegressionTests(TestCase):
         self.assertTrue(result.has_errors)
         self.assertIn("Field 'model' is required", result.errors[0].message)
 
+        result = importer.import_records(Car, [42], context=ImportContext(garage=self.garage))
+        self.assertTrue(result.has_errors)
+        self.assertIn('Record is not an object', result.errors[0].message)
+
+        self.client.force_login(self.owner)
         result = importer.import_records(
             WorkJob,
             [{
@@ -1577,8 +1584,13 @@ class AuthAndInputCoverageTests(TestCase):
     def test_importer_list_and_type_validations(self):
         importer = CSVImporter()
 
+        self.assertEqual(importer.parse_csv_content(''), [])
+        self.assertEqual(importer.parse_csv_content('   \n '), [])
+        self.assertEqual(importer._detect_dialect('make,model,vin\n').delimiter, ',')
+        self.assertEqual(importer._detect_dialect('justaword\n'), csv.excel)
         self.assertEqual(importer._coerce_bool('yes', field_name='flag'), True)
         self.assertEqual(importer._coerce_bool('0', field_name='flag'), False)
+        self.assertEqual(importer._coerce_bool('', field_name='flag'), False)
         with self.assertRaises(ImportValidationError):
             importer._coerce_bool('maybe', field_name='flag')
 
@@ -1588,8 +1600,30 @@ class AuthAndInputCoverageTests(TestCase):
             importer._parse_date_value('not-a-date')
 
         self.assertEqual(importer._coerce_string_list(['', 'fee', None], field_name='list'), ['fee'])
+        self.assertEqual(importer._coerce_string_list('one\ntwo', field_name='list'), ['one', 'two'])
         with self.assertRaises(ImportValidationError):
             importer._coerce_string_list(123, field_name='list')
+
+        with self.assertRaises(ImportValidationError):
+            importer._normalize_vin('1HGBH41JXMN10918I')
+        with self.assertRaises(ImportValidationError):
+            importer._normalize_vin('SHORT')
+        self.assertEqual(importer._normalize_vin(' 1hgbh41jxmn109186 '), '1HGBH41JXMN109186')
+
+        with self.assertRaises(ImportValidationError):
+            importer._normalize_license_plate('A' * 21)
+        with self.assertRaises(ImportValidationError):
+            importer._normalize_license_plate('BAD_PLATE')
+        self.assertEqual(importer._normalize_license_plate('abc 123'), 'ABC 123')
+        self.assertEqual(importer._normalize_license_plate(''), '')
+
+        with self.assertRaises(ImportValidationError):
+            importer._coerce_optional_int('not-an-int', field_name='mileage')
+        self.assertEqual(importer._coerce_optional_int('', field_name='mileage'), None)
+        self.assertEqual(importer._coerce_optional_int('123', field_name='mileage'), 123)
+
+        self.assertEqual(importer._format_validation_error(ValidationError({'make': ['Bad value.']})), 'make: Bad value.')
+        self.assertEqual(importer._format_validation_error(ValidationError('Plain error.')), 'Plain error.')
 
     def test_mailgun_backend_success_and_error_paths(self):
         settings_override = override_settings(MAILGUN_API_KEY='secret', MAILGUN_SANDBOX_DOMAIN='mg.example.com', MAILGUN_BASE_DOMAIN='https://api.mailgun.net')

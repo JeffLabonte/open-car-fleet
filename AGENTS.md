@@ -1,86 +1,85 @@
 # Open Car Fleet — Agent Instructions
 
-Open Car Fleet is a Django 6 vehicle maintenance management system. Users track cars, plan work jobs, and record maintenance reports across shared garages.
+Django 6 vehicle maintenance app (Poetry, Python ≥3.12) with two apps: `shop` (garages, cars, work jobs, reports) and `car_docs` (PDF car documents). Custom user model `shop.ShopUser`.
 
-## Build & Test
+## Commands
+
+Run everything from the project root. `manage.py` lives at `src/manage.py`; Python imports are `shop.*` / `settings.*` (root `conftest.py` puts `src/` on `sys.path`).
 
 ```bash
-# Install dependencies
-poetry install
+poetry install --no-root        # plain `poetry install` FAILS: no package root is defined
+make run                        # start Postgres (docker compose), wait, migrate, runserver
+make test                       # pytest -q
+poetry run pytest src/shop/tests.py -k NameFragment          # focused run
+poetry run pytest src/shop/tests.py::TestClass::test_name    # single test
 
-# Run development server (from project root)
-poetry run python src/manage.py runserver
-
-# Run migrations
-poetry run python src/manage.py migrate
-
-# Run tests
-poetry run pytest src/
-
-# Bulk import data
-poetry run python src/manage.py import_csv Car src/imports/cars.csv
+# Management commands
+poetry run python src/manage.py import_csv Car src/imports/cars.csv --garage <garage-uuid>  # --garage REQUIRED for Car
 poetry run python src/manage.py import_csv WorkJob src/imports/workjobs.csv
 poetry run python src/manage.py import_csv Report src/imports/reports_FMG3809.csv
-
-# Promote a user to mechanic
+poetry run python src/manage.py export_garage <garage-uuid> [--output path.xlsx]
 poetry run python src/manage.py convert_user_to_mechanic <email>
+
+# Translations (en-ca / fr-ca)
+poetry run python src/manage.py makemessages -l en_CA -l fr_CA
+poetry run python src/manage.py compilemessages
 ```
 
-## Architecture
-
-```
-src/
-  settings/         # Django settings, URLs, ASGI/WSGI
-  shop/
-    models/         # One file per model (car, garage, job, report, user)
-    views.py        # All views (function-based)
-    forms.py        # ModelForms
-    auth.py         # Hanko sync helpers
-    middleware.py   # Hanko session validation
-    management/commands/  # import_json, convert_user_to_mechanic
-    templates/shop/ # HTML templates
-    migrations/
-```
-
-## Authentication
-
-All protected views use `@hanko_login_required` (not Django's `login_required`). Auth flow:
-1. Hanko JS frontend → POST `/auth/hanko/callback/` → `sync_hanko_user()` → Django session
-2. `HankoAuthenticationMiddleware` validates `hanko_session_token` on every request via `HANKO_API_URL`
-3. `PUBLIC_PATHS` in middleware bypass auth (login, logout, static)
-
-`HANKO_API_URL` must be set in `.env` (project root or `src/`).
-
-## Data Access Conventions
-
-**Always scope queries to the requesting user.** Use the view-level helpers:
-- `_user_cars_queryset(user)` — cars in garages the user is a member of
-- `_user_garages_queryset(user)` — garages where the user has a membership
-
-Never query `Car.objects.all()` or `Garage.objects.all()` in views.
-
-## Key Model Gotchas
-
-- **UUID PKs**: `Car`, `Garage`, `GarageInvitation` use `UUIDField(primary_key=True)`; other models use default integer PKs.
-- **Mutual exclusion**: `WorkJob` and `Report` can be assigned to a `ShopUser` (mechanic) **or** a `KnownShop`, never both. This is enforced at the model `clean()` level.
-- **JSON fields**: `required_items`, `documents`, `photos` are stored as JSON lists. Forms use a `<textarea>` with `clean_<field>()` to serialize/deserialize.
-- **VIN validation**: 11–17 chars, no letters I/O/Q, must be unique.
-- **Mechanic flag**: Check `ShopUser.is_mechanic` before exposing mechanic assignment in forms/views.
-
-## Adding New Features
-
-| Task | Where to start |
-|------|---------------|
-| New model | `src/shop/models/<name>.py`, export from `models/__init__.py`, create migration |
-| New view | `views.py` with `@hanko_login_required`, add URL in `shop/urls.py`, filter with `_user_*_queryset()` |
-| New form | `forms.py` as a `ModelForm`; list-valued fields use `<textarea>` + `clean_*()` |
-| Management command | `src/shop/management/commands/import_csv.py` |
-| New bulk import type | Extend `import_csv.py` or add a model-specific handler |
+`make translations` is currently broken (typo in the Makefile) — call `makemessages` directly. Other useful targets: `make db-snapshot` (pg_dump to `db_backups/`), `make db-reset` (destructive: drops the Postgres volume).
 
 ## Testing
 
-- Tests live in `src/shop/tests.py` using Django `TestCase`.
-- Mock the Hanko API with `@patch('shop.middleware.requests.get')`.
-- Use `RequestFactory` for middleware unit tests.
-- Manipulate sessions via `self.client.session['hanko_session_token']` + `.save()`.
-- See [src/shop/tests.py](src/shop/tests.py) for established patterns.
+- **`make test` / bare `pytest` / CI only collect `src/shop/tests.py`** — `pytest.ini` sets `testpaths = src/shop`. `src/car_docs/tests.py` is silently skipped; run it explicitly: `poetry run pytest src/car_docs/tests.py`.
+- Tests need no Postgres or Docker: root `conftest.py` clears `POSTGRES_*` env vars (forcing sqlite) and sets up Django databases via a `DiscoverRunner` session fixture — not pytest-django.
+- Auth mocking: `@patch('shop.middleware.requests.get', ...)` for the Hanko API; authenticate test clients via `self.client.session['hanko_session_token'] = '...'` + `.save()`.
+- Email mocking: `@patch('shop.models.garage.send_mail')` for invitations, `@patch('shop.mailgun_backend.requests.post')` for the Mailgun backend.
+- CI is `.github/workflows/test.yml`: Fedora container, `poetry install --no-root`, `pytest -q` (same car_docs blind spot).
+
+## Environment & Database
+
+- `settings/settings.py` loads `src/.env` → falls back to checked-in `src/.env.template` → root `.env`/`.env.template` (first value per variable wins). The template has working defaults, so no `.env` is needed for dev or tests.
+- DB: Postgres when `POSTGRES_DB` is set (docker-compose `db` service, postgres:18), else sqlite at `src/db.sqlite3`. Dev server uses Postgres via `make run`.
+- `HANKO_API_URL` is required for real logins; `MAILGUN_API_KEY` / `MAILGUN_SANDBOX_DOMAIN` for invitation emails (custom HTTP backend `shop/mailgun_backend.py`, not SMTP).
+
+## Authentication
+
+All protected views in both apps use `@hanko_login_required` from `shop.middleware` — never Django's `login_required`:
+
+1. Hanko JS frontend POSTs `/auth/hanko/callback/` → `complete_hanko_login()` (`src/shop/auth.py`) → Django session gains `hanko_session_token`.
+2. `HankoAuthenticationMiddleware` revalidates that token against `HANKO_API_URL` (`GET <api>/userinfo`) on every unauthenticated request; API failure logs the user out.
+3. `PUBLIC_PATHS` (`/login`, `/theme`, `/auth/hanko/callback/`) and `PUBLIC_PREFIXES` (`/static/`, `/admin/`) bypass auth.
+
+## Data access
+
+Scope all queries to the requesting user via `src/shop/view_helpers.py`: `user_cars_queryset`, `user_garages_queryset`, `user_car_docs_queryset`, `user_can_manage_garage`. Never `Car.objects.all()` / `Garage.objects.all()` in views.
+
+## Model gotchas
+
+- **UUID PKs**: `Car`, `Garage`, `GarageInvitation` (other models use integer PKs).
+- **Assignment mutual exclusion**: `WorkJob`/`Report` take `assigned_to` (mechanic user) OR `assigned_shop` (`KnownShop`), never both. Enforced by DB CheckConstraints (`workjob_single_assignment_target`, `report_single_assignment_target`) plus `AssignedToShopFormMixin.clean()` — saving both via the ORM raises IntegrityError. Model `clean()` additionally requires `assigned_to.is_mechanic`.
+- **VIN rules (11–17 alphanumerics, no I/O/Q, unique) live in `CarBaseForm.clean_vin` and `shop/importers.py`, NOT the model** — the model field is just `max_length=50, unique=True, nullable`, so ORM-created cars bypass VIN validation.
+- **JSON list fields** (`required_items`, `documents`, `photos`): edited as `<textarea>` (one item per line) via `LineListFieldMixin` in `src/shop/forms/base.py`.
+- `ShopUser.is_mechanic` gates mechanic assignment; forms restrict `assigned_to` to mechanics and CSV imports require it.
+
+## Structure
+
+```
+src/
+  settings/         # Django settings, root urls.py
+  shop/
+    models/         # one file per model: car, garage, job, report, user
+    forms/          # forms package: base.py (mixins), car, garage, job, report, shop, import_data
+    views.py        # all shop views (function-based)
+    view_helpers.py, middleware.py, auth.py
+    importers.py    # CSV import logic (import_csv command + web UI)
+    exporters.py    # Excel garage export (export_garage command + web UI)
+    management/commands/  # import_csv, export_garage, convert_user_to_mechanic
+  car_docs/         # CarDoc PDF uploads; reuses shop's middleware and view_helpers
+  imports/          # sample CSVs for import_csv
+```
+
+## Conventions
+
+- Templates use `{% translate %}` (en-ca/fr-ca). After adding user-facing strings, run `makemessages` + `compilemessages`, and update `src/locale/*/LC_MESSAGES/django.po`.
+- CSV import is all-or-nothing: any invalid row aborts the whole import; unknown fields are warned and ignored; `car` references resolve by UUID, VIN, license plate, or usual name.
+- Deploy: `scripts/prepare-env.sh` (writes `src/.env.production`) then `scripts/deploy-ssh.sh` (uploads full source over SSH, `docker compose up -d --build`, migrates).
