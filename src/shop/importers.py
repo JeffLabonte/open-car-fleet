@@ -227,7 +227,7 @@ class CSVImporter:
             "car": self._resolve_car(record.get("car"), context),
             "title": self._require_text(record, "title"),
             "maintenance_type": self._clean_optional_text(record.get("maintenance_type")) or "",
-            "assigned_to": self._resolve_mechanic(record.get("assigned_to")),
+            "assigned_to": self._resolve_mechanic(record.get("assigned_to"), context=context),
             "assigned_shop": self._resolve_shop(record.get("assigned_shop")),
             "planned_date": self._parse_date_value(record.get("planned_date")),
             "is_done": self._coerce_bool(record.get("is_done", False), field_name="is_done"),
@@ -258,7 +258,7 @@ class CSVImporter:
             "car": self._resolve_car(record.get("car"), context),
             "mileage": self._coerce_optional_int(record.get("mileage"), field_name="mileage"),
             "job_name": job_name,
-            "assigned_to": self._resolve_mechanic(record.get("assigned_to")),
+            "assigned_to": self._resolve_mechanic(record.get("assigned_to"), context=context),
             "assigned_shop": self._resolve_shop(record.get("assigned_shop")),
             "date_done": date_done,
             "documents": self._coerce_string_list(record.get("documents"), field_name="documents"),
@@ -319,12 +319,17 @@ class CSVImporter:
         except (Car.DoesNotExist, ValidationError, ValueError) as exc:
             raise ImportValidationError(f"Car not found for id '{raw_value}'.") from exc
 
-    def _resolve_mechanic(self, raw_value: Any):
+    def _resolve_mechanic(self, raw_value: Any, context: ImportContext | None = None):
         if raw_value in (None, ""):
             return None
 
         user_model = get_user_model()
         queryset = user_model.objects.filter(is_mechanic=True)
+        if context is not None and context.garage is not None:
+            queryset = queryset.filter(
+                garage_memberships__garage=context.garage,
+                garage_memberships__role__in=['owner', 'admin', 'mechanic'],
+            ).distinct()
         if isinstance(raw_value, str):
             value = raw_value.strip()
             if not value:

@@ -51,6 +51,7 @@
             {% for invite in pending_invitations %}
               <li class="mb-3">
                 <strong>{{ invite.invited_email }}</strong><br>
+                <small>{% translate 'Role' %}: {{ invite.get_role_display }}</small><br>
                 <small>{% translate 'Sent' %} {{ invite.created_at|date:'F j, Y, g:i a' }}</small><br>
                 {% if invite.expires_at %}
                   <small>{% translate 'Expires' %} {{ invite.expires_at|date:'F j, Y, g:i a' }}</small>
@@ -61,6 +62,9 @@
         {% else %}
           <p>{% translate 'No pending invitations.' %}</p>
         {% endif %}
+        <div class="mt-4">
+          <a class="button is-light is-small" href="{% url 'shop-garage-members' garage.pk %}">{% translate 'Manage members' %}</a>
+        </div>
       </div>
     </div>
   </div>

@@ -116,7 +116,10 @@ class ReportForm(LineListFieldMixin, AssignedToShopFormMixin, forms.ModelForm):
         }
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+        user = kwargs.pop('user', None)
+        garage = kwargs.pop('garage', None)
         super().__init__(*args, **kwargs)
+        self.configure_assigned_fields(user=user, garage=garage)
         if self.instance and self.instance.pk:
             self.fields['documents'].initial = '\n'.join(self.instance.documents or [])
             self.fields['photos'].initial = '\n'.join(self.instance.photos or [])

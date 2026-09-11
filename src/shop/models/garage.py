@@ -42,23 +42,39 @@ class GarageMembership(models.Model):
     """Membership relation between a user and a fleet."""
 
     ROLE_OWNER = "owner"
-    ROLE_MANAGER = "manager"
-    ROLE_MEMBER = "member"
+    ROLE_ADMIN = "admin"
+    ROLE_MECHANIC = "mechanic"
+    ROLE_VIEWER = "viewer"
+
+    # Backward-compatible aliases used by historical code/tests.
+    ROLE_MANAGER = ROLE_ADMIN
+    ROLE_MEMBER = ROLE_VIEWER
 
     ROLE_CHOICES = [
         (ROLE_OWNER, "Owner"),
-        (ROLE_MANAGER, "Manager"),
-        (ROLE_MEMBER, "Member"),
+        (ROLE_ADMIN, "Admin"),
+        (ROLE_MECHANIC, "Mechanic"),
+        (ROLE_VIEWER, "Viewer"),
     ]
+
+    MANAGEMENT_ROLES = {ROLE_OWNER, ROLE_ADMIN}
+    WRITE_DATA_ROLES = {ROLE_OWNER, ROLE_ADMIN, ROLE_MECHANIC}
 
     garage = models.ForeignKey(Garage, on_delete=models.CASCADE, related_name="memberships")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="garage_memberships")
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_MEMBER)
-    joined_at = models.DateTimeField(auto_now_add=True)
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_VIEWER)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "garage_membership"
         unique_together = ("garage", "user")
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(role__in=['owner', 'admin', 'mechanic', 'viewer']),
+                name="garage_membership_valid_role",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"{self.user} in fleet {self.garage} ({self.role})"
@@ -69,12 +85,14 @@ class GarageInvitation(models.Model):
 
     STATUS_PENDING = "pending"
     STATUS_ACCEPTED = "accepted"
+    STATUS_DECLINED = "declined"
     STATUS_CANCELLED = "cancelled"
     STATUS_EXPIRED = "expired"
 
     STATUS_CHOICES = [
         (STATUS_PENDING, "Pending"),
         (STATUS_ACCEPTED, "Accepted"),
+        (STATUS_DECLINED, "Declined"),
         (STATUS_CANCELLED, "Cancelled"),
         (STATUS_EXPIRED, "Expired"),
     ]
@@ -91,6 +109,11 @@ class GarageInvitation(models.Model):
     )
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    role = models.CharField(
+        max_length=20,
+        choices=GarageMembership.ROLE_CHOICES,
+        default=GarageMembership.ROLE_VIEWER,
+    )
     message = models.TextField(blank=True)
     expires_at = models.DateTimeField(null=True, blank=True)
     accepted_at = models.DateTimeField(null=True, blank=True)
@@ -101,7 +124,16 @@ class GarageInvitation(models.Model):
         on_delete=models.SET_NULL,
         related_name="accepted_garage_invitations",
     )
+    declined_at = models.DateTimeField(null=True, blank=True)
+    declined_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="declined_garage_invitations",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "garage_invitation"

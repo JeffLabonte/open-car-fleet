@@ -529,7 +529,7 @@ class GarageSharingTests(TestCase):
         )
         self.client.force_login(self.member)
 
-        response = self.client.get(reverse('shop-garage-invitation-accept', args=[invitation.token]))
+        response = self.client.post(reverse('shop-garage-invitation-accept', args=[invitation.token]))
 
         self.assertEqual(response.status_code, 302)
         self.assertTrue(

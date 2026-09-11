@@ -22,7 +22,10 @@ class AssignedToShopFormMixin:
     def configure_assigned_fields(self, *, user: Any = None, garage: Any = None) -> None:
         mechanics = get_user_model().objects.filter(is_mechanic=True)
         if garage is not None:
-            mechanics = mechanics.filter(garage_memberships__garage=garage).distinct()
+            mechanics = mechanics.filter(
+                garage_memberships__garage=garage,
+                garage_memberships__role__in=['owner', 'admin', 'mechanic'],
+            ).distinct()
         self.fields['assigned_to'].queryset = mechanics
         self.fields['assigned_to'].help_text = _('Only users converted to mechanics can be selected.')
         shops = KnownShop.objects.all()

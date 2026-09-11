@@ -42,7 +42,7 @@ class GarageAdmin(admin.ModelAdmin):
 
 @admin.register(GarageMembership)
 class GarageMembershipAdmin(admin.ModelAdmin):
-	list_display = ("garage", "user", "role", "joined_at")
+	list_display = ("garage", "user", "role", "created_at")
 	list_filter = ("role",)
 	search_fields = ("garage__name", "user__username", "user__email")
 

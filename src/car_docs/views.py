@@ -7,6 +7,7 @@ from django.views.decorators.http import require_GET
 from car_docs.forms import CarDocForm
 from car_docs.models import CarDoc
 from shop.middleware import hanko_login_required
+from shop.permissions import GarageSharingPermissions
 from shop.view_helpers import user_car_docs_queryset, user_cars_queryset
 
 
@@ -46,7 +47,10 @@ def car_doc_file(request, car_pk, pk):
 
 @hanko_login_required
 def car_doc_create(request, car_pk):
-    car = get_object_or_404(user_cars_queryset(request.user), pk=car_pk)
+    car = get_object_or_404(user_cars_queryset(request.user).select_related('garage'), pk=car_pk)
+    if not GarageSharingPermissions(request.user, car.garage).can_edit_garage_data:
+        messages.error(request, 'You do not have permission to add documents to this car.')
+        return redirect(reverse('shop-car-doc-list', args=[car.pk]))
     if request.method == 'POST':
         form = CarDocForm(request.POST, request.FILES)
         if form.is_valid():
@@ -68,7 +72,10 @@ def car_doc_create(request, car_pk):
 
 @hanko_login_required
 def car_doc_update(request, car_pk, pk):
-    car = get_object_or_404(user_cars_queryset(request.user), pk=car_pk)
+    car = get_object_or_404(user_cars_queryset(request.user).select_related('garage'), pk=car_pk)
+    if not GarageSharingPermissions(request.user, car.garage).can_edit_garage_data:
+        messages.error(request, 'You do not have permission to update documents for this car.')
+        return redirect(reverse('shop-car-doc-list', args=[car.pk]))
     doc = get_object_or_404(user_car_docs_queryset(request.user), pk=pk, car=car)
     if request.method == 'POST':
         form = CarDocForm(request.POST, request.FILES, instance=doc)
@@ -90,7 +97,10 @@ def car_doc_update(request, car_pk, pk):
 
 @hanko_login_required
 def car_doc_delete(request, car_pk, pk):
-    car = get_object_or_404(user_cars_queryset(request.user), pk=car_pk)
+    car = get_object_or_404(user_cars_queryset(request.user).select_related('garage'), pk=car_pk)
+    if not GarageSharingPermissions(request.user, car.garage).can_edit_garage_data:
+        messages.error(request, 'You do not have permission to delete documents from this car.')
+        return redirect(reverse('shop-car-doc-list', args=[car.pk]))
     doc = get_object_or_404(CarDoc, pk=pk, car=car)
     if request.method == 'POST':
         doc.delete()

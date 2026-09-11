@@ -1,0 +1,37 @@
+{% extends 'shop/index.html' %}
+{% load i18n %}
+
+{% block content %}
+  <div class="box">
+    <h1 class="title">{% translate 'Accept fleet invitation' %}</h1>
+    <p class="subtitle">{{ invitation.garage.name }}</p>
+
+    <p>
+      {% blocktranslate with email=invitation.invited_email %}
+        You have been invited to join this fleet as <strong>{{ email }}</strong>.
+      {% endblocktranslate %}
+    </p>
+
+    {% if invitation.message %}
+      <div class="notification is-info mt-4">
+        <strong>{% translate 'Message from inviter:' %}</strong><br>
+        {{ invitation.message|linebreaksbr }}
+      </div>
+    {% endif %}
+
+    <div class="field is-grouped mt-5">
+      <div class="control">
+        <form method="post" action="{% url 'shop-garage-invitation-accept' invitation.token %}">
+          {% csrf_token %}
+          <button class="button is-primary" type="submit">{% translate 'Accept invitation' %}</button>
+        </form>
+      </div>
+      <div class="control">
+        <form method="post" action="{% url 'shop-garage-invitation-decline' invitation.token %}">
+          {% csrf_token %}
+          <button class="button is-light" type="submit">{% translate 'Decline' %}</button>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endblock %}

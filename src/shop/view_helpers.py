@@ -3,7 +3,8 @@ from typing import Any
 from django.db.models import Q
 
 from shop.models.car import Car
-from shop.models.garage import Garage, GarageMembership, KnownShop
+from shop.models.garage import Garage, KnownShop
+from shop.permissions import GarageSharingPermissions
 
 
 def user_cars_queryset(user: Any):
@@ -20,10 +21,15 @@ def user_car_docs_queryset(user: Any):
 
 
 def user_can_manage_garage(user: Any, garage: Garage) -> bool:
-    return garage.memberships.filter(
-        user=user,
-        role__in=[GarageMembership.ROLE_OWNER, GarageMembership.ROLE_MANAGER],
-    ).exists()
+    return GarageSharingPermissions(user, garage).can_manage_members
+
+
+def user_can_edit_garage_data(user: Any, garage: Garage) -> bool:
+    return GarageSharingPermissions(user, garage).can_edit_garage_data
+
+
+def user_can_view_garage(user: Any, garage: Garage) -> bool:
+    return GarageSharingPermissions(user, garage).can_view_garage
 
 
 def user_known_shops_queryset(user: Any):

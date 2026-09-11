@@ -21,14 +21,18 @@
     </div>
 
     <div class="buttons">
-      <a class="button is-link" href="{% url 'shop-car-update' car.pk %}">{% translate 'Edit' %}</a>
-      <form method="post" action="{% url 'shop-car-delete' car.pk %}" style="display:inline;">
-        {% csrf_token %}
-        {% translate 'Delete this car?' as delete_car_confirmation %}
-        <button class="button is-danger is-light" type="submit" onclick="return confirm('{{ delete_car_confirmation|escapejs }}')">{% translate 'Delete' %}</button>
-      </form>
-      <a class="button is-primary" href="{% url 'shop-workjob-create' car.pk %}">{% translate 'Add planned work' %}</a>
-      <a class="button is-info is-light" href="{% url 'shop-car-import' car.pk %}">Import work jobs or reports</a>
+      {% if can_edit_garage_data %}
+        <a class="button is-link" href="{% url 'shop-car-update' car.pk %}">{% translate 'Edit' %}</a>
+        <form method="post" action="{% url 'shop-car-delete' car.pk %}" style="display:inline;">
+          {% csrf_token %}
+          {% translate 'Delete this car?' as delete_car_confirmation %}
+          <button class="button is-danger is-light" type="submit" onclick="return confirm('{{ delete_car_confirmation|escapejs }}')">{% translate 'Delete' %}</button>
+        </form>
+      {% endif %}
+      {% if can_edit_garage_data %}
+        <a class="button is-primary" href="{% url 'shop-workjob-create' car.pk %}">{% translate 'Add planned work' %}</a>
+        <a class="button is-info is-light" href="{% url 'shop-car-import' car.pk %}">Import work jobs or reports</a>
+      {% endif %}
       <a class="button is-light" href="{% url 'shop-car-doc-list' car.pk %}">Documents</a>
       <a class="button is-light" href="{% url 'shop-car-list' %}">{% translate 'Back to list' %}</a>
     </div>
@@ -42,9 +46,11 @@
         </div>
       </div>
       <div class="level-right">
-        <div class="level-item">
-          <a class="button is-primary" href="{% url 'shop-part-create' car.pk %}">{% translate 'Add part status' %}</a>
-        </div>
+        {% if can_edit_garage_data %}
+          <div class="level-item">
+            <a class="button is-primary" href="{% url 'shop-part-create' car.pk %}">{% translate 'Add part status' %}</a>
+          </div>
+        {% endif %}
       </div>
     </div>
     {% if parts %}
@@ -81,7 +87,9 @@
                   {% endwith %}
                 </td>
                 <td>
-                  <a class="button is-small is-link" href="{% url 'shop-part-update' car.pk part.pk %}">{% translate 'Edit' %}</a>
+                  {% if can_edit_garage_data %}
+                <a class="button is-small is-link" href="{% url 'shop-part-update' car.pk part.pk %}">{% translate 'Edit' %}</a>
+              {% endif %}
                 </td>
               </tr>
             {% endfor %}
@@ -110,12 +118,14 @@
             <a class="button is-light" href="{% url 'shop-car-detail' car.pk %}?show_done=1">{% translate 'Show done/cancelled' %}</a>
           {% endif %}
         </div>
-        <div class="level-item">
-          <a class="button is-info is-light" href="{% url 'shop-car-import' car.pk %}?type=workjob">{% translate 'Import work jobs' %}</a>
-        </div>
-        <div class="level-item">
-          <a class="button is-primary" href="{% url 'shop-workjob-create' car.pk %}">{% translate 'Add planned work' %}</a>
-        </div>
+        {% if can_edit_garage_data %}
+          <div class="level-item">
+            <a class="button is-info is-light" href="{% url 'shop-car-import' car.pk %}?type=workjob">{% translate 'Import work jobs' %}</a>
+          </div>
+          <div class="level-item">
+            <a class="button is-primary" href="{% url 'shop-workjob-create' car.pk %}">{% translate 'Add planned work' %}</a>
+          </div>
+        {% endif %}
       </div>
     </div>
     {% if work_jobs %}
@@ -150,7 +160,9 @@
                 <td>{{ job.get_status_display }}</td>
                 <td>{{ job.done_date|date:'M j, Y'|default:'—' }}</td>
                 <td>
-                  <a class="button is-small is-link" href="{% url 'shop-workjob-update' car.pk job.pk %}">{% translate 'Edit' %}</a>
+                  {% if can_edit_garage_data %}
+                    <a class="button is-small is-link" href="{% url 'shop-workjob-update' car.pk job.pk %}">{% translate 'Edit' %}</a>
+                  {% endif %}
                 </td>
               </tr>
             {% endfor %}
@@ -176,12 +188,14 @@
         </div>
       </div>
       <div class="level-right">
-        <div class="level-item">
-          <a class="button is-info is-light" href="{% url 'shop-car-import' car.pk %}?type=report">{% translate 'Import reports' %}</a>
-        </div>
-        <div class="level-item">
-          <a class="button is-primary" href="{% url 'shop-report-create' car.pk %}">{% translate 'Add maintenance report' %}</a>
-        </div>
+        {% if can_edit_garage_data %}
+          <div class="level-item">
+            <a class="button is-info is-light" href="{% url 'shop-car-import' car.pk %}?type=report">{% translate 'Import reports' %}</a>
+          </div>
+          <div class="level-item">
+            <a class="button is-primary" href="{% url 'shop-report-create' car.pk %}">{% translate 'Add maintenance report' %}</a>
+          </div>
+        {% endif %}
       </div>
     </div>
     {% if reports %}
@@ -190,7 +204,9 @@
           <article class="message is-info">
             <div class="message-header">
               <p>{{ report.job_name }} — {{ report.date_done|date:'F j, Y' }}</p>
-              <a class="button is-small is-link" href="{% url 'shop-report-update' car.pk report.pk %}">{% translate 'Edit' %}</a>
+              {% if can_edit_garage_data %}
+                <a class="button is-small is-link" href="{% url 'shop-report-update' car.pk report.pk %}">{% translate 'Edit' %}</a>
+              {% endif %}
             </div>
             <div class="message-body">
               <p class="report-description">{{ report.note|linebreaksbr|default:_('No maintenance report details provided.') }}</p>

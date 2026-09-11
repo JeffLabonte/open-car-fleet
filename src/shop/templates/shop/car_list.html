@@ -8,7 +8,9 @@
       <p class="page-subtitle">{% translate 'Browse the vehicles in your shared fleets.' %}</p>
     </div>
     <div class="page-actions">
-      <a class="button is-primary" href="{% url 'shop-car-create' %}">{% translate 'Add a new car' %}</a>
+      {% if can_edit_garage_data %}
+        <a class="button is-primary" href="{% url 'shop-car-create' %}">{% translate 'Add a new car' %}</a>
+      {% endif %}
     </div>
   </div>
 
@@ -42,10 +44,12 @@
               <td>{{ car.make }}</td>
               <td>{{ car.year|default:"—" }}</td>
               <td>
-                <form method="post" action="{% url 'shop-car-delete' car.pk %}" style="display:inline;">
-                  {% csrf_token %}
-                  <button class="button is-small is-danger is-light" type="submit" onclick="return confirm('{% translate 'Delete this car?' %}')">{% translate 'Delete' %}</button>
-                </form>
+                {% if can_edit_garage_data %}
+                  <form method="post" action="{% url 'shop-car-delete' car.pk %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button class="button is-small is-danger is-light" type="submit" onclick="return confirm('{% translate 'Delete this car?' %}')">{% translate 'Delete' %}</button>
+                  </form>
+                {% endif %}
               </td>
             </tr>
           {% endfor %}

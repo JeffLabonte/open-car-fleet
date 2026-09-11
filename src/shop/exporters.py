@@ -33,7 +33,7 @@ def export_garage_to_excel(garage: Garage) -> GarageExportWorkbook:
         .select_related("car", "assigned_to", "assigned_shop")
         .order_by("id")
     )
-    memberships = list(garage.memberships.select_related("user").order_by("joined_at", "id"))
+    memberships = list(garage.memberships.select_related("user").order_by("created_at", "id"))
 
     workbook = Workbook()
     meta_sheet = workbook.active
@@ -93,7 +93,7 @@ def export_garage_to_excel(garage: Garage) -> GarageExportWorkbook:
             "username",
             "display_name",
             "role",
-            "joined_at",
+            "created_at",
         ],
         [
             [
@@ -103,7 +103,7 @@ def export_garage_to_excel(garage: Garage) -> GarageExportWorkbook:
                 membership.user.username,
                 membership.user.display_name,
                 membership.role,
-                _format_datetime(membership.joined_at),
+                _format_datetime(membership.created_at),
             ]
             for membership in memberships
         ],

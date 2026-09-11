@@ -14,7 +14,9 @@
         <a class="button is-info is-light" href="{% url 'shop-garage-import' garage.pk %}">{% translate 'Import cars' %}</a>
         <a class="button is-success is-light" href="{% url 'shop-garage-export' garage.pk %}">{% translate 'Export to Excel' %}</a>
       {% endif %}
-      <a class="button is-primary" href="{% url 'shop-car-create' %}">{% translate 'Add car' %}</a>
+      {% if can_edit_garage_data %}
+        <a class="button is-primary" href="{% url 'shop-car-create' %}">{% translate 'Add car' %}</a>
+      {% endif %}
     </div>
   </div>
 
