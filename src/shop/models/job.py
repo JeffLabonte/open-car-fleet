@@ -16,11 +16,16 @@ class WorkJob(models.Model):
         ("ahead", "Planned Ahead"),
     ]
 
+    STATUS_PENDING = "pending"
+    STATUS_IN_PROGRESS = "in_progress"
+    STATUS_DONE = "done"
+    STATUS_CANCELLED = "cancelled"
+
     STATUS_CHOICES = [
-        ("pending", "Pending"),
-        ("in_progress", "In Progress"),
-        ("done", "Done"),
-        ("cancelled", "Cancelled"),
+        (STATUS_PENDING, "Pending"),
+        (STATUS_IN_PROGRESS, "In Progress"),
+        (STATUS_DONE, "Done"),
+        (STATUS_CANCELLED, "Cancelled"),
     ]
 
     car = models.ForeignKey(Car, related_name="work_jobs", on_delete=models.CASCADE)

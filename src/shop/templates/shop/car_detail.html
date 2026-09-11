@@ -104,6 +104,13 @@
       </div>
       <div class="level-right">
         <div class="level-item">
+          {% if show_done %}
+            <a class="button is-light" href="{% url 'shop-car-detail' car.pk %}">{% translate 'Hide done/cancelled' %}</a>
+          {% else %}
+            <a class="button is-light" href="{% url 'shop-car-detail' car.pk %}?show_done=1">{% translate 'Show done/cancelled' %}</a>
+          {% endif %}
+        </div>
+        <div class="level-item">
           <a class="button is-info is-light" href="{% url 'shop-car-import' car.pk %}?type=workjob">{% translate 'Import work jobs' %}</a>
         </div>
         <div class="level-item">
@@ -152,7 +159,11 @@
       </div>
     {% else %}
       <div class="notification is-warning">
-        {% translate 'No planned jobs or assignments for this car.' %}
+        {% if show_done %}
+          {% translate 'No planned jobs or assignments for this car.' %}
+        {% else %}
+          {% translate 'No open planned jobs or assignments for this car. Done or cancelled items are hidden.' %}
+        {% endif %}
       </div>
     {% endif %}
   </div>

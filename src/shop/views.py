@@ -545,7 +545,10 @@ def car_detail(request: HttpRequest, pk: str) -> HttpResponse:
         user_cars_queryset(request.user).prefetch_related('work_jobs', 'reports', 'parts__status_history'),
         pk=pk,
     )
-    work_jobs = car.work_jobs.order_by('status', 'planned_date', 'created_at')
+    show_done = request.GET.get('show_done') == '1'
+    work_jobs_qs = car.work_jobs.order_by('status', 'planned_date', 'created_at')
+    if not show_done:
+        work_jobs_qs = work_jobs_qs.exclude(status__in=(WorkJob.STATUS_DONE, WorkJob.STATUS_CANCELLED))
     reports = car.reports.order_by('-date_done', '-created_at')
     parts = list(car.parts.order_by('name'))
     related_cars = (
@@ -559,9 +562,10 @@ def car_detail(request: HttpRequest, pk: str) -> HttpResponse:
         {
             'car': car,
             'related_cars': related_cars,
-            'work_jobs': work_jobs,
+            'work_jobs': work_jobs_qs,
             'reports': reports,
             'parts': parts,
+            'show_done': show_done,
         },
     )
 

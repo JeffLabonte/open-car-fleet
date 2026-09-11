@@ -841,6 +841,48 @@ class ColourFieldTests(TestCase):
         self.assertIn(b'Colour:', response.content)
         self.assertIn(b'Noir', response.content)
 
+    def test_car_detail_hides_done_and_cancelled_work_jobs_by_default(self):
+        self.client.force_login(self.user)
+        car = Car.objects.create(
+            garage=self.garage,
+            make='Toyota',
+            model='Yaris',
+            vin='JTDKB20U793512349',
+        )
+        WorkJob.objects.create(car=car, title='Open job', status=WorkJob.STATUS_PENDING)
+        WorkJob.objects.create(car=car, title='Done job', status=WorkJob.STATUS_DONE)
+        WorkJob.objects.create(car=car, title='Cancelled job', status=WorkJob.STATUS_CANCELLED)
+
+        response = self.client.get(reverse('shop-car-detail', args=[car.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn('Open job', content)
+        self.assertNotIn('Done job', content)
+        self.assertNotIn('Cancelled job', content)
+        self.assertIn('Show done/cancelled', content)
+
+    def test_car_detail_show_done_reveals_done_and_cancelled_work_jobs(self):
+        self.client.force_login(self.user)
+        car = Car.objects.create(
+            garage=self.garage,
+            make='Toyota',
+            model='Yaris',
+            vin='JTDKB20U793512349',
+        )
+        WorkJob.objects.create(car=car, title='Open job', status=WorkJob.STATUS_PENDING)
+        WorkJob.objects.create(car=car, title='Done job', status=WorkJob.STATUS_DONE)
+        WorkJob.objects.create(car=car, title='Cancelled job', status=WorkJob.STATUS_CANCELLED)
+
+        response = self.client.get(reverse('shop-car-detail', args=[car.pk]), data={'show_done': '1'})
+
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn('Open job', content)
+        self.assertIn('Done job', content)
+        self.assertIn('Cancelled job', content)
+        self.assertIn('Hide done/cancelled', content)
+
 
 class ReportAttachmentTests(TestCase):
     def setUp(self) -> None:
