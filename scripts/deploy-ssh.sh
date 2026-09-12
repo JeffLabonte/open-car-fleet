@@ -80,6 +80,17 @@ done
 SSH_OPTS=(-p "${SSH_PORT}" -o BatchMode=yes -o StrictHostKeyChecking=accept-new)
 
 if [[ "${SKIP_UPLOAD}" != "true" ]]; then
+  echo "Checking existing remote .env on ${HOST} ..."
+  REMOTE_ENV_HASH="$(ssh "${SSH_OPTS[@]}" "${HOST}" \
+    "sha256sum '${REMOTE_DIR}/src/.env' 2>/dev/null | cut -d' ' -f1" || true)"
+  LOCAL_ENV_HASH="$(sha256sum "${ENV_FILE}" | cut -d' ' -f1)"
+
+  if [[ -n "${REMOTE_ENV_HASH}" && "${REMOTE_ENV_HASH}" != "${LOCAL_ENV_HASH}" ]]; then
+    BACKUP_NAME=".env.bak-$(date +%Y%m%d-%H%M%S)"
+    echo "Remote .env differs from ${ENV_FILE}; backing up to src/${BACKUP_NAME} ..."
+    ssh "${SSH_OPTS[@]}" "${HOST}" "cp '${REMOTE_DIR}/src/.env' '${REMOTE_DIR}/src/${BACKUP_NAME}'"
+  fi
+
   echo "Uploading application source to ${HOST}:${REMOTE_DIR} ..."
   tar -C "${REPO_ROOT}" \
     --exclude=".git" \
