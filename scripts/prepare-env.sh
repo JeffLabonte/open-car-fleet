@@ -123,6 +123,10 @@ updates = {
     "DEBUG": "False",
     "DJANGO_ALLOWED_HOSTS": r"${DJANGO_ALLOWED_HOSTS}",
     "CSRF_TRUSTED_ORIGINS": r"${CSRF_TRUSTED_ORIGINS}",
+    "SECURE_SSL_REDIRECT": "True",
+    "SECURE_HSTS_SECONDS": "31536000",
+    "SESSION_COOKIE_SECURE": "True",
+    "CSRF_COOKIE_SECURE": "True",
     "POSTGRES_DB": r"${POSTGRES_DB}",
     "POSTGRES_USER": r"${POSTGRES_USER}",
     "POSTGRES_PASSWORD": r"${POSTGRES_PASSWORD}",
@@ -154,4 +158,5 @@ echo "Wrote ${OUTPUT_FILE}"
 echo "Next steps:"
 echo "  1) Review DJANGO_ALLOWED_HOSTS and CSRF_TRUSTED_ORIGINS"
 echo "  2) Set HANKO_API_URL if missing"
-echo "  3) Deploy with scripts/deploy-ssh.sh --host <user@server> --env-file ${OUTPUT_FILE}"
+echo "  3) Verify HTTPS is terminated in front of the app (SECURE_SSL_REDIRECT and HSTS are enabled)"
+echo "  4) Deploy with scripts/deploy-ssh.sh --host <user@server> --env-file ${OUTPUT_FILE}"
