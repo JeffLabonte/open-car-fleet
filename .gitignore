@@ -34,8 +34,9 @@ db.sqlite3-journal
 media/
 staticfiles/
 static/
-import/*
-!important/.gitkeep
+/src/imports/**
+!/src/imports/.gitkeep
+/import/
 
 # IDEs and editors
 .vscode/
