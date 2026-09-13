@@ -31,6 +31,7 @@ Other useful targets: `make db-snapshot` (pg_dump to `db_backups/`), `make db-re
 
 - **`make test` / bare `pytest` / CI collect both Django apps and `tests/bdd`** — pytest-django is configured through `pytest.ini`; Selenium tests remain separate under `make test-e2e`.
 - Tests need no Postgres or Docker: pytest-env clears `POSTGRES_*` variables before pytest-django initializes the settings module, forcing SQLite.
+- **`make test-e2e` runs the server and pytest against one shared SQLite file** (`E2E_DB`, default `/tmp/open-car-fleet-e2e-<port>.sqlite3`, wiped each run) via `DJANGO_SETTINGS_MODULE=settings.test_settings` + `E2E_DB_PATH`, with `POSTGRES_*` cleared. ORM fixture data is visible to the live server; never point the two processes at different databases.
 - Auth mocking: `@patch('shop.auth.requests.get', ...)` for the Hanko API; authenticate test clients via `self.client.session['hanko_session_token'] = '...'` + `.save()`.
 - Email mocking: `@patch('shop.models.garage.send_mail')` for invitations, `@patch('shop.mailgun_backend.requests.post')` for the Mailgun backend.
 - CI is `.github/workflows/test.yml`: the unit suite runs in Fedora and a separate PR job installs Firefox with `browser-actions/setup-firefox@v1` before running `make test-e2e`.
