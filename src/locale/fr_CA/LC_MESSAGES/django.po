@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Open Car Fleet\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-13 04:01+0000\n"
+"POT-Creation-Date: 2026-09-13 18:37+0000\n"
 "PO-Revision-Date: 2026-09-13 02:13+0000\n"
 "Last-Translator: Open Car Fleet <noreply@opencarfleet.ca>\n"
 "Language-Team: fr_CA <LL@li.org>\n"
@@ -37,10 +37,6 @@ msgstr "Pièces jointes"
 msgid "Add notes, instructions, or summary details..."
 msgstr "Ajoutez des notes, des instructions ou des détails de résumé..."
 
-#: src/car_docs/templates/car_docs/confirm_delete.html:7
-msgid "Delete document"
-msgstr "Supprimer le document"
-
 #: src/car_docs/templates/car_docs/confirm_delete.html:9
 #, python-format
 msgid ""
@@ -49,8 +45,8 @@ msgstr ""
 "Voulez-vous vraiment supprimer <strong>%(title)s</strong> pour %(name)s ?"
 
 #: src/car_docs/templates/car_docs/confirm_delete.html:16
-#: src/car_docs/templates/car_docs/detail.html:30
-#: src/car_docs/templates/car_docs/list.html:47
+#: src/car_docs/templates/car_docs/detail.html:10
+#: src/car_docs/templates/car_docs/list.html:41
 #: src/shop/templates/shop/car_detail.html:15
 #: src/shop/templates/shop/car_detail.html:54
 #: src/shop/templates/shop/car_list.html:50
@@ -59,7 +55,7 @@ msgid "Delete"
 msgstr "Supprimer"
 
 #: src/car_docs/templates/car_docs/confirm_delete.html:19
-#: src/car_docs/templates/car_docs/form.html:41
+#: src/car_docs/templates/car_docs/form.html:31
 #: src/shop/templates/shop/car_detail.html:53
 #: src/shop/templates/shop/car_form.html:27
 #: src/shop/templates/shop/car_import.html:32
@@ -74,22 +70,8 @@ msgstr "Supprimer"
 msgid "Cancel"
 msgstr "Annuler"
 
-#: src/car_docs/templates/car_docs/detail.html:8
-#, python-format
-msgid "For %(name)s"
-msgstr "Pour %(name)s"
-
-#: src/car_docs/templates/car_docs/detail.html:23
-msgid "No document content added yet."
-msgstr "Aucun contenu de document ajouté pour le moment."
-
-#: src/car_docs/templates/car_docs/detail.html:26
-#, python-format
-msgid "Updated: %(updated)s"
-msgstr "Mise à jour : %(updated)s"
-
-#: src/car_docs/templates/car_docs/detail.html:29
-#: src/car_docs/templates/car_docs/list.html:46
+#: src/car_docs/templates/car_docs/detail.html:9
+#: src/car_docs/templates/car_docs/list.html:40
 #: src/shop/templates/shop/car_detail.html:14
 #: src/shop/templates/shop/car_detail.html:107
 #: src/shop/templates/shop/car_detail.html:179
@@ -97,20 +79,25 @@ msgstr "Mise à jour : %(updated)s"
 msgid "Edit"
 msgstr "Modifier"
 
-#: src/car_docs/templates/car_docs/detail.html:31
+#: src/car_docs/templates/car_docs/detail.html:11
 msgid "Back to documents"
 msgstr "Retour aux documents"
 
-#: src/car_docs/templates/car_docs/form.html:7
-#: src/car_docs/templates/car_docs/list.html:18 src/car_docs/views.py:61
-msgid "Add document"
-msgstr "Ajouter un document"
+#: src/car_docs/templates/car_docs/detail.html:15
+#, python-format
+msgid "For %(name)s"
+msgstr "Pour %(name)s"
 
-#: src/car_docs/templates/car_docs/form.html:7 src/car_docs/views.py:88
-msgid "Edit document"
-msgstr "Modifier le document"
+#: src/car_docs/templates/car_docs/detail.html:31
+msgid "No document content added yet."
+msgstr "Aucun contenu de document ajouté pour le moment."
 
-#: src/car_docs/templates/car_docs/form.html:38
+#: src/car_docs/templates/car_docs/detail.html:34
+#, python-format
+msgid "Updated: %(updated)s"
+msgstr "Mise à jour : %(updated)s"
+
+#: src/car_docs/templates/car_docs/form.html:28
 #: src/shop/templates/shop/car_form.html:24
 #: src/shop/templates/shop/fleet_form.html:24
 #: src/shop/templates/shop/part_form.html:24
@@ -119,7 +106,7 @@ msgstr "Modifier le document"
 msgid "Create"
 msgstr "Créer"
 
-#: src/car_docs/templates/car_docs/form.html:38
+#: src/car_docs/templates/car_docs/form.html:28
 #: src/shop/templates/shop/car_form.html:24
 #: src/shop/templates/shop/fleet_form.html:24
 #: src/shop/templates/shop/fleet_members.html:53
@@ -129,24 +116,26 @@ msgstr "Créer"
 msgid "Update"
 msgstr "Mettre à jour"
 
+#: src/car_docs/templates/car_docs/list.html:8
+msgid "Back to car"
+msgstr "Retour au véhicule"
+
 #: src/car_docs/templates/car_docs/list.html:11
-#, python-format
-msgid "%(name)s docs"
-msgstr "Documents de %(name)s"
+#: src/car_docs/templates/car_docs/list.html:52 src/car_docs/views.py:61
+msgid "Add document"
+msgstr "Ajouter un document"
 
-#: src/car_docs/templates/car_docs/list.html:12
-msgid "Notes, service details, and reference info"
-msgstr "Notes, détails d'entretien et informations de référence"
-
-#: src/car_docs/templates/car_docs/list.html:28
+#: src/car_docs/templates/car_docs/list.html:22
+#: src/car_docs/templates/car_docs/list.html:30
 msgid "Title"
 msgstr "Titre"
 
-#: src/car_docs/templates/car_docs/list.html:29
+#: src/car_docs/templates/car_docs/list.html:23
+#: src/car_docs/templates/car_docs/list.html:36
 msgid "Updated"
 msgstr "Mise à jour"
 
-#: src/car_docs/templates/car_docs/list.html:30
+#: src/car_docs/templates/car_docs/list.html:24
 #: src/shop/templates/shop/car_detail.html:80
 #: src/shop/templates/shop/car_detail.html:150
 #: src/shop/templates/shop/car_list.html:26
@@ -154,18 +143,14 @@ msgstr "Mise à jour"
 msgid "Actions"
 msgstr "Actions"
 
-#: src/car_docs/templates/car_docs/list.html:45
+#: src/car_docs/templates/car_docs/list.html:39
 #: src/shop/templates/shop/shop_list.html:38
 msgid "View"
 msgstr "Consulter"
 
-#: src/car_docs/templates/car_docs/list.html:57
+#: src/car_docs/templates/car_docs/list.html:52
 msgid "No documents have been added for this car yet."
 msgstr "Aucun document n'a été ajouté pour cette voiture pour le moment."
-
-#: src/car_docs/templates/car_docs/list.html:62
-msgid "Back to car"
-msgstr "Retour au véhicule"
 
 #: src/car_docs/views.py:22
 #, python-format
@@ -201,6 +186,10 @@ msgstr ""
 #: src/car_docs/views.py:79
 msgid "Document updated successfully."
 msgstr "Document mis à jour avec succès."
+
+#: src/car_docs/views.py:88
+msgid "Edit document"
+msgstr "Modifier le document"
 
 #: src/car_docs/views.py:89
 msgid "Update the vehicle note"
@@ -1765,6 +1754,16 @@ msgstr "Rapport d'entretien mis à jour avec succès."
 #: src/shop/views.py:989
 msgid "Logged out successfully."
 msgstr "Déconnexion réussie."
+
+#~ msgid "Delete document"
+#~ msgstr "Supprimer le document"
+
+#, python-format
+#~ msgid "%(name)s docs"
+#~ msgstr "Documents de %(name)s"
+
+#~ msgid "Notes, service details, and reference info"
+#~ msgstr "Notes, détails d'entretien et informations de référence"
 
 #~ msgid ""
 #~ "Invite a member by email. They must sign in with that same email to "

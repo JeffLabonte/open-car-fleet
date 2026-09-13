@@ -1,10 +1,10 @@
-{% extends 'shop/index.html' %}
-
+{% extends 'shop/base.html' %}
 {% load i18n %}
 
 {% block content %}
-  <div class="box">
-    <h1 class="title">{% translate 'Delete document' %}</h1>
+  <section class="box content-card auth-card" data-testid="doc-delete-confirm">
+    <h1 class="title">{{ title }}</h1>
+    <p class="subtitle mb-4">{{ subtitle }}</p>
     <div class="notification is-warning">
       {% blocktranslate with title=doc.title name=car.usual_name|default:car.make %}Are you sure you want to delete <strong>{{ title }}</strong> for {{ name }}?{% endblocktranslate %}
     </div>
@@ -20,5 +20,5 @@
         </div>
       </div>
     </form>
-  </div>
+  </section>
 {% endblock %}

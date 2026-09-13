@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Open Car Fleet\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-13 04:01+0000\n"
+"POT-Creation-Date: 2026-09-13 18:37+0000\n"
 "PO-Revision-Date: 2026-09-13 02:13+0000\n"
 "Last-Translator: Open Car Fleet <noreply@opencarfleet.ca>\n"
 "Language-Team: en_CA <LL@li.org>\n"
@@ -37,10 +37,6 @@ msgstr ""
 msgid "Add notes, instructions, or summary details..."
 msgstr ""
 
-#: src/car_docs/templates/car_docs/confirm_delete.html:7
-msgid "Delete document"
-msgstr ""
-
 #: src/car_docs/templates/car_docs/confirm_delete.html:9
 #, python-format
 msgid ""
@@ -48,8 +44,8 @@ msgid ""
 msgstr ""
 
 #: src/car_docs/templates/car_docs/confirm_delete.html:16
-#: src/car_docs/templates/car_docs/detail.html:30
-#: src/car_docs/templates/car_docs/list.html:47
+#: src/car_docs/templates/car_docs/detail.html:10
+#: src/car_docs/templates/car_docs/list.html:41
 #: src/shop/templates/shop/car_detail.html:15
 #: src/shop/templates/shop/car_detail.html:54
 #: src/shop/templates/shop/car_list.html:50
@@ -58,7 +54,7 @@ msgid "Delete"
 msgstr ""
 
 #: src/car_docs/templates/car_docs/confirm_delete.html:19
-#: src/car_docs/templates/car_docs/form.html:41
+#: src/car_docs/templates/car_docs/form.html:31
 #: src/shop/templates/shop/car_detail.html:53
 #: src/shop/templates/shop/car_form.html:27
 #: src/shop/templates/shop/car_import.html:32
@@ -73,22 +69,8 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-#: src/car_docs/templates/car_docs/detail.html:8
-#, python-format
-msgid "For %(name)s"
-msgstr ""
-
-#: src/car_docs/templates/car_docs/detail.html:23
-msgid "No document content added yet."
-msgstr ""
-
-#: src/car_docs/templates/car_docs/detail.html:26
-#, python-format
-msgid "Updated: %(updated)s"
-msgstr ""
-
-#: src/car_docs/templates/car_docs/detail.html:29
-#: src/car_docs/templates/car_docs/list.html:46
+#: src/car_docs/templates/car_docs/detail.html:9
+#: src/car_docs/templates/car_docs/list.html:40
 #: src/shop/templates/shop/car_detail.html:14
 #: src/shop/templates/shop/car_detail.html:107
 #: src/shop/templates/shop/car_detail.html:179
@@ -96,20 +78,25 @@ msgstr ""
 msgid "Edit"
 msgstr ""
 
-#: src/car_docs/templates/car_docs/detail.html:31
+#: src/car_docs/templates/car_docs/detail.html:11
 msgid "Back to documents"
 msgstr ""
 
-#: src/car_docs/templates/car_docs/form.html:7
-#: src/car_docs/templates/car_docs/list.html:18 src/car_docs/views.py:61
-msgid "Add document"
+#: src/car_docs/templates/car_docs/detail.html:15
+#, python-format
+msgid "For %(name)s"
 msgstr ""
 
-#: src/car_docs/templates/car_docs/form.html:7 src/car_docs/views.py:88
-msgid "Edit document"
+#: src/car_docs/templates/car_docs/detail.html:31
+msgid "No document content added yet."
 msgstr ""
 
-#: src/car_docs/templates/car_docs/form.html:38
+#: src/car_docs/templates/car_docs/detail.html:34
+#, python-format
+msgid "Updated: %(updated)s"
+msgstr ""
+
+#: src/car_docs/templates/car_docs/form.html:28
 #: src/shop/templates/shop/car_form.html:24
 #: src/shop/templates/shop/fleet_form.html:24
 #: src/shop/templates/shop/part_form.html:24
@@ -118,7 +105,7 @@ msgstr ""
 msgid "Create"
 msgstr ""
 
-#: src/car_docs/templates/car_docs/form.html:38
+#: src/car_docs/templates/car_docs/form.html:28
 #: src/shop/templates/shop/car_form.html:24
 #: src/shop/templates/shop/fleet_form.html:24
 #: src/shop/templates/shop/fleet_members.html:53
@@ -128,24 +115,26 @@ msgstr ""
 msgid "Update"
 msgstr ""
 
+#: src/car_docs/templates/car_docs/list.html:8
+msgid "Back to car"
+msgstr ""
+
 #: src/car_docs/templates/car_docs/list.html:11
-#, python-format
-msgid "%(name)s docs"
+#: src/car_docs/templates/car_docs/list.html:52 src/car_docs/views.py:61
+msgid "Add document"
 msgstr ""
 
-#: src/car_docs/templates/car_docs/list.html:12
-msgid "Notes, service details, and reference info"
-msgstr ""
-
-#: src/car_docs/templates/car_docs/list.html:28
+#: src/car_docs/templates/car_docs/list.html:22
+#: src/car_docs/templates/car_docs/list.html:30
 msgid "Title"
 msgstr ""
 
-#: src/car_docs/templates/car_docs/list.html:29
+#: src/car_docs/templates/car_docs/list.html:23
+#: src/car_docs/templates/car_docs/list.html:36
 msgid "Updated"
 msgstr ""
 
-#: src/car_docs/templates/car_docs/list.html:30
+#: src/car_docs/templates/car_docs/list.html:24
 #: src/shop/templates/shop/car_detail.html:80
 #: src/shop/templates/shop/car_detail.html:150
 #: src/shop/templates/shop/car_list.html:26
@@ -153,17 +142,13 @@ msgstr ""
 msgid "Actions"
 msgstr ""
 
-#: src/car_docs/templates/car_docs/list.html:45
+#: src/car_docs/templates/car_docs/list.html:39
 #: src/shop/templates/shop/shop_list.html:38
 msgid "View"
 msgstr ""
 
-#: src/car_docs/templates/car_docs/list.html:57
+#: src/car_docs/templates/car_docs/list.html:52
 msgid "No documents have been added for this car yet."
-msgstr ""
-
-#: src/car_docs/templates/car_docs/list.html:62
-msgid "Back to car"
 msgstr ""
 
 #: src/car_docs/views.py:22
@@ -197,6 +182,10 @@ msgstr ""
 
 #: src/car_docs/views.py:79
 msgid "Document updated successfully."
+msgstr ""
+
+#: src/car_docs/views.py:88
+msgid "Edit document"
 msgstr ""
 
 #: src/car_docs/views.py:89

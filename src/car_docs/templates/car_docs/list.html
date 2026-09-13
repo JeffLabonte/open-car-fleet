@@ -1,48 +1,44 @@
-{% extends 'shop/index.html' %}
-
+{% extends 'shop/base.html' %}
 {% load i18n %}
 
 {% block content %}
-  <div class="box">
-    <div class="level">
-      <div class="level-left">
-        <div class="level-item">
-          <div>
-            <h1 class="title">{% blocktranslate with name=car.usual_name|default:car.make %}{{ name }} docs{% endblocktranslate %}</h1>
-            <p class="subtitle is-6">{% translate 'Notes, service details, and reference info' %}</p>
-          </div>
-        </div>
-      </div>
-      <div class="level-right">
-        <div class="level-item">
-          <a class="button is-primary" href="{% url 'shop-car-doc-create' car.pk %}">{% translate 'Add document' %}</a>
-        </div>
-      </div>
+  <header class="page-header">
+    {% include 'shop/partials/_page_header.html' with heading=title subheading=subtitle %}
+    <div class="page-actions">
+      <a class="button is-light" href="{% url 'shop-car-detail' car.pk %}">{% translate 'Back to car' %}</a>
+      <a class="button is-primary" href="{% url 'shop-car-doc-create' car.pk %}">
+        {% include 'shop/partials/_icon.html' with name='plus' %}
+        <span>{% translate 'Add document' %}</span>
+      </a>
     </div>
+  </header>
 
-    {% if docs %}
-      <div class="table-container">
-        <table class="table is-fullwidth is-striped is-hoverable">
+  {% if docs %}
+    <div class="table-container">
+      <div class="table-wrap">
+        <table class="table is-fullwidth is-striped is-hoverable table--responsive" data-testid="docs-table">
           <thead>
             <tr>
-              <th>{% translate 'Title' %}</th>
-              <th>{% translate 'Updated' %}</th>
-              <th>{% translate 'Actions' %}</th>
+              <th scope="col">{% translate 'Title' %}</th>
+              <th scope="col">{% translate 'Updated' %}</th>
+              <th scope="col">{% translate 'Actions' %}</th>
             </tr>
           </thead>
           <tbody>
             {% for doc in docs %}
-              <tr>
-                <td>
+              <tr data-testid="doc-row">
+                <td data-label="{% translate 'Title' %}">
                   <a href="{% url 'shop-car-doc-detail' car.pk doc.pk %}">{{ doc.title }}</a>
-                  {% if doc.file %}<br><small>{{ doc.file.name }}</small>{% endif %}
+                  {% for attachment in doc.attachments.all %}
+                    {% if attachment.file %}<br><small><a href="{% url 'shop-attachment-file' attachment.pk %}" target="_blank" rel="noopener noreferrer">{{ attachment.display_name|default:attachment.file.name }}</a></small>{% endif %}
+                  {% endfor %}
                 </td>
-                <td>{{ doc.updated_at|date:'M j, Y' }}</td>
-                <td>
+                <td data-label="{% translate 'Updated' %}">{{ doc.updated_at|date:'M j, Y' }}</td>
+                <td data-label="">
                   <div class="buttons are-small">
                     <a class="button is-link" href="{% url 'shop-car-doc-detail' car.pk doc.pk %}">{% translate 'View' %}</a>
                     <a class="button is-light" href="{% url 'shop-car-doc-update' car.pk doc.pk %}">{% translate 'Edit' %}</a>
-                    <a class="button is-danger is-light" href="{% url 'shop-car-doc-delete' car.pk doc.pk %}">{% translate 'Delete' %}</a>
+                    <a class="button is-danger" href="{% url 'shop-car-doc-delete' car.pk doc.pk %}">{% translate 'Delete' %}</a>
                   </div>
                 </td>
               </tr>
@@ -50,14 +46,9 @@
           </tbody>
         </table>
       </div>
-    {% else %}
-      <div class="notification is-info">
-        {% translate 'No documents have been added for this car yet.' %}
-      </div>
-    {% endif %}
-
-    <div class="mt-4">
-      <a class="button is-light" href="{% url 'shop-car-detail' car.pk %}">{% translate 'Back to car' %}</a>
     </div>
-  </div>
+  {% else %}
+    {% url 'shop-car-doc-create' car.pk as add_doc_url %}
+    {% include 'shop/partials/_empty_state.html' with empty_message=_('No documents have been added for this car yet.') empty_action_url=add_doc_url empty_action_label=_('Add document') %}
+  {% endif %}
 {% endblock %}
