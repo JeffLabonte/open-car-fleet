@@ -1,0 +1,15 @@
+{% load i18n %}
+<div class="theme-toggle" role="group" aria-label="{% translate 'Theme selector' %}" data-testid="theme-toggle">
+  <a class="theme-toggle__option {% if theme == 'light' %}is-active{% endif %}"
+     href="{% url 'shop-theme' theme='light' %}?next={{ request.get_full_path|urlencode }}"
+     {% if theme == 'light' %}aria-pressed="true"{% else %}aria-pressed="false"{% endif %}>
+    {% include 'shop/partials/_icon.html' with name='sun' %}
+    <span>{% translate 'Light' %}</span>
+  </a>
+  <a class="theme-toggle__option {% if theme == 'dark' %}is-active{% endif %}"
+     href="{% url 'shop-theme' theme='dark' %}?next={{ request.get_full_path|urlencode }}"
+     {% if theme == 'dark' %}aria-pressed="true"{% else %}aria-pressed="false"{% endif %}>
+    {% include 'shop/partials/_icon.html' with name='moon' %}
+    <span>{% translate 'Dark' %}</span>
+  </a>
+</div>

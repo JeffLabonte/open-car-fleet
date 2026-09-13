@@ -1,0 +1,77 @@
+{% load i18n %}
+<aside class="app-sidebar" aria-label="{% translate 'Main navigation' %}" data-testid="app-sidebar">
+  <a class="app-sidebar__brand" href="{% url 'shop-index' %}">
+    {% include 'shop/partials/_logo.html' %}
+    {% translate 'Open Fleets' as default_brand_name %}
+    <span>{{ brand_name|default:default_brand_name }}</span>
+  </a>
+  <nav class="app-sidebar__nav">
+    <a class="app-navlink" href="{% url 'shop-index' %}" data-testid="nav-fleets">
+      {% include 'shop/partials/_icon.html' with name='garage' %}
+      <span>{% translate 'My Fleets' %}</span>
+    </a>
+    <a class="app-navlink" href="{% url 'shop-car-list' %}" data-testid="nav-cars">
+      {% include 'shop/partials/_icon.html' with name='car' %}
+      <span>{% translate 'Cars' %}</span>
+    </a>
+    <a class="app-navlink" href="{% url 'shop-known-shop-list' %}" data-testid="nav-shops">
+      {% include 'shop/partials/_icon.html' with name='shop' %}
+      <span>{% translate 'Known shops' %}</span>
+    </a>
+  </nav>
+  <div class="app-sidebar__footer">
+    <div class="app-user">
+      <span class="app-user__name" data-testid="user-name">{{ request.user.display_name|default:request.user.username }}</span>
+      <form method="post" action="{% url 'shop-logout' %}">
+        {% csrf_token %}
+        <button class="button is-light is-small" type="submit">
+          {% include 'shop/partials/_icon.html' with name='logout' %}
+          <span>{% translate 'Logout' %}</span>
+        </button>
+      </form>
+    </div>
+    {% include 'shop/partials/_theme_toggle.html' %}
+    {% include 'shop/partials/_lang_toggle.html' %}
+  </div>
+</aside>
+
+<header class="app-topbar">
+  <a class="app-topbar__brand" href="{% url 'shop-index' %}">
+    {% include 'shop/partials/_logo.html' %}
+    {% translate 'Open Fleets' as default_brand_name %}
+    <span>{{ brand_name|default:default_brand_name }}</span>
+  </a>
+  {% include 'shop/partials/_theme_toggle.html' %}
+</header>
+
+<nav class="app-tabbar" aria-label="{% translate 'Main navigation' %}" data-testid="app-tabbar">
+  <a class="app-tab" href="{% url 'shop-index' %}">
+    {% include 'shop/partials/_icon.html' with name='garage' %}
+    <span>{% translate 'Fleets' %}</span>
+  </a>
+  <a class="app-tab" href="{% url 'shop-car-list' %}">
+    {% include 'shop/partials/_icon.html' with name='car' %}
+    <span>{% translate 'Cars' %}</span>
+  </a>
+  <a class="app-tab" href="{% url 'shop-known-shop-list' %}">
+    {% include 'shop/partials/_icon.html' with name='shop' %}
+    <span>{% translate 'Shops' %}</span>
+  </a>
+  <details class="app-tab app-tab--menu" data-menu>
+    <summary class="app-tab app-tab__summary" data-testid="account-menu">
+      {% include 'shop/partials/_icon.html' with name='user' %}
+      <span>{% translate 'Account' %}</span>
+    </summary>
+    <div class="app-tab__panel">
+      <p class="app-tab__username">{{ request.user.email|default:request.user.username }}</p>
+      {% include 'shop/partials/_lang_toggle.html' %}
+      <form method="post" action="{% url 'shop-logout' %}">
+        {% csrf_token %}
+        <button class="button is-light is-fullwidth" type="submit">
+          {% include 'shop/partials/_icon.html' with name='logout' %}
+          <span>{% translate 'Logout' %}</span>
+        </button>
+      </form>
+    </div>
+  </details>
+</nav>

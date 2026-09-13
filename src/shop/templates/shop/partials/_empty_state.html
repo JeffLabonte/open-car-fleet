@@ -1,0 +1,11 @@
+{% load i18n %}
+<div class="empty-state" data-testid="empty-state">
+  {% include 'shop/partials/_icon.html' with name='inbox' %}
+  <p>{{ empty_message }}</p>
+  {% if empty_action_url %}
+    <a class="button is-primary" href="{{ empty_action_url }}">
+      {% include 'shop/partials/_icon.html' with name='plus' %}
+      <span>{{ empty_action_label }}</span>
+    </a>
+  {% endif %}
+</div>

@@ -1,0 +1,33 @@
+{% load static i18n %}<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE|default:'en-ca' }}" data-theme="{{ theme|default:'light' }}">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    {% block title %}<title>{{ title|default:'Open Car Fleet' }}</title>{% endblock %}
+    <link rel="icon" href="{% static 'logo.png' %}" type="image/png" />
+    <link rel="stylesheet" href="{% static 'shop/css/tokens.css' %}" />
+    <link rel="stylesheet" href="{% static 'shop/css/base.css' %}" />
+    <link rel="stylesheet" href="{% static 'shop/css/layout.css' %}" />
+    <link rel="stylesheet" href="{% static 'shop/css/components.css' %}" />
+    <script src="{% static 'shop/js/app.js' %}" defer></script>
+    {% block head_extra %}{% endblock %}
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">{% translate 'Skip to main content' %}</a>
+    <div class="app-shell">
+      {% if request.user.is_authenticated %}
+        {% include 'shop/partials/_nav.html' %}
+      {% else %}
+        {% block public_header %}{% endblock %}
+      {% endif %}
+      <main id="main-content" class="app-main" tabindex="-1">
+        <div class="container">
+          {% include 'shop/partials/_messages.html' %}
+          {% block content %}{% endblock %}
+        </div>
+      </main>
+    </div>
+    {% block extra_scripts %}{% endblock %}
+  </body>
+</html>

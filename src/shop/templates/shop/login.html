@@ -1,15 +1,28 @@
-{% extends 'shop/index.html' %}
+{% extends 'shop/base.html' %}
 {% load i18n %}
 
+{% block public_header %}
+  <header class="public-header">
+    <div class="public-header__brand">
+      {% include 'shop/partials/_logo.html' %}
+      <span>{{ title|default:'Open Car Fleet' }}</span>
+    </div>
+    <div class="public-header__controls">
+      {% include 'shop/partials/_theme_toggle.html' %}
+      {% include 'shop/partials/_lang_toggle.html' %}
+    </div>
+  </header>
+{% endblock %}
+
 {% block content %}
-  <div class="box">
+  <section class="auth-card box content-card" data-testid="login-card">
     <h1 class="title">{% translate 'Sign in' %}</h1>
     <p class="subtitle">{% translate 'You must be signed in to view the shop.' %}</p>
 
     <div id="hanko-auth-container">
       <hanko-login></hanko-login>
     </div>
-  </div>
+  </section>
 
   <script type="module">
     import { Hanko } from 'https://esm.run/@teamhanko/hanko-frontend-sdk';

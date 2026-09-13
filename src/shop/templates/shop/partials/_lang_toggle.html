@@ -1,0 +1,15 @@
+{% load i18n %}
+<div class="lang-toggle" role="group" aria-label="{% translate 'Language selector' %}" data-testid="lang-toggle">
+  {% for lang_code, lang_name in LANGUAGES %}
+    {% if lang_code == LANGUAGE_CODE %}
+      <span class="lang-toggle__option is-active">{{ lang_name }}</span>
+    {% else %}
+      <form method="post" action="{% url 'set_language' %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <input type="hidden" name="language" value="{{ lang_code }}">
+        <button class="lang-toggle__option" type="submit">{{ lang_name }}</button>
+      </form>
+    {% endif %}
+  {% endfor %}
+</div>

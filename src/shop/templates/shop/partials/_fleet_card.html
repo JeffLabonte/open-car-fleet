@@ -1,0 +1,47 @@
+{% load i18n %}
+{% with cars=garage.cars.all %}
+<article class="fleet-card content-card" data-testid="fleet-card">
+  <div class="fleet-card__head">
+    <h2 class="fleet-card__title">
+      <a href="{% url 'shop-garage-detail' garage.pk %}">{{ garage.name }}</a>
+    </h2>
+    {% if garage.pk in manageable_garage_ids %}
+      <span class="badge badge--owner">{% translate 'Manage' %}</span>
+    {% endif %}
+  </div>
+  {% if garage.description %}
+    <p class="fleet-card__desc">{{ garage.description }}</p>
+  {% endif %}
+  <div class="fleet-card__meta">
+    <span class="chip">
+      {% include 'shop/partials/_icon.html' with name='car' %}
+      {% blocktranslate count counter=cars|length %}{{ counter }} car{% plural %}{{ counter }} cars{% endblocktranslate %}
+    </span>
+    <span class="chip">{% translate 'Created' %} {{ garage.created_at|date:'M j, Y' }}</span>
+  </div>
+  {% if cars %}
+    <ul class="fleet-card__cars">
+      {% for car in cars|slice:':3' %}
+        <li>
+          <a href="{% url 'shop-car-detail' car.pk %}">
+            <span>{{ car.usual_name|default:car.make }}</span>
+            <span class="fleet-card__car-meta">{{ car.make }}{% if car.model %} · {{ car.model }}{% endif %}</span>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+    {% if cars|length > 3 %}
+      <p class="fleet-card__more">{% blocktranslate with extra=cars|length|add:'-3' %}+{{ extra }} more{% endblocktranslate %}</p>
+    {% endif %}
+  {% endif %}
+  <div class="fleet-card__actions">
+    <a class="button is-light is-small" href="{% url 'shop-garage-detail' garage.pk %}">{% translate 'Open fleet' %}</a>
+    {% if garage.pk in manageable_garage_ids %}
+      <a class="button is-light is-small" href="{% url 'shop-garage-export' garage.pk %}">
+        {% include 'shop/partials/_icon.html' with name='download' %}
+        <span>{% translate 'Export' %}</span>
+      </a>
+    {% endif %}
+  </div>
+</article>
+{% endwith %}

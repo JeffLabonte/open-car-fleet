@@ -1,55 +1,89 @@
-{% extends 'shop/index.html' %}
+{% extends 'shop/base.html' %}
 {% load i18n %}
 
 {% block content %}
-  <div class="page-header">
-    <div>
-      <h1 class="title page-title">{{ garage.name }}</h1>
-      <p class="page-subtitle">{% translate 'Review the vehicles in this fleet and manage access.' %}</p>
-    </div>
+  <header class="page-header">
+    {% include 'shop/partials/_page_header.html' with heading=garage.name subheading=_('Review the vehicles in this fleet and manage access.') %}
     <div class="page-actions">
       <a class="button is-light" href="{% url 'shop-index' %}">{% translate 'Back to fleets' %}</a>
       {% if can_manage_garage %}
-        <a class="button is-link is-light" href="{% url 'shop-garage-share' garage.pk %}">{% translate 'Share fleet' %}</a>
-        <a class="button is-info is-light" href="{% url 'shop-garage-import' garage.pk %}">{% translate 'Import cars' %}</a>
-        <a class="button is-success is-light" href="{% url 'shop-garage-export' garage.pk %}">{% translate 'Export to Excel' %}</a>
+        <a class="button is-link" href="{% url 'shop-garage-share' garage.pk %}">
+          {% include 'shop/partials/_icon.html' with name='share' %}
+          <span>{% translate 'Share fleet' %}</span>
+        </a>
+        <a class="button is-info" href="{% url 'shop-garage-import' garage.pk %}">
+          {% include 'shop/partials/_icon.html' with name='upload' %}
+          <span>{% translate 'Import cars' %}</span>
+        </a>
+        <a class="button is-success" href="{% url 'shop-garage-export' garage.pk %}">
+          {% include 'shop/partials/_icon.html' with name='download' %}
+          <span>{% translate 'Export to Excel' %}</span>
+        </a>
       {% endif %}
       {% if can_edit_garage_data %}
-        <a class="button is-primary" href="{% url 'shop-car-create' %}">{% translate 'Add car' %}</a>
+        <a class="button is-primary" href="{% url 'shop-car-create' %}">
+          {% include 'shop/partials/_icon.html' with name='plus' %}
+          <span>{% translate 'Add car' %}</span>
+        </a>
       {% endif %}
     </div>
+  </header>
+
+  <div class="split split--fleet">
+    <section class="split__main">
+      {% if cars %}
+        <div class="table-container">
+          <div class="table-wrap">
+            <table class="table is-fullwidth is-striped is-hoverable table--responsive" data-testid="fleet-cars-table">
+              <thead>
+                <tr>
+                  <th scope="col">{% translate 'Name' %}</th>
+                  <th scope="col">{% translate 'Make' %}</th>
+                  <th scope="col">{% translate 'Model' %}</th>
+                  <th scope="col">{% translate 'Year' %}</th>
+                  <th scope="col">{% translate 'VIN' %}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for car in cars %}
+                  <tr data-testid="car-row">
+                    <td data-label="{% translate 'Name' %}"><a href="{% url 'shop-car-detail' car.pk %}">{{ car.usual_name|default:car.make }}</a></td>
+                    <td data-label="{% translate 'Make' %}">{{ car.make }}</td>
+                    <td data-label="{% translate 'Model' %}">{{ car.model }}</td>
+                    <td data-label="{% translate 'Year' %}">{{ car.year|default:'—' }}</td>
+                    <td data-label="{% translate 'VIN' %}"><span class="mono">{{ car.vin|default:'—' }}</span></td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% else %}
+        {% if can_edit_garage_data %}
+          {% url 'shop-car-create' as add_car_url %}
+          {% include 'shop/partials/_empty_state.html' with empty_message=_('No cars in this fleet yet.') empty_action_url=add_car_url empty_action_label=_('Add car') %}
+        {% else %}
+          {% include 'shop/partials/_empty_state.html' with empty_message=_('No cars in this fleet yet.') %}
+        {% endif %}
+      {% endif %}
+    </section>
+
+    <aside class="split__aside">
+      <div class="content-card" data-testid="fleet-meta">
+        <h2 class="title is-4 mb-3">{% translate 'Fleet details' %}</h2>
+        {% if garage.description %}
+          <p>{{ garage.description }}</p>
+        {% else %}
+          <p class="has-text-grey">{% translate 'No description provided for this fleet.' %}</p>
+        {% endif %}
+        <div class="fleet-card__meta mt-4">
+          <span class="chip">
+            {% include 'shop/partials/_icon.html' with name='car' %}
+            {% blocktranslate count counter=cars|length %}{{ counter }} car{% plural %}{{ counter }} cars{% endblocktranslate %}
+          </span>
+          <span class="chip">{% translate 'Created' %} {{ garage.created_at|date:'M j, Y' }}</span>
+        </div>
+      </div>
+    </aside>
   </div>
-
-  {% if garage.description %}
-    <div class="box content-card mb-4">
-      <p>{{ garage.description }}</p>
-    </div>
-  {% endif %}
-
-  {% if cars %}
-    <div class="table-container content-card">
-      <table class="table is-fullwidth is-striped is-hoverable">
-        <thead>
-          <tr>
-            <th>{% translate 'Name' %}</th><th>{% translate 'Make' %}</th><th>{% translate 'Model' %}</th><th>{% translate 'Year' %}</th><th>{% translate 'VIN' %}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for car in cars %}
-            <tr>
-              <td><a href="{% url 'shop-car-detail' car.pk %}">{{ car.usual_name|default:car.make }}</a></td>
-              <td>{{ car.make }}</td>
-              <td>{{ car.model }}</td>
-              <td>{{ car.year|default:'—' }}</td>
-              <td>{{ car.vin|default:'—' }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% else %}
-    <div class="empty-state">
-      {% translate 'No cars in this fleet yet.' %}
-    </div>
-  {% endif %}
 {% endblock %}

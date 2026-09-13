@@ -1,0 +1,7 @@
+{% if messages %}
+  {% for message in messages %}
+    <div class="notification {% if message.tags %}is-{{ message.tags }}{% else %}is-info{% endif %}"
+         role="{% if message.tags == 'error' or message.tags == 'warning' %}alert{% else %}status{% endif %}"
+         data-testid="flash-message">{{ message }}</div>
+  {% endfor %}
+{% endif %}
