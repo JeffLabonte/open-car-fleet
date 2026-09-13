@@ -1,79 +1,95 @@
-{% extends 'shop/index.html' %}
+{% extends 'shop/base.html' %}
 {% load i18n %}
 
+{% block title %}
+  <title>{{ car.usual_name|default:car.make }} · Open Car Fleet</title>
+{% endblock %}
+
 {% block content %}
-  <div class="box">
-    <div class="content">
-      <h1 class="title">{{ car.usual_name|default:car.make }}</h1>
-      <div class="columns is-multiline">
-        <div class="column is-half">
-          <p><strong>{% translate 'Make:' %}</strong> {{ car.make }}</p>
-          <p><strong>{% translate 'Model:' %}</strong> {{ car.model }}</p>
-          <p><strong>{% translate 'Colour:' %}</strong> {{ car.colour|default:"—" }}</p>
-          <p><strong>{% translate 'Year:' %}</strong> {{ car.year|default:"—" }}</p>
-        </div>
-        <div class="column is-half">
-          <p><strong>{% translate 'VIN:' %}</strong> {{ car.vin|default:"—" }}</p>
-          <p><strong>{% translate 'License plate:' %}</strong> {{ car.license_plate|default:"—" }}</p>
-          <p><strong>{% translate 'Last updated:' %}</strong> {{ car.updated_at|date:'F j, Y, g:i a' }}</p>
-        </div>
+  <div class="box" data-testid="vehicle-header">
+    <div class="page-header mb-0">
+      {% include 'shop/partials/_page_header.html' with heading=car.usual_name|default:car.make subheading=_('Vehicle identity, status tracker and maintenance ledger.') %}
+      <div class="page-actions">
+        {% if can_edit_garage_data %}
+          <a class="button is-link" href="{% url 'shop-car-update' car.pk %}">{% translate 'Edit' %}</a>
+          <button class="button is-danger" type="button" data-dialog-open="dialog-car-delete" data-dialog-action="{% url 'shop-car-delete' car.pk %}" data-testid="delete-car-button">{% translate 'Delete' %}</button>
+        {% endif %}
+        {% if can_edit_garage_data %}
+          <a class="button is-primary" href="{% url 'shop-workjob-create' car.pk %}">
+            {% include 'shop/partials/_icon.html' with name='plus' %}
+            <span>{% translate 'Add planned work' %}</span>
+          </a>
+          <a class="button is-info" href="{% url 'shop-car-import' car.pk %}">
+            {% include 'shop/partials/_icon.html' with name='upload' %}
+            <span>{% translate 'Import work jobs or reports' %}</span>
+          </a>
+        {% endif %}
+        <a class="button is-light" href="{% url 'shop-car-doc-list' car.pk %}">
+          {% include 'shop/partials/_icon.html' with name='doc' %}
+          <span>{% translate 'Documents' %}</span>
+        </a>
+        <a class="button is-light" href="{% url 'shop-car-list' %}">{% translate 'Back to list' %}</a>
       </div>
     </div>
 
-    <div class="buttons">
-      {% if can_edit_garage_data %}
-        <a class="button is-link" href="{% url 'shop-car-update' car.pk %}">{% translate 'Edit' %}</a>
-        <form method="post" action="{% url 'shop-car-delete' car.pk %}" style="display:inline;">
-          {% csrf_token %}
-          {% translate 'Delete this car?' as delete_car_confirmation %}
-          <button class="button is-danger is-light" type="submit" onclick="return confirm('{{ delete_car_confirmation|escapejs }}')">{% translate 'Delete' %}</button>
-        </form>
-      {% endif %}
-      {% if can_edit_garage_data %}
-        <a class="button is-primary" href="{% url 'shop-workjob-create' car.pk %}">{% translate 'Add planned work' %}</a>
-        <a class="button is-info is-light" href="{% url 'shop-car-import' car.pk %}">{% translate 'Import work jobs or reports' %}</a>
-      {% endif %}
-      <a class="button is-light" href="{% url 'shop-car-doc-list' car.pk %}">{% translate 'Documents' %}</a>
-      <a class="button is-light" href="{% url 'shop-car-list' %}">{% translate 'Back to list' %}</a>
-    </div>
+    <dl class="vehicle-attributes mt-5">
+      <div class="attr"><dt>{% translate 'Make' %}</dt><dd>{{ car.make }}</dd></div>
+      <div class="attr"><dt>{% translate 'Model' %}</dt><dd>{{ car.model }}</dd></div>
+      <div class="attr"><dt>{% translate 'Colour' %}</dt><dd>{{ car.colour|default:'—' }}</dd></div>
+      <div class="attr"><dt>{% translate 'Year' %}</dt><dd>{{ car.year|default:'—' }}</dd></div>
+      <div class="attr"><dt>{% translate 'VIN' %}</dt><dd class="mono">{{ car.vin|default:'—' }}</dd></div>
+      <div class="attr"><dt>{% translate 'License plate' %}</dt><dd class="mono">{{ car.license_plate|default:'—' }}</dd></div>
+      <div class="attr"><dt>{% translate 'Last updated' %}</dt><dd>{{ car.updated_at|date:'F j, Y, g:i a' }}</dd></div>
+    </dl>
   </div>
 
-  <div class="box">
-    <div class="level">
-      <div class="level-left">
-        <div class="level-item">
-          <h2 class="title is-4">{% translate 'Part status tracker' %}</h2>
+  {% if can_edit_garage_data %}
+    <dialog class="dialog" id="dialog-car-delete">
+      <form method="post" action="#" data-dialog-action-form>
+        {% csrf_token %}
+        <h2 class="dialog__title">{% translate 'Delete this car?' %}</h2>
+        <p>{% translate 'This will permanently remove the vehicle and all of its parts, work jobs and reports.' %}</p>
+        <div class="dialog-actions">
+          <button class="button is-light" type="button" data-dialog-close>{% translate 'Cancel' %}</button>
+          <button class="button is-danger" type="submit">{% translate 'Delete' %}</button>
         </div>
-      </div>
-      <div class="level-right">
-        {% if can_edit_garage_data %}
-          <div class="level-item">
-            <a class="button is-primary" href="{% url 'shop-part-create' car.pk %}">{% translate 'Add part status' %}</a>
-          </div>
-        {% endif %}
-      </div>
+      </form>
+    </dialog>
+  {% endif %}
+
+  <section class="section-head" data-testid="parts-section">
+    <h2 class="title is-4">{% translate 'Part status tracker' %}</h2>
+    <div class="section-actions">
+      {% if can_edit_garage_data %}
+        <a class="button is-primary is-small" href="{% url 'shop-part-create' car.pk %}">{% translate 'Add part status' %}</a>
+      {% endif %}
     </div>
-    {% if parts %}
-      <div class="table-container">
-        <table class="table is-fullwidth is-striped is-hoverable is-bordered">
+  </section>
+
+  {% if parts %}
+    <div class="table-container">
+      <div class="table-wrap">
+        <table class="table is-fullwidth is-striped is-hoverable table--responsive" data-testid="parts-table">
           <thead>
             <tr>
-              <th>{% translate 'Part' %}</th>
-              <th>{% translate 'Status' %}</th>
-              <th>{% translate 'Last updated' %}</th>
-              <th>{% translate 'Notes' %}</th>
-              <th>{% translate 'Change history' %}</th>
-              <th>{% translate 'Actions' %}</th>
+              <th scope="col">{% translate 'Part' %}</th>
+              <th scope="col">{% translate 'Status' %}</th>
+              <th scope="col">{% translate 'Last updated' %}</th>
+              <th scope="col">{% translate 'Notes' %}</th>
+              <th scope="col">{% translate 'Change history' %}</th>
+              <th scope="col">{% translate 'Actions' %}</th>
             </tr>
           </thead>
           <tbody>
             {% for part in parts %}
-              <tr>
-                <td>{{ part.name }}</td>
-                <td>{{ part.get_status_display }}</td>
-                <td>{{ part.updated_at|date:'M j, Y g:i a' }}</td>
-                <td>{{ part.notes|default:'—'|linebreaksbr }}</td>
-                <td>
+              <tr data-testid="part-row">
+                <td data-label="{% translate 'Part' %}">{{ part.name }}</td>
+                <td data-label="{% translate 'Status' %}">
+                  {% include 'shop/partials/_status_badge.html' with status=part.status label=part.get_status_display %}
+                </td>
+                <td data-label="{% translate 'Last updated' %}">{{ part.updated_at|date:'M j, Y g:i a' }}</td>
+                <td data-label="{% translate 'Notes' %}">{{ part.notes|default:'—'|linebreaksbr }}</td>
+                <td data-label="{% translate 'Change history' %}">
                   {% with history=part.status_history.all|slice:':3' %}
                     {% if history %}
                       <ul>
@@ -86,68 +102,65 @@
                     {% endif %}
                   {% endwith %}
                 </td>
-                <td>
+                <td data-label="">
                   {% if can_edit_garage_data %}
-                <a class="button is-small is-link" href="{% url 'shop-part-update' car.pk part.pk %}">{% translate 'Edit' %}</a>
-              {% endif %}
+                    <a class="button is-small is-link" href="{% url 'shop-part-update' car.pk part.pk %}">{% translate 'Edit' %}</a>
+                  {% endif %}
                 </td>
               </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
-    {% else %}
-      <div class="notification is-warning">
-        {% translate 'No parts tracked for this car yet.' %}
-      </div>
-    {% endif %}
-  </div>
-
-  <div class="box">
-    <div class="level">
-      <div class="level-left">
-        <div class="level-item">
-          <h2 class="title is-4">{% translate 'Planned work and assignments' %}</h2>
-        </div>
-      </div>
-      <div class="level-right">
-        <div class="level-item">
-          {% if show_done %}
-            <a class="button is-light" href="{% url 'shop-car-detail' car.pk %}">{% translate 'Hide done/cancelled' %}</a>
-          {% else %}
-            <a class="button is-light" href="{% url 'shop-car-detail' car.pk %}?show_done=1">{% translate 'Show done/cancelled' %}</a>
-          {% endif %}
-        </div>
-        {% if can_edit_garage_data %}
-          <div class="level-item">
-            <a class="button is-info is-light" href="{% url 'shop-car-import' car.pk %}?type=workjob">{% translate 'Import work jobs' %}</a>
-          </div>
-          <div class="level-item">
-            <a class="button is-primary" href="{% url 'shop-workjob-create' car.pk %}">{% translate 'Add planned work' %}</a>
-          </div>
-        {% endif %}
-      </div>
     </div>
-    {% if work_jobs %}
-      <div class="table-container">
-        <table class="table is-fullwidth is-striped is-hoverable is-bordered">
+  {% else %}
+    <div class="notification is-warning">{% translate 'No parts tracked for this car yet.' %}</div>
+  {% endif %}
+
+  <section class="section-head" data-testid="work-jobs-section">
+    <h2 class="title is-4">{% translate 'Planned work and assignments' %}</h2>
+    <div class="section-actions">
+      {% if show_done %}
+        <a class="button is-light is-small" href="{% url 'shop-car-detail' car.pk %}">{% translate 'Hide done/cancelled' %}</a>
+      {% else %}
+        <a class="button is-light is-small" href="{% url 'shop-car-detail' car.pk %}?show_done=1">{% translate 'Show done/cancelled' %}</a>
+      {% endif %}
+      {% if can_edit_garage_data %}
+        <a class="button is-info is-small" href="{% url 'shop-car-import' car.pk %}?type=workjob">
+          {% include 'shop/partials/_icon.html' with name='upload' %}
+          <span>{% translate 'Import work jobs' %}</span>
+        </a>
+        <a class="button is-primary is-small" href="{% url 'shop-workjob-create' car.pk %}">{% translate 'Add planned work' %}</a>
+      {% endif %}
+    </div>
+  </section>
+
+  {% if work_jobs %}
+    <div class="table-container">
+      <div class="table-wrap">
+        <table class="table is-fullwidth is-striped is-hoverable table--responsive" data-testid="work-jobs-table">
           <thead>
             <tr>
-              <th>{% translate 'Work' %}</th>
-              <th>{% translate 'Type' %}</th>
-              <th>{% translate 'Assigned to' %}</th>
-              <th>{% translate 'Planned' %}</th>
-              <th>{% translate 'Status' %}</th>
-              <th>{% translate 'Done' %}</th>
-              <th>{% translate 'Actions' %}</th>
+              <th scope="col">{% translate 'Work' %}</th>
+              <th scope="col">{% translate 'Type' %}</th>
+              <th scope="col">{% translate 'Assigned to' %}</th>
+              <th scope="col">{% translate 'Planned' %}</th>
+              <th scope="col">{% translate 'Status' %}</th>
+              <th scope="col">{% translate 'Done' %}</th>
+              <th scope="col">{% translate 'Actions' %}</th>
             </tr>
           </thead>
           <tbody>
             {% for job in work_jobs %}
-              <tr>
-                <td>{{ job.title }}</td>
-                <td>{{ job.maintenance_type|default:'—' }}</td>
-                <td>
+              <tr data-testid="workjob-row">
+                <td data-label="{% translate 'Work' %}">
+                  {{ job.title }}
+                  {% if job.urgency == 'soon' %}
+                    <div class="mt-2">{% include 'shop/partials/_status_badge.html' with status=job.urgency label=job.get_urgency_display %}</div>
+                  {% endif %}
+                </td>
+                <td data-label="{% translate 'Type' %}">{{ job.maintenance_type|default:'—' }}</td>
+                <td data-label="{% translate 'Assigned to' %}">
                   {% if job.assigned_to %}
                     {% translate 'Mechanic:' %} {{ job.assigned_to }}
                   {% elif job.assigned_shop %}
@@ -156,10 +169,12 @@
                     {% translate 'Unassigned' %}
                   {% endif %}
                 </td>
-                <td>{{ job.planned_date|date:'M j, Y'|default:'—' }}</td>
-                <td>{{ job.get_status_display }}</td>
-                <td>{{ job.done_date|date:'M j, Y'|default:'—' }}</td>
-                <td>
+                <td data-label="{% translate 'Planned' %}">{{ job.planned_date|date:'M j, Y'|default:'—' }}</td>
+                <td data-label="{% translate 'Status' %}">
+                  {% include 'shop/partials/_status_badge.html' with status=job.status label=job.get_status_display %}
+                </td>
+                <td data-label="{% translate 'Done' %}">{{ job.done_date|date:'M j, Y'|default:'—' }}</td>
+                <td data-label="">
                   {% if can_edit_garage_data %}
                     <a class="button is-small is-link" href="{% url 'shop-workjob-update' car.pk job.pk %}">{% translate 'Edit' %}</a>
                   {% endif %}
@@ -169,124 +184,121 @@
           </tbody>
         </table>
       </div>
-    {% else %}
-      <div class="notification is-warning">
-        {% if show_done %}
-          {% translate 'No planned jobs or assignments for this car.' %}
-        {% else %}
-          {% translate 'No open planned jobs or assignments for this car. Done or cancelled items are hidden.' %}
-        {% endif %}
-      </div>
-    {% endif %}
-  </div>
-
-  <div class="box">
-    <div class="level">
-      <div class="level-left">
-        <div class="level-item">
-          <h2 class="title is-4">{% translate 'Maintenance history' %}</h2>
-        </div>
-      </div>
-      <div class="level-right">
-        {% if can_edit_garage_data %}
-          <div class="level-item">
-            <a class="button is-info is-light" href="{% url 'shop-car-import' car.pk %}?type=report">{% translate 'Import reports' %}</a>
-          </div>
-          <div class="level-item">
-            <a class="button is-primary" href="{% url 'shop-report-create' car.pk %}">{% translate 'Add maintenance report' %}</a>
-          </div>
-        {% endif %}
-      </div>
     </div>
-    {% if reports %}
-      <div class="content">
-        {% for report in reports %}
-          <article class="message is-info">
-            <div class="message-header">
-              <p>{{ report.job_name }} — {{ report.date_done|date:'F j, Y' }}</p>
-              {% if can_edit_garage_data %}
-                <a class="button is-small is-link" href="{% url 'shop-report-update' car.pk report.pk %}">{% translate 'Edit' %}</a>
-              {% endif %}
-            </div>
-            <div class="message-body">
-              <p class="report-description">{{ report.note|linebreaksbr|default:_('No maintenance report details provided.') }}</p>
-              {% if report.additional_information %}
-                <p class="report-description"><strong>{% translate 'Additional information:' %}</strong> {{ report.additional_information|linebreaksbr }}</p>
-              {% endif %}
-              {% if report.assigned_to %}
-                <p><strong>{% translate 'Mechanic:' %}</strong> {{ report.assigned_to }}</p>
-              {% elif report.assigned_shop %}
-                <p><strong>{% translate 'Shop:' %}</strong> {{ report.assigned_shop }}</p>
-              {% endif %}
-              <p><strong>{% translate 'Documents:' %}</strong> {{ report.documents|length }}</p>
-              <p><strong>{% translate 'Photos:' %}</strong> {{ report.photos|length }}</p>
-              {% if report.attachments.exists %}
-                <div class="mt-3">
-                  <strong>{% translate 'Attachments:' %}</strong>
-                  <ul>
-                    {% for attachment in report.attachments.all %}
-                      <li>
-                        {% if attachment.source_type == 'external' %}
-                          <a href="{{ attachment.url }}" target="_blank" rel="noopener noreferrer">{{ attachment.display_name|default:attachment.url }}</a>
-                        {% elif attachment.kind == 'image' and attachment.file %}
-                          <a href="{% url 'shop-report-attachment-file' car.pk report.pk attachment.pk %}" target="_blank" rel="noopener noreferrer">{{ attachment.display_name|default:attachment.file.name }}</a>
-                          <div class="mt-2">
-                            <img src="{% url 'shop-report-attachment-file' car.pk report.pk attachment.pk %}" alt="{{ attachment.display_name|default:attachment.file.name }}" style="max-width: 220px; height: auto; border-radius: 0.5rem;" />
-                          </div>
-                        {% elif attachment.kind == 'video' and attachment.file %}
-                           <a href="{% url 'shop-report-attachment-file' car.pk report.pk attachment.pk %}" target="_blank" rel="noopener noreferrer">{{ attachment.display_name|default:attachment.file.name }}</a>
-                           <div class="mt-2">
-                             <video controls preload="metadata" style="max-width: 320px; width: 100%; border-radius: 0.5rem;">
-                               <source src="{% url 'shop-report-attachment-file' car.pk report.pk attachment.pk %}" type="{{ attachment.mime_type|default:'video/mp4' }}" />
-                              {% translate 'Your browser does not support embedded videos.' %}
-                            </video>
-                          </div>
-                        {% else %}
-                           <a href="{% url 'shop-report-attachment-file' car.pk report.pk attachment.pk %}" target="_blank" rel="noopener noreferrer">{{ attachment.display_name|default:attachment.file.name }}</a>
-                        {% endif %}
-                      </li>
-                    {% endfor %}
-                  </ul>
-                </div>
-              {% endif %}
-            </div>
-          </article>
-        {% endfor %}
-      </div>
-    {% else %}
-      <div class="notification is-warning">
-        {% translate 'No completed maintenance reports found for this car.' %}
-      </div>
-    {% endif %}
-  </div>
-
-    <div class="box">
-      <h2 class="title is-4">{% translate 'Related cars' %}</h2>
-      {% if related_cars %}
-        <div class="table-container">
-          <table class="table is-fullwidth is-striped is-hoverable is-bordered">
-            <thead>
-              <tr>
-                <th>{% translate 'Name' %}</th>
-                <th>{% translate 'Year' %}</th>
-                <th>{% translate 'VIN' %}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for related_car in related_cars %}
-                  <tr>
-                  <td><a href="{% url 'shop-car-detail' related_car.pk %}">{{ related_car.usual_name|default:related_car.make }}</a></td>
-                  <td>{{ related_car.year|default:'—' }}</td>
-                  <td>{{ related_car.vin|default:'—' }}</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
+  {% else %}
+    <div class="notification is-warning">
+      {% if show_done %}
+        {% translate 'No planned jobs or assignments for this car.' %}
       {% else %}
-        <div class="notification is-info">
-          {% translate 'No related cars with the same make and model.' %}
-        </div>
+        {% translate 'No open planned jobs or assignments for this car. Done or cancelled items are hidden.' %}
       {% endif %}
     </div>
+  {% endif %}
+
+  <section class="section-head" data-testid="reports-section">
+    <h2 class="title is-4">{% translate 'Maintenance history' %}</h2>
+    <div class="section-actions">
+      {% if can_edit_garage_data %}
+        <a class="button is-info is-small" href="{% url 'shop-car-import' car.pk %}?type=report">
+          {% include 'shop/partials/_icon.html' with name='upload' %}
+          <span>{% translate 'Import reports' %}</span>
+        </a>
+        <a class="button is-primary is-small" href="{% url 'shop-report-create' car.pk %}">{% translate 'Add maintenance report' %}</a>
+      {% endif %}
+    </div>
+  </section>
+
+  {% if reports %}
+    {% for report in reports %}
+      <article class="message is-info" data-testid="report-card">
+        <div class="message-header">
+          <p>{{ report.job_name }} — {{ report.date_done|date:'F j, Y' }}</p>
+          {% if can_edit_garage_data %}
+            <a class="button is-small" href="{% url 'shop-report-update' car.pk report.pk %}">{% translate 'Edit' %}</a>
+          {% endif %}
+        </div>
+        <div class="message-body">
+          <p class="report-description">{{ report.note|linebreaksbr|default:_('No maintenance report details provided.') }}</p>
+          {% if report.additional_information %}
+            <p class="report-description"><strong>{% translate 'Additional information:' %}</strong> {{ report.additional_information|linebreaksbr }}</p>
+          {% endif %}
+          {% if report.assigned_to %}
+            <p><strong>{% translate 'Mechanic:' %}</strong> {{ report.assigned_to }}</p>
+          {% elif report.assigned_shop %}
+            <p><strong>{% translate 'Shop:' %}</strong> {{ report.assigned_shop }}</p>
+          {% endif %}
+          {% if report.attachments.exists %}
+            <div class="mt-3" data-testid="report-attachments">
+              <strong>{% translate 'Attachments:' %}</strong>
+              <ul>
+                {% for attachment in report.attachments.all %}
+                  <li>
+                    {% if attachment.source_type == 'external' %}
+                      {% if attachment.url %}
+                        <a href="{{ attachment.url }}" target="_blank" rel="noopener noreferrer">{{ attachment.display_name|default:attachment.url }}</a>
+                      {% else %}
+                        {{ attachment.display_name }}
+                      {% endif %}
+                    {% elif attachment.kind == 'image' and attachment.file %}
+                      <a href="{% url 'shop-attachment-file' attachment.pk %}" target="_blank" rel="noopener noreferrer">{{ attachment.display_name|default:attachment.file.name }}</a>
+                      <div class="mt-2 report-attachment-media">
+                        <img src="{% url 'shop-attachment-file' attachment.pk %}" alt="{{ attachment.display_name|default:attachment.file.name }}" loading="lazy" />
+                      </div>
+                    {% elif attachment.kind == 'video' and attachment.file %}
+                      <a href="{% url 'shop-attachment-file' attachment.pk %}" target="_blank" rel="noopener noreferrer">{{ attachment.display_name|default:attachment.file.name }}</a>
+                      <div class="mt-2 report-attachment-media">
+                        <video controls preload="metadata" style="max-width: 20rem; width: 100%;">
+                          <source src="{% url 'shop-attachment-file' attachment.pk %}" type="{{ attachment.mime_type|default:'video/mp4' }}" />
+                          {% translate 'Your browser does not support embedded videos.' %}
+                        </video>
+                      </div>
+                    {% else %}
+                      <a href="{% url 'shop-attachment-file' attachment.pk %}" target="_blank" rel="noopener noreferrer">{{ attachment.display_name|default:attachment.file.name }}</a>
+                    {% endif %}
+                  </li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+        </div>
+      </article>
+    {% endfor %}
+  {% else %}
+    <div class="notification is-warning">
+      {% translate 'No completed maintenance reports found for this car.' %}
+    </div>
+  {% endif %}
+
+  <section class="section-head" data-testid="related-cars-section">
+    <h2 class="title is-4">{% translate 'Related cars' %}</h2>
+  </section>
+
+  {% if related_cars %}
+    <div class="table-container">
+      <div class="table-wrap">
+        <table class="table is-fullwidth is-striped is-hoverable table--responsive" data-testid="related-cars-table">
+          <thead>
+            <tr>
+              <th scope="col">{% translate 'Name' %}</th>
+              <th scope="col">{% translate 'Year' %}</th>
+              <th scope="col">{% translate 'VIN' %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for related_car in related_cars %}
+              <tr>
+                <td data-label="{% translate 'Name' %}"><a href="{% url 'shop-car-detail' related_car.pk %}">{{ related_car.usual_name|default:related_car.make }}</a></td>
+                <td data-label="{% translate 'Year' %}">{{ related_car.year|default:'—' }}</td>
+                <td data-label="{% translate 'VIN' %}"><span class="mono">{{ related_car.vin|default:'—' }}</span></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% else %}
+    <div class="notification is-info">
+      {% translate 'No related cars with the same make and model.' %}
+    </div>
+  {% endif %}
 {% endblock %}

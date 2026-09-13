@@ -1,89 +1,27 @@
-{% extends 'shop/index.html' %}
-{% load i18n %}
+{% extends 'shop/base.html' %}
+{% load static i18n %}
 
 {% block content %}
-  <div class="box">
-    <h1 class="title">{% if is_create %}{% translate 'Add Maintenance Report' %}{% else %}{% translate 'Edit Maintenance Report' %}{% endif %}</h1>
+  <section class="box" data-testid="report-form">
+    <h1 class="title mb-4">{% if is_create %}{% translate 'Add Maintenance Report' %}{% else %}{% translate 'Edit Maintenance Report' %}{% endif %}</h1>
 
     <form method="post" enctype="multipart/form-data" novalidate>
       {% csrf_token %}
       {% if form.non_field_errors %}
-        <div class="notification is-danger">
+        <div class="notification is-danger mb-4">
           {{ form.non_field_errors }}
         </div>
       {% endif %}
 
-      {% if report and report.attachments.exists %}
-        <div class="field">
-          <label class="label">{% translate 'Current attachments' %}</label>
-          <ul>
-            {% for attachment in report.attachments.all %}
-              <li>
-                {% if attachment.source_type == 'external' %}
-                  <a href="{{ attachment.url }}" target="_blank" rel="noopener noreferrer">{{ attachment.display_name|default:attachment.url }}</a>
-                {% else %}
-                  <a href="{% url 'shop-report-attachment-file' car.pk report.pk attachment.pk %}" target="_blank" rel="noopener noreferrer">{{ attachment.display_name|default:attachment.file.name }}</a>
-                {% endif %}
-              </li>
-            {% endfor %}
-          </ul>
-        </div>
-      {% endif %}
+      <div class="form-grid">
+        {% for field in form.visible_fields %}
+          {% if field.name != 'attachments' %}
+            {% include 'shop/partials/_form_field.html' %}
+          {% endif %}
+        {% endfor %}
+      </div>
 
-      {% for field in form.visible_fields %}
-        {% if field.name == 'attachments' %}
-          <div class="field">
-            <label class="label" for="{{ field.id_for_label }}">{% translate 'Attachments' %}</label>
-            <div class="control">
-              <div class="file is-boxed is-fullwidth" id="attachment-dropzone">
-                <label class="file-label">
-                  {{ field }}
-                  <span class="file-cta">
-                    <span class="file-label">{% translate 'Choose files or drag and drop here' %}</span>
-                  </span>
-                </label>
-              </div>
-            </div>
-            <div class="is-flex is-justify-content-space-between is-align-items-center mt-3">
-              <p class="is-size-7 has-text-grey mb-0">{% translate 'You can add more files by dropping them multiple times.' %}</p>
-              <button class="button is-small is-light" type="button" id="attachment-clear-button">{% translate 'Clear selected files' %}</button>
-            </div>
-            <div id="attachment-preview-list" class="content mt-3"></div>
-            {% if field.help_text %}
-              <p class="help">{{ field.help_text }}</p>
-            {% endif %}
-            {% for error in field.errors %}
-              <p class="help is-danger">{{ error }}</p>
-            {% endfor %}
-          </div>
-        {% elif field.name == 'external_links' %}
-          <div class="field">
-            {{ field.label_tag }}
-            <div class="control">
-              {{ field }}
-            </div>
-            {% if field.help_text %}
-              <p class="help">{{ field.help_text }}</p>
-            {% endif %}
-            {% for error in field.errors %}
-              <p class="help is-danger">{{ error }}</p>
-            {% endfor %}
-          </div>
-        {% else %}
-          <div class="field">
-            {{ field.label_tag }}
-            <div class="control">
-              {{ field }}
-            </div>
-            {% if field.help_text %}
-              <p class="help">{{ field.help_text }}</p>
-            {% endif %}
-            {% for error in field.errors %}
-              <p class="help is-danger">{{ error }}</p>
-            {% endfor %}
-          </div>
-        {% endif %}
-      {% endfor %}
+      {% include 'shop/partials/_attachments_section.html' with field=form.attachments current_attachments=report.attachments.all %}
 
       <div class="field is-grouped">
         <div class="control">
@@ -94,97 +32,9 @@
         </div>
       </div>
     </form>
-  </div>
+  </section>
 {% endblock %}
 
 {% block extra_scripts %}
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const fileInput = document.querySelector('input[type="file"][name="attachments"]');
-      const dropzone = document.getElementById('attachment-dropzone');
-      const clearButton = document.getElementById('attachment-clear-button');
-      const previewList = document.getElementById('attachment-preview-list');
-      if (!fileInput || !dropzone || !previewList || !clearButton) {
-        return;
-      }
-
-      let selectedFiles = [];
-
-      const fileKey = (file) => [file.name, file.size, file.lastModified, file.type].join('::');
-
-      const syncInputFiles = () => {
-        const dataTransfer = new DataTransfer();
-        selectedFiles.forEach((file) => dataTransfer.items.add(file));
-        fileInput.files = dataTransfer.files;
-      };
-
-      const mergeFiles = (incomingFiles) => {
-        const known = new Set(selectedFiles.map(fileKey));
-        Array.from(incomingFiles || []).forEach((file) => {
-          const key = fileKey(file);
-          if (!known.has(key)) {
-            selectedFiles.push(file);
-            known.add(key);
-          }
-        });
-      };
-
-      const updatePreview = () => {
-        if (!selectedFiles.length) {
-          previewList.innerHTML = '';
-          return;
-        }
-
-        previewList.innerHTML = '<ul>' + selectedFiles.map((file) => {
-          const isImage = file.type.startsWith('image/');
-          const isVideo = file.type.startsWith('video/');
-          const safeName = file.name || 'Selected file';
-          let label = 'Document';
-          if (isImage) {
-            label = 'Image';
-          } else if (isVideo) {
-            label = 'Video';
-          }
-          return `<li>${safeName} (${label})</li>`;
-        }).join('') + '</ul>';
-      };
-
-      fileInput.addEventListener('change', () => {
-        mergeFiles(fileInput.files);
-        syncInputFiles();
-        updatePreview();
-      });
-
-      clearButton.addEventListener('click', () => {
-        selectedFiles = [];
-        syncInputFiles();
-        updatePreview();
-      });
-
-      ['dragenter', 'dragover'].forEach((eventName) => {
-        dropzone.addEventListener(eventName, (event) => {
-          event.preventDefault();
-          dropzone.classList.add('is-active');
-        });
-      });
-      ['dragleave', 'drop'].forEach((eventName) => {
-        dropzone.addEventListener(eventName, (event) => {
-          event.preventDefault();
-          dropzone.classList.remove('is-active');
-        });
-      });
-
-      dropzone.addEventListener('drop', (event) => {
-        const droppedFiles = event.dataTransfer?.files || [];
-        if (droppedFiles.length) {
-          mergeFiles(droppedFiles);
-          syncInputFiles();
-          updatePreview();
-        }
-      });
-
-      selectedFiles = Array.from(fileInput.files || []);
-      updatePreview();
-    });
-  </script>
+  <script src="{% static 'shop/js/attachments.js' %}" defer></script>
 {% endblock %}

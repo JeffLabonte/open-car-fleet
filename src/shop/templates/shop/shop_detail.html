@@ -1,41 +1,67 @@
-{% extends 'shop/index.html' %}
+{% extends 'shop/base.html' %}
 {% load i18n %}
 
 {% block content %}
-  <div class="page-header">
-    <div>
-      <h1 class="title page-title">{{ shop.name }}</h1>
-      <p class="page-subtitle">{% translate 'Shop details and supporting proofs.' %}</p>
-    </div>
+  <header class="page-header">
+    {% include 'shop/partials/_page_header.html' with heading=title subheading=subtitle %}
     <div class="page-actions">
-      <a class="button is-primary" href="{% url 'shop-known-shop-proof-create' shop.pk %}">{% translate 'Add proof' %}</a>
+      <a class="button is-primary" href="{% url 'shop-known-shop-proof-create' shop.pk %}">
+        {% include 'shop/partials/_icon.html' with name='plus' %}
+        <span>{% translate 'Add proof' %}</span>
+      </a>
       <a class="button is-light" href="{% url 'shop-known-shop-list' %}">{% translate 'Back to shops' %}</a>
     </div>
-  </div>
+  </header>
 
-  <div class="box content-card">
-    <h2 class="title is-4">{% translate 'Contact details' %}</h2>
-    {% if shop.address %}<p><strong>{% translate 'Address:' %}</strong> {{ shop.address }}</p>{% endif %}
-    {% if shop.phone %}<p><strong>{% translate 'Phone:' %}</strong> {{ shop.phone }}</p>{% endif %}
-    {% if shop.email %}<p><strong>{% translate 'Email:' %}</strong> <a href="mailto:{{ shop.email }}">{{ shop.email }}</a></p>{% endif %}
+  <div class="box content-card" data-testid="shop-contact">
+    <h2 class="title is-4 mb-3">{% translate 'Contact details' %}</h2>
+    <dl class="attr-grid">
+      {% if shop.address %}
+        <div class="attr"><dt>{% translate 'Address:' %}</dt><dd>{{ shop.address }}</dd></div>
+      {% endif %}
+      {% if shop.phone %}
+        <div class="attr"><dt>{% translate 'Phone:' %}</dt><dd class="mono">{{ shop.phone }}</dd></div>
+      {% endif %}
+      {% if shop.email %}
+        <div class="attr"><dt>{% translate 'Email:' %}</dt><dd><a href="mailto:{{ shop.email }}">{{ shop.email }}</a></dd></div>
+      {% endif %}
+    </dl>
     {% if shop.notes %}<p class="mt-4">{{ shop.notes|linebreaksbr }}</p>{% endif %}
   </div>
 
-  <div class="box content-card">
+  <section class="section-head">
     <h2 class="title is-4">{% translate 'Proofs' %}</h2>
-    {% if shop.proofs.all %}
-      {% for proof in shop.proofs.all %}
-        <article class="message mb-4">
-          <div class="message-header"><p>{{ proof.title }}</p></div>
-          <div class="message-body">
-            {% if proof.content %}<p>{{ proof.content|linebreaksbr }}</p>{% endif %}
-            {% if proof.file %}<p class="mt-3"><a href="{% url 'shop-known-shop-proof-file' shop.pk proof.pk %}" target="_blank" rel="noopener noreferrer">{% translate 'Open PDF proof' %}</a></p>{% endif %}
-            <p class="help mt-3">{{ proof.created_at|date:'M j, Y' }}</p>
-          </div>
-        </article>
-      {% endfor %}
-    {% else %}
-      <p>{% translate 'No proofs have been added yet.' %}</p>
-    {% endif %}
-  </div>
+  </section>
+
+  {% if shop.proofs.all %}
+    {% for proof in shop.proofs.all %}
+      <article class="message" data-testid="proof-card">
+        <div class="message-header">
+          <p>{{ proof.title }}</p>
+        </div>
+        <div class="message-body">
+          {% if proof.content %}<p>{{ proof.content|linebreaksbr }}</p>{% endif %}
+          {% if proof.attachments.exists %}
+            <ul class="mt-3" data-testid="proof-attachments">
+              {% for attachment in proof.attachments.all %}
+                <li>
+                  {% if attachment.file %}
+                    <a href="{% url 'shop-attachment-file' attachment.pk %}" target="_blank" rel="noopener noreferrer">{{ attachment.display_name|default:attachment.file.name }}</a>
+                  {% elif attachment.url %}
+                    <a href="{{ attachment.url }}" target="_blank" rel="noopener noreferrer">{{ attachment.display_name|default:attachment.url }}</a>
+                  {% else %}
+                    {{ attachment.display_name }}
+                  {% endif %}
+                </li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+          <p class="help mt-3 mb-0">{{ proof.created_at|date:'M j, Y' }}</p>
+        </div>
+      </article>
+    {% endfor %}
+  {% else %}
+    {% url 'shop-known-shop-proof-create' shop.pk as add_proof_url %}
+    {% include 'shop/partials/_empty_state.html' with empty_message=_('No proofs have been added yet.') empty_action_url=add_proof_url empty_action_label=_('Add proof') %}
+  {% endif %}
 {% endblock %}
