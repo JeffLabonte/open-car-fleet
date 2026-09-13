@@ -47,7 +47,7 @@ All protected views in both apps use `@hanko_login_required` from `shop.middlewa
 
 1. Hanko JS frontend POSTs `/auth/hanko/callback/` → `complete_hanko_login()` (`src/shop/auth.py`) → Django session gains `hanko_session_token`.
 2. `HankoAuthenticationMiddleware` revalidates that token against `HANKO_API_URL` (`GET <api>/userinfo`) on every unauthenticated request; API failure logs the user out.
-3. `PUBLIC_PATHS` (`/login`, `/theme`, `/auth/hanko/callback/`) and `PUBLIC_PREFIXES` (`/static/`, `/admin/`) bypass auth.
+3. `PUBLIC_PATHS` (`/login`, `/theme`, `/auth/hanko/callback/`, `/set-test-session/`) and `PUBLIC_PREFIXES` (`/static/`, `/admin/`) bypass auth. `/set-test-session/` is a DEBUG-only helper for the Selenium suites: it signs a user in by email without a Hanko session token (so the middleware skips revalidation) and 404s when `settings.DEBUG` is false.
 
 ## Data access
 
@@ -58,7 +58,8 @@ Scope all queries to the requesting user via `src/shop/view_helpers.py`: `user_c
 - **UUID PKs**: `Car`, `Garage`, `GarageInvitation` (other models use integer PKs).
 - **Assignment mutual exclusion**: `WorkJob`/`Report` take `assigned_to` (mechanic user) OR `assigned_shop` (`KnownShop`), never both. Enforced by DB CheckConstraints (`workjob_single_assignment_target`, `report_single_assignment_target`) plus `AssignedToShopFormMixin.clean()` — saving both via the ORM raises IntegrityError. Model `clean()` additionally requires `assigned_to.is_mechanic`.
 - **VIN rules (11–17 alphanumerics, no I/O/Q, unique) live in `CarBaseForm.clean_vin` and `shop/importers.py`, NOT the model** — the model field is just `max_length=50, unique=True, nullable`, so ORM-created cars bypass VIN validation.
-- **JSON list fields** (`required_items`, `documents`, `photos`): edited as `<textarea>` (one item per line) via `LineListFieldMixin` in `src/shop/forms/base.py`.
+- **Unified attachments**: `shop.Attachment` is the single generic attachment model (GenericForeignKey) used by `Report`, `CarDoc`, and `KnownShopProof`; parents declare a `GenericRelation` named `attachments`. There are NO separate `Report.documents`/`Report.photos` JSON fields or `CarDoc.file`/`KnownShopProof.file` upload fields. Uploads validate through `AttachmentField` (`src/shop/forms/base.py`: extension + declared content-type + magic-byte sniffing + 25 MB/file + max 10 files). Serving goes through one permission-checked view `shop-attachment-file` (`/attachments/<pk>/file/`). CSV `documents`/`photos`/`attachments` columns map to external-link attachments; the Excel export writes a single `attachments_text` column.
+- **JSON list field** (`required_items` on WorkJob): edited as `<textarea>` (one item per line) via `LineListFieldMixin` in `src/shop/forms/base.py`.
 - `ShopUser.is_mechanic` gates mechanic assignment; forms restrict `assigned_to` to mechanics and CSV imports require it.
 
 ## Structure
@@ -67,14 +68,14 @@ Scope all queries to the requesting user via `src/shop/view_helpers.py`: `user_c
 src/
   settings/         # Django settings, root urls.py
   shop/
-    models/         # one file per model: car, garage, job, report, user
-    forms/          # forms package: base.py (mixins), car, garage, job, report, shop, import_data
+    models/         # one file per model: attachment, car, garage, job, report, user
+    forms/          # forms package: base.py (mixins, AttachmentField), car, garage, job, report, shop, import_data
     views.py        # all shop views (function-based)
     view_helpers.py, middleware.py, auth.py
     importers.py    # CSV import logic (import_csv command + web UI)
     exporters.py    # Excel garage export (export_garage command + web UI)
     management/commands/  # import_csv, export_garage, convert_user_to_mechanic
-  car_docs/         # CarDoc PDF uploads; reuses shop's middleware and view_helpers
+  car_docs/         # CarDoc notes/documents; reuses shop's middleware and view_helpers
   imports/          # sample CSVs for import_csv
 ```
 
