@@ -55,13 +55,14 @@ Troubleshooting:
 Focused runs:
 
 ```bash
-poetry run pytest src/shop/tests.py -k NameFragment          # by test name
-poetry run pytest src/shop/tests.py::TestClass::test_name    # single test
+poetry run pytest src/shop/tests/test_auth.py -k NameFragment          # by test name
+poetry run pytest src/shop/tests/test_auth.py::TestClass::test_name    # single test
 ```
 
 ### Unit test conventions
 
 - pytest-django is configured through `pytest.ini`; tests collect from `src` and `tests/bdd`.
+- Shop unit tests live in the `src/shop/tests/` package, one module per domain: `test_auth`, `test_garage_sharing`, `test_shops`, `test_cars`, `test_forms`, `test_attachments`, `test_importers`, `test_exporters`, `test_views`, `test_security`. Shared fakes and file signatures are in `src/shop/tests/helpers.py`.
 - Auth mocking: `@patch('shop.auth.requests.get', ...)` for the Hanko API; authenticate test clients via `self.client.session['hanko_session_token'] = '...'` + `.save()`.
 - Email mocking: `@patch('shop.models.garage.send_mail')` for invitations, `@patch('shop.mailgun_backend.requests.post')` for the Mailgun backend.
 - `settings/test_settings.py` adds fast password hashing (MD5) and a per-process temporary `MEDIA_ROOT`.

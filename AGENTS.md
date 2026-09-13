@@ -10,8 +10,8 @@ Run everything from the project root. `manage.py` lives at `src/manage.py`; Pyth
 poetry install --no-root        # plain `poetry install` FAILS: no package root is defined
 make run                        # start Postgres (docker compose), wait, migrate, runserver
 make test                       # pytest -q
-poetry run pytest src/shop/tests.py -k NameFragment          # focused run
-poetry run pytest src/shop/tests.py::TestClass::test_name    # single test
+poetry run pytest src/shop/tests/test_auth.py -k NameFragment     # focused run
+poetry run pytest src/shop/tests/test_auth.py::TestClass::test_name    # single test
 
 # Management commands
 poetry run python src/manage.py import_csv Car src/imports/cars.csv --garage <garage-uuid>  # --garage REQUIRED for Car

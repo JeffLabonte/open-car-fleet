@@ -78,7 +78,7 @@ check-migrations:
 	DEBUG=True DJANGO_SECRET_KEY=check-only-secret $(PYTHON) src/manage.py makemigrations --check --no-input
 
 test-fast:
-	$(POETRY) run pytest -q src/shop/tests.py -k FormEditableFieldsCoverageTests
+	$(POETRY) run pytest -q src/shop/tests/test_forms.py -k FormEditableFieldsCoverageTests
 
 test-bdd:
 	$(POETRY) run pytest -q tests/bdd
