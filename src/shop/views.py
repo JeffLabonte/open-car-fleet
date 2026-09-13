@@ -1,9 +1,11 @@
 import json
 import mimetypes
+import os
 from datetime import timedelta
 from typing import Any, cast
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.http import FileResponse, Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
@@ -11,6 +13,7 @@ from django.urls import reverse
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.middleware.csrf import get_token
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_GET, require_POST
 from django.utils import timezone
 from django.utils.translation import gettext as _
@@ -32,13 +35,16 @@ from shop.forms import (
     WorkJobForm,
 )
 from shop.importers import CSVImporter, ImportContext, ImportValidationError
+from car_docs.models import CarDoc
 from shop.middleware import hanko_login_required
+from shop.models.attachment import Attachment
 from shop.models.car import CarPart
 from shop.models.garage import GarageInvitation, GarageMembership, KnownShop, KnownShopProof
 from shop.models.job import WorkJob
-from shop.models.report import Report, ReportAttachment
+from shop.models.report import Report
 from shop.permissions import GarageSharingPermissions, get_membership_or_404
 from shop.view_helpers import (
+    save_attachments,
     user_can_manage_garage,
     user_can_manage_known_shop,
     user_cars_queryset,
@@ -46,12 +52,37 @@ from shop.view_helpers import (
     user_known_shops_queryset,
 )
 
+# Content types that are safe to render inline in the browser. Anything else
+# (e.g. text/html disguised with a trusted extension) is served as a download.
+INLINE_SAFE_ATTACHMENT_TYPES = {
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+    'video/mp4',
+    'video/webm',
+    'video/quicktime',
+    'application/pdf',
+}
+
 
 def get_theme_from_request(request: HttpRequest) -> str:
     cookie_theme = request.COOKIES.get('theme', '').lower()
     if cookie_theme in {'light', 'dark'}:
         return cookie_theme
     return 'light'
+
+
+def safe_next_url(request: HttpRequest, default: str = '/') -> str:
+    """Return a local, scheme-safe redirect target from ?next=, else the default."""
+    candidate = request.GET.get('next', default) or default
+    if url_has_allowed_host_and_scheme(
+        candidate,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return candidate
+    return default
 
 
 def login_view(request: HttpRequest) -> HttpResponse:
@@ -71,7 +102,7 @@ def login_view(request: HttpRequest) -> HttpResponse:
         'title': _('Login'),
         'subtitle': _('Authenticate with Hanko to continue'),
             'hanko_api_url': getattr(settings, 'HANKO_API_URL', ''),
-        'next_url': request.GET.get('next', '/'),
+        'next_url': safe_next_url(request),
         'logged_out': logged_out,
         'theme': get_theme_from_request(request),
     })
@@ -82,10 +113,34 @@ def theme_view(request: HttpRequest, theme: str) -> HttpResponse:
     if normalized_theme not in {'light', 'dark'}:
         normalized_theme = 'light'
 
-    response = redirect(request.GET.get('next') or reverse('shop-index'))
+    response = redirect(safe_next_url(request, default=reverse('shop-index')))
     response.set_cookie('theme', normalized_theme, max_age=60 * 60 * 24 * 365, httponly=False, samesite='Lax')
     response.cookies['theme']['max-age'] = '31536000'
     return response
+
+
+@require_GET
+def set_test_session(request: HttpRequest) -> HttpResponse:
+    """DEBUG-only helper that signs a user in by email for Selenium suites.
+
+    The session is created without a Hanko session token, so the
+    authentication middleware skips Hanko revalidation for these browser
+    sessions. The endpoint is disabled entirely outside DEBUG mode.
+    """
+    if not getattr(settings, 'DEBUG', False):
+        raise Http404(_('Not found.'))
+
+    email = (request.GET.get('email') or '').strip().lower()
+    if not email or '@' not in email or len(email) > 254:
+        return JsonResponse({'ok': False, 'error': 'A valid email is required.'}, status=400)
+
+    complete_hanko_login(request, {
+        'id': f'e2e-{email}',
+        'email': email,
+        'name': email.split('@')[0],
+        'provider': 'local',
+    })
+    return redirect(safe_next_url(request, default=reverse('shop-index')))
 
 
 def hanko_callback(request: HttpRequest) -> JsonResponse:
@@ -460,11 +515,11 @@ def known_shop_list(request: HttpRequest) -> HttpResponse:
 @hanko_login_required
 def known_shop_create(request: HttpRequest) -> HttpResponse:
     if request.method == 'POST':
-            form = KnownShopForm(request.POST)
-            if form.is_valid():
-                shop = form.save(commit=False)
-                shop.created_by = request.user
-                shop.save()
+        form = KnownShopForm(request.POST)
+        if form.is_valid():
+            shop = form.save(commit=False)
+            shop.created_by = request.user
+            shop.save()
             messages.success(request, _('Shop added successfully.'))
             return redirect(reverse('shop-known-shop-detail', args=[shop.pk]))
     else:
@@ -496,9 +551,15 @@ def known_shop_proof_create(request: HttpRequest, shop_pk: int) -> HttpResponse:
     if request.method == 'POST':
         form = KnownShopProofForm(request.POST, request.FILES)
         if form.is_valid():
-            proof = form.save(commit=False)
-            proof.shop = shop
-            proof.save()
+            with transaction.atomic():
+                proof = form.save(commit=False)
+                proof.shop = shop
+                proof.save()
+                save_attachments(
+                    proof,
+                    form.cleaned_data.get('attachments', []),
+                    [],
+                )
             messages.success(request, _('Proof added successfully.'))
             return redirect(reverse('shop-known-shop-detail', args=[shop.pk]))
     else:
@@ -509,16 +570,6 @@ def known_shop_proof_create(request: HttpRequest, shop_pk: int) -> HttpResponse:
         'title': _('Add proof for %(name)s') % {'name': shop.name},
         'subtitle': _('Add a document or notes supporting this shop'),
     })
-
-
-@hanko_login_required
-@require_GET
-def known_shop_proof_file(request: HttpRequest, shop_pk: int, pk: int) -> FileResponse:
-    shop = get_object_or_404(user_known_shops_queryset(request.user), pk=shop_pk)
-    proof = get_object_or_404(KnownShopProof, pk=pk, shop=shop)
-    if not proof.file:
-        raise Http404(_('Proof has no file.'))
-    return FileResponse(proof.file.open('rb'), content_type='application/pdf')
 
 
 @hanko_login_required
@@ -850,43 +901,36 @@ def workjob_update(request: HttpRequest, car_pk: str, pk: str) -> HttpResponse:
     return render(request, 'shop/workjob_form.html', {'form': form, 'is_create': False, 'car': car, 'work_job': work_job})
 
 
-def _persist_report_attachments(report: Report, uploaded_files: list[Any], external_links: list[str]) -> None:
-    for index, uploaded_file in enumerate(uploaded_files):
-        attachment = ReportAttachment(
-            report=report,
-            source_type=ReportAttachment.SOURCE_UPLOAD,
-            file=uploaded_file,
-            display_name=getattr(uploaded_file, 'name', f'attachment-{index + 1}'),
-            mime_type=getattr(uploaded_file, 'content_type', ''),
-        )
-        attachment.save()
-
-    for index, external_link in enumerate(external_links):
-        attachment = ReportAttachment(
-            report=report,
-            source_type=ReportAttachment.SOURCE_EXTERNAL,
-            url=external_link,
-            display_name=external_link.split('/')[-1] or f'link-{index + 1}',
-            kind=ReportAttachment.KIND_LINK,
-        )
-        attachment.save()
+def _user_can_view_attachment(user: Any, attachment: Attachment) -> bool:
+    """Authorize attachment downloads through their parent object's permissions."""
+    parent = attachment.parent
+    if parent is None:
+        return False
+    if isinstance(parent, Report):
+        return user_cars_queryset(user).filter(pk=parent.car_id).exists()
+    if isinstance(parent, CarDoc):
+        from shop.view_helpers import user_car_docs_queryset
+        return user_car_docs_queryset(user).filter(pk=parent.pk).exists()
+    if isinstance(parent, KnownShopProof):
+        return user_known_shops_queryset(user).filter(pk=parent.shop_id).exists()
+    return False
 
 
 @hanko_login_required
 @require_GET
-def report_attachment_file(request: HttpRequest, car_pk: str, report_pk: int, pk: int) -> FileResponse:
-    car = get_object_or_404(user_cars_queryset(request.user), pk=car_pk)
-    report = get_object_or_404(Report, pk=report_pk, car=car)
-    attachment = get_object_or_404(
-        ReportAttachment,
-        pk=pk,
-        report=report,
-        source_type=ReportAttachment.SOURCE_UPLOAD,
-    )
+def attachment_file(request: HttpRequest, pk: int) -> FileResponse:
+    attachment = get_object_or_404(Attachment.objects.select_related('content_type'), pk=pk)
+    if not _user_can_view_attachment(request.user, attachment):
+        raise Http404(_('Attachment not found.'))
     if not attachment.file:
         raise Http404(_('Attachment has no file.'))
     content_type = mimetypes.guess_type(attachment.file.name)[0] or 'application/octet-stream'
-    return FileResponse(attachment.file.open('rb'), content_type=content_type)
+    response = FileResponse(attachment.file.open('rb'), content_type=content_type)
+    response['X-Content-Type-Options'] = 'nosniff'
+    if content_type not in INLINE_SAFE_ATTACHMENT_TYPES:
+        download_name = os.path.basename(attachment.file.name).replace('"', '')
+        response['Content-Disposition'] = f'attachment; filename="{download_name}"'
+    return response
 
 
 @hanko_login_required
@@ -898,11 +942,15 @@ def report_create(request: HttpRequest, car_pk: str) -> HttpResponse:
     if request.method == 'POST':
         form = ReportForm(request.POST, request.FILES, user=request.user, garage=car.garage)
         if form.is_valid():
-            report = form.save(commit=False)
-            report.car = car
-            report.save()
-            uploaded_files = form.cleaned_data.get('attachments', [])
-            _persist_report_attachments(report, uploaded_files, form.cleaned_data.get('external_links', []))
+            with transaction.atomic():
+                report = form.save(commit=False)
+                report.car = car
+                report.save()
+                save_attachments(
+                    report,
+                    form.cleaned_data.get('attachments', []),
+                    form.cleaned_data.get('external_links', []),
+                )
             messages.success(request, _('Maintenance report added successfully.'))
             return redirect(reverse('shop-car-detail', args=[car.pk]))
     else:
@@ -920,9 +968,13 @@ def report_update(request: HttpRequest, car_pk: str, pk: str) -> HttpResponse:
     if request.method == 'POST':
         form = ReportForm(request.POST, request.FILES, instance=report, user=request.user, garage=car.garage)
         if form.is_valid():
-            form.save()
-            uploaded_files = form.cleaned_data.get('attachments', [])
-            _persist_report_attachments(report, uploaded_files, form.cleaned_data.get('external_links', []))
+            with transaction.atomic():
+                form.save()
+                save_attachments(
+                    report,
+                    form.cleaned_data.get('attachments', []),
+                    form.cleaned_data.get('external_links', []),
+                )
             messages.success(request, _('Maintenance report updated successfully.'))
             return redirect(reverse('shop-car-detail', args=[car.pk]))
     else:

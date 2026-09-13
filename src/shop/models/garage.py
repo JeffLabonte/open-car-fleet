@@ -1,10 +1,9 @@
 import uuid
 
 from django.conf import settings
+from django.contrib.contenttypes.fields import GenericRelation
 from django.core.mail import send_mail
 from django.db import models
-from django.db.models.signals import post_delete
-from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
@@ -209,7 +208,7 @@ class KnownShopProof(models.Model):
     shop = models.ForeignKey(KnownShop, on_delete=models.CASCADE, related_name='proofs')
     title = models.CharField(max_length=255)
     content = models.TextField(blank=True)
-    file = models.FileField(upload_to='known_shop_proofs/', blank=True, null=True)
+    attachments = GenericRelation('shop.Attachment')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -218,9 +217,3 @@ class KnownShopProof(models.Model):
 
     def __str__(self) -> str:
         return f"{self.title} ({self.shop})"
-
-
-@receiver(post_delete, sender=KnownShopProof)
-def delete_known_shop_proof_file(sender: type[KnownShopProof], instance: KnownShopProof, **kwargs: object) -> None:
-    if instance.file:
-        instance.file.delete(save=False)

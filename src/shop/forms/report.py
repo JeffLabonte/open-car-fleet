@@ -4,61 +4,12 @@ from urllib.parse import urlparse
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
-from shop.forms.base import AssignedToShopFormMixin, LineListFieldMixin
+from shop.forms.base import AssignedToShopFormMixin, AttachmentField, MultipleFileInput
 from shop.models.report import Report
 
 
-class MultipleFileInput(forms.FileInput):
-    allow_multiple_selected = True
-
-    def __init__(self, attrs: dict[str, Any] | None = None, **kwargs: Any) -> None:
-        super().__init__(attrs=attrs, **kwargs)
-        self.attrs['multiple'] = True
-
-
-class MultipleFileField(forms.FileField):
-    widget = MultipleFileInput
-    max_upload_bytes = 25 * 1024 * 1024
-    allowed_content_types = {
-        'image/jpeg',
-        'image/png',
-        'image/gif',
-        'image/webp',
-        'video/mp4',
-        'video/webm',
-        'video/quicktime',
-        'application/pdf',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    }
-
-    def clean(self, data: Any, initial: Any = None) -> list[Any]:
-        if not data:
-            return []
-
-        if isinstance(data, (list, tuple)):
-            cleaned_files: list[Any] = []
-            for item in data:
-                if item:
-                    cleaned_files.append(self._clean_upload(item, initial))
-            return cleaned_files
-
-        cleaned_file = self._clean_upload(data, initial)
-        return [cleaned_file] if cleaned_file else []
-
-    def _clean_upload(self, data: Any, initial: Any = None) -> Any:
-        cleaned_file = super().clean(data, initial)
-        if cleaned_file is None:
-            return None
-        if cleaned_file.size > self.max_upload_bytes:
-            raise forms.ValidationError(_('Uploaded attachments must be no larger than 25 MB.'))
-        if cleaned_file.content_type not in self.allowed_content_types:
-            raise forms.ValidationError(_('Unsupported attachment file type.'))
-        return cleaned_file
-
-
-class ReportForm(LineListFieldMixin, AssignedToShopFormMixin, forms.ModelForm):
-    attachments = MultipleFileField(
+class ReportForm(AssignedToShopFormMixin, forms.ModelForm):
+    attachments = AttachmentField(
         required=False,
         widget=MultipleFileInput(attrs={
             'accept': 'image/*,video/*,.pdf,.doc,.docx',
@@ -75,16 +26,6 @@ class ReportForm(LineListFieldMixin, AssignedToShopFormMixin, forms.ModelForm):
         }),
         help_text=_('Add one external link per line. OneDrive and Google Drive share links work well.'),
     )
-    documents = forms.CharField(
-        required=False,
-        widget=forms.Textarea(attrs={'class': 'textarea', 'rows': 3, 'placeholder': _('One document URL or path per line')}),
-        help_text=_('Add one document URL or path per line.'),
-    )
-    photos = forms.CharField(
-        required=False,
-        widget=forms.Textarea(attrs={'class': 'textarea', 'rows': 3, 'placeholder': _('One photo URL or path per line')}),
-        help_text=_('Add one photo URL or path per line.'),
-    )
 
     class Meta:
         model = Report
@@ -94,8 +35,6 @@ class ReportForm(LineListFieldMixin, AssignedToShopFormMixin, forms.ModelForm):
             'assigned_to',
             'assigned_shop',
             'date_done',
-            'documents',
-            'photos',
             'note',
             'additional_information',
         ]
@@ -116,8 +55,6 @@ class ReportForm(LineListFieldMixin, AssignedToShopFormMixin, forms.ModelForm):
             'assigned_to': _('Assigned to'),
             'assigned_shop': _('Known shop'),
             'date_done': _('Date completed'),
-            'documents': _('Documents'),
-            'photos': _('Photos'),
             'note': _('Maintenance report'),
             'additional_information': _('Additional information'),
             'attachments': _('Attachments'),
@@ -129,9 +66,11 @@ class ReportForm(LineListFieldMixin, AssignedToShopFormMixin, forms.ModelForm):
         garage = kwargs.pop('garage', None)
         super().__init__(*args, **kwargs)
         self.configure_assigned_fields(user=user, garage=garage)
-        if self.instance and self.instance.pk:
-            self.fields['documents'].initial = '\n'.join(self.instance.documents or [])
-            self.fields['photos'].initial = '\n'.join(self.instance.photos or [])
+        # The unified attachment mechanism renders at the bottom of the form.
+        self.order_fields([
+            name for name in self.fields
+            if name not in ('external_links', 'attachments')
+        ] + [name for name in ('external_links', 'attachments') if name in self.fields])
 
     def clean_external_links(self) -> list[str]:
         raw = self.cleaned_data.get('external_links', '')
@@ -141,9 +80,3 @@ class ReportForm(LineListFieldMixin, AssignedToShopFormMixin, forms.ModelForm):
             if parsed.scheme not in {'http', 'https'} or not parsed.netloc:
                 raise forms.ValidationError(_('External links must use http:// or https://.'))
         return links
-
-    def clean_documents(self) -> list[str]:
-        return self._clean_line_list_field('documents')
-
-    def clean_photos(self) -> list[str]:
-        return self._clean_line_list_field('photos')

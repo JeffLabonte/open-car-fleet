@@ -1,8 +1,8 @@
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
+from shop.forms.base import AttachmentField, MultipleFileInput
 from shop.models.garage import KnownShop, KnownShopProof
-from shop.file_validation import validate_pdf_upload
 
 
 class KnownShopForm(forms.ModelForm):
@@ -26,23 +26,28 @@ class KnownShopForm(forms.ModelForm):
 
 
 class KnownShopProofForm(forms.ModelForm):
+    attachments = AttachmentField(
+        required=False,
+        widget=MultipleFileInput(attrs={
+            'accept': 'image/*,video/*,.pdf,.doc,.docx',
+        }),
+        help_text=_('Upload one or more photos, videos, or documents.'),
+    )
+
     class Meta:
         model = KnownShopProof
-        fields = ['title', 'content', 'file']
+        fields = ['title', 'content']
         labels = {
             'title': _('Proof title'),
             'content': _('Notes'),
-            'file': _('PDF file'),
+            'attachments': _('Attachments'),
         }
         widgets = {
             'title': forms.TextInput(attrs={'class': 'input'}),
             'content': forms.Textarea(attrs={'class': 'textarea', 'rows': 6}),
-            'file': forms.ClearableFileInput(attrs={'class': 'input', 'accept': '.pdf,application/pdf'}),
         }
 
-    def clean_file(self):
-        uploaded_file = self.cleaned_data.get('file')
-        return validate_pdf_upload(
-            uploaded_file,
-            message='Only valid PDF files can be uploaded as shop proofs.',
-        )
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        # The unified attachment mechanism renders at the bottom of the form.
+        self.order_fields([name for name in ('title', 'content') if name in self.fields] + ['attachments'])

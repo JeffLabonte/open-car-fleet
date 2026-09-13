@@ -31,6 +31,7 @@ def export_garage_to_excel(garage: Garage) -> GarageExportWorkbook:
     reports = list(
         Report.objects.filter(car__garage=garage)
         .select_related("car", "assigned_to", "assigned_shop")
+        .prefetch_related("attachments")
         .order_by("id")
     )
     memberships = list(garage.memberships.select_related("user").order_by("created_at", "id"))
@@ -211,8 +212,7 @@ def export_garage_to_excel(garage: Garage) -> GarageExportWorkbook:
             "assigned_shop_name",
             "assigned_shop_email",
             "date_done",
-            "documents_text",
-            "photos_text",
+            "attachments_text",
             "note",
             "created_at",
         ],
@@ -230,8 +230,7 @@ def export_garage_to_excel(garage: Garage) -> GarageExportWorkbook:
                 report.assigned_shop.name if report.assigned_shop else "",
                 report.assigned_shop.email if report.assigned_shop else "",
                 _format_date(report.date_done),
-                _join_list(report.documents),
-                _join_list(report.photos),
+                _join_attachments(report.attachments.all()),
                 report.note,
                 _format_datetime(report.created_at),
             ]
@@ -247,7 +246,18 @@ def export_garage_to_excel(garage: Garage) -> GarageExportWorkbook:
 def _append_rows(sheet: Any, header: list[str], rows: list[list[Any]]) -> None:
     sheet.append(header)
     for row in rows:
-        sheet.append(row)
+        sheet.append([_sanitize_cell(cell) for cell in row])
+
+
+# Characters that spreadsheet applications interpret as formula prefixes.
+FORMULA_PREFIXES = ('=', '+', '-', '@', '\t', '\r')
+
+
+def _sanitize_cell(value: Any) -> Any:
+    """Prefix user-controlled strings with a single quote to block formula injection."""
+    if isinstance(value, str) and value.startswith(FORMULA_PREFIXES):
+        return "'" + value
+    return value
 
 
 def _serialize_workbook(workbook: Workbook) -> bytes:
@@ -274,6 +284,17 @@ def _join_list(value: Any) -> str:
     if value in (None, ""):
         return ""
     return str(value)
+
+
+def _join_attachments(attachments: Any) -> str:
+    """Render report attachments (uploads and external links) for the export sheet."""
+    lines: list[str] = []
+    for attachment in attachments:
+        if attachment.source_type == "external":
+            lines.append(attachment.url or attachment.display_name)
+        else:
+            lines.append(attachment.display_name or attachment.file.name)
+    return "\n".join(str(line).strip() for line in lines if str(line).strip())
 
 
 def _car_reference(car: Car) -> str:

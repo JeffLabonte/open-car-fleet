@@ -1,4 +1,5 @@
 from functools import wraps
+import time
 from typing import Any, Callable, Optional, cast
 
 from django.contrib.auth import logout
@@ -16,12 +17,18 @@ PUBLIC_PATHS = {
     '/theme',
     '/theme/',
     '/auth/hanko/callback/',
+    '/set-test-session/',
 }
 
 PUBLIC_PREFIXES = (
     '/static/',
     '/admin/',
 )
+
+# How often (seconds) an already-authenticated Django session is revalidated
+# against the Hanko API, so revoking a Hanko session eventually logs the user
+# out of Django too.
+SESSION_RECHECK_INTERVAL = 15 * 60
 
 
 class HankoAuthenticationMiddleware(MiddlewareMixin):
@@ -35,6 +42,17 @@ class HankoAuthenticationMiddleware(MiddlewareMixin):
             return None
 
         if request.user.is_authenticated:
+            hanko_session_token = request.session.get('hanko_session_token')
+            if hanko_session_token:
+                last_check = request.session.get('hanko_last_check', 0)
+                if time.time() - last_check > SESSION_RECHECK_INTERVAL:
+                    try:
+                        fetch_hanko_userinfo(hanko_session_token)
+                    except HankoAuthenticationError:
+                        logout(request)
+                        return cast(HttpResponse, redirect_to_login(request.get_full_path()))
+                    request.session['hanko_last_check'] = time.time()
+                    request.session.save()
             return None
 
         hanko_session_token: str | None = request.session.get('hanko_session_token')

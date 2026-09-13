@@ -1,15 +1,15 @@
 from django.contrib import messages
-from django.http import FileResponse, Http404
+from django.db import transaction
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext as _
-from django.views.decorators.http import require_GET
 
 from car_docs.forms import CarDocForm
 from car_docs.models import CarDoc
 from shop.middleware import hanko_login_required
 from shop.permissions import GarageSharingPermissions
-from shop.view_helpers import user_car_docs_queryset, user_cars_queryset
+from shop.view_helpers import save_attachments, user_car_docs_queryset, user_cars_queryset
 
 
 @hanko_login_required
@@ -37,16 +37,6 @@ def car_doc_detail(request, car_pk, pk):
 
 
 @hanko_login_required
-@require_GET
-def car_doc_file(request, car_pk, pk):
-    car = get_object_or_404(user_cars_queryset(request.user), pk=car_pk)
-    doc = get_object_or_404(user_car_docs_queryset(request.user), pk=pk, car=car)
-    if not doc.file:
-        raise Http404(_('Document has no file.'))
-    return FileResponse(doc.file.open('rb'), content_type='application/pdf')
-
-
-@hanko_login_required
 def car_doc_create(request, car_pk):
     car = get_object_or_404(user_cars_queryset(request.user).select_related('garage'), pk=car_pk)
     if not GarageSharingPermissions(request.user, car.garage).can_edit_garage_data:
@@ -55,9 +45,11 @@ def car_doc_create(request, car_pk):
     if request.method == 'POST':
         form = CarDocForm(request.POST, request.FILES)
         if form.is_valid():
-            doc = form.save(commit=False)
-            doc.car = car
-            doc.save()
+            with transaction.atomic():
+                doc = form.save(commit=False)
+                doc.car = car
+                doc.save()
+                save_attachments(doc, form.cleaned_data.get('attachments', []), [])
             messages.success(request, _('Document added successfully.'))
             return redirect(reverse('shop-car-doc-list', args=[car.pk]))
     else:
@@ -81,7 +73,9 @@ def car_doc_update(request, car_pk, pk):
     if request.method == 'POST':
         form = CarDocForm(request.POST, request.FILES, instance=doc)
         if form.is_valid():
-            form.save()
+            with transaction.atomic():
+                form.save()
+                save_attachments(doc, form.cleaned_data.get('attachments', []), [])
             messages.success(request, _('Document updated successfully.'))
             return redirect(reverse('shop-car-doc-detail', args=[car.pk, doc.pk]))
     else:

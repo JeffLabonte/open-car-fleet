@@ -13,6 +13,7 @@ import requests
 from django.contrib.auth import get_user_model
 from django.contrib.auth.middleware import AuthenticationMiddleware
 from django.contrib.auth.models import AnonymousUser
+from django.contrib.contenttypes.models import ContentType
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.core.exceptions import ValidationError
@@ -49,11 +50,17 @@ from shop.forms import (
 from shop.importers import CSVImporter, ImportContext, ImportValidationError
 from shop.mailgun_backend import MailgunEmailBackend
 from shop.middleware import HankoAuthenticationMiddleware, hanko_login_required
+from shop.models.attachment import Attachment
 from shop.models.car import Car, CarPart, CarPartStatusHistory
 from shop.models.garage import Garage, GarageInvitation, GarageMembership, KnownShop, KnownShopProof
 from shop.models.job import WorkJob
-from shop.models.report import Report, ReportAttachment
+from shop.models.report import Report
 from shop.models.user import ShopUser
+
+PNG_SIGNATURE = b'\x89PNG\r\n\x1a\n' + b'\x00\x00\x00\x0dIHDR'
+JPEG_SIGNATURE = b'\xff\xd8\xff\xdb'
+PDF_SIGNATURE = b'%PDF-1.4'
+MP4_SIGNATURE = b'\x00\x00\x00\x20ftypisom'
 
 
 class HankoAuthenticationIntegrationTests(TestCase):
@@ -231,10 +238,9 @@ class HankoAuthenticationIntegrationTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '<meta name="viewport"')
-        self.assertContains(response, 'Light mode')
-        self.assertContains(response, 'Dark mode')
-        self.assertContains(response, 'beta')
-        self.assertContains(response, 'theme-beta')
+        self.assertContains(response, 'data-testid="theme-toggle"')
+        self.assertContains(response, '<span>Light</span>')
+        self.assertContains(response, '<span>Dark</span>')
 
     @override_settings(HANKO_API_URL='https://hanko.example.com')
     def test_car_list_uses_hanko_session_token_to_authenticate(self):
@@ -628,15 +634,16 @@ class KnownShopTests(TestCase):
             data={
                 'title': 'Business registration',
                 'content': 'Registration document received.',
-                'file': SimpleUploadedFile('registration.pdf', b'%PDF-1.4 proof', content_type='application/pdf'),
+                'attachments': SimpleUploadedFile('registration.pdf', b'%PDF-1.4 proof', content_type='application/pdf'),
             },
         )
 
         self.assertEqual(proof_response.status_code, 302)
         proof = KnownShopProof.objects.get(shop=shop)
         self.assertEqual(proof.title, 'Business registration')
-        self.assertIn('registration', proof.file.name)
-        self.assertTrue(proof.file.name.endswith('.pdf'))
+        attachment = proof.attachments.get()
+        self.assertIn('registration', attachment.file.name)
+        self.assertTrue(attachment.file.name.endswith('.pdf'))
 
     def test_other_user_cannot_view_or_add_proof_to_owned_shop(self):
         shop = KnownShop.objects.create(name='Private Shop', created_by=self.user)
@@ -689,12 +696,14 @@ class KnownShopTests(TestCase):
 
     def test_known_shop_proof_file_deleted_on_model_delete(self):
         shop = KnownShop.objects.create(name='Delete Proof Shop', created_by=self.user)
-        proof = KnownShopProof.objects.create(
-            shop=shop,
-            title='Delete proof',
+        proof = KnownShopProof.objects.create(shop=shop, title='Delete proof')
+        attachment = Attachment.objects.create(
+            content_type=ContentType.objects.get_for_model(proof),
+            object_id=str(proof.pk),
+            source_type=Attachment.SOURCE_UPLOAD,
             file=SimpleUploadedFile('delete.pdf', b'%PDF-1.4 delete', content_type='application/pdf'),
         )
-        file_path = proof.file.path
+        file_path = attachment.file.path
         self.assertTrue(Path(file_path).exists())
         proof.delete()
         self.assertFalse(Path(file_path).exists())
@@ -702,9 +711,11 @@ class KnownShopTests(TestCase):
     def test_known_shop_proof_file_requires_authentication(self):
         self.client.force_login(self.user)
         shop = KnownShop.objects.create(name='Proof Shop', created_by=self.user)
-        proof = KnownShopProof.objects.create(
-            shop=shop,
-            title='Insurance proof',
+        proof = KnownShopProof.objects.create(shop=shop, title='Insurance proof')
+        attachment = Attachment.objects.create(
+            content_type=ContentType.objects.get_for_model(proof),
+            object_id=str(proof.pk),
+            source_type=Attachment.SOURCE_UPLOAD,
             file=SimpleUploadedFile(
                 'insurance.pdf',
                 b'%PDF-1.4 shop proof',
@@ -714,19 +725,20 @@ class KnownShopTests(TestCase):
 
         try:
             response = self.client.get(
-                reverse('shop-known-shop-proof-file', args=[shop.pk, proof.pk]),
+                reverse('shop-attachment-file', args=[attachment.pk]),
             )
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response['Content-Type'], 'application/pdf')
             self.assertEqual(b''.join(response.streaming_content), b'%PDF-1.4 shop proof')
+            self.assertEqual(response['X-Content-Type-Options'], 'nosniff')
 
             self.client.logout()
             anonymous_response = self.client.get(
-                reverse('shop-known-shop-proof-file', args=[shop.pk, proof.pk]),
+                reverse('shop-attachment-file', args=[attachment.pk]),
             )
             self.assertEqual(anonymous_response.status_code, 302)
         finally:
-            proof.file.delete(save=False)
+            attachment.file.delete(save=False)
 
 
 class FormEditableFieldsCoverageTests(TestCase):
@@ -838,7 +850,7 @@ class ColourFieldTests(TestCase):
         response = self.client.get(reverse('shop-car-detail', args=[car.pk]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b'Colour:', response.content)
+        self.assertIn(b'<dt>Colour</dt>', response.content)
         self.assertIn(b'Noir', response.content)
 
     def test_car_detail_hides_done_and_cancelled_work_jobs_by_default(self):
@@ -912,8 +924,8 @@ class ReportAttachmentTests(TestCase):
 
     def test_report_create_accepts_uploads_and_external_links(self):
         self.client.force_login(self.user)
-        image = SimpleUploadedFile('before.png', b'fake-image', content_type='image/png')
-        video = SimpleUploadedFile('clip.mp4', b'fake-video', content_type='video/mp4')
+        image = SimpleUploadedFile('before.png', PNG_SIGNATURE, content_type='image/png')
+        video = SimpleUploadedFile('clip.mp4', MP4_SIGNATURE, content_type='video/mp4')
 
         job_name = f'Brake service {self._testMethodName}'
         response = self.client.post(
@@ -967,14 +979,29 @@ class ReportAttachmentTests(TestCase):
         self.assertFalse(unsafe_file_form.is_valid())
         self.assertIn('attachments', unsafe_file_form.errors)
 
+    def test_orphaned_attachment_returns_404(self):
+        attachment = Attachment.objects.create(
+            content_type=ContentType.objects.get_for_model(Report),
+            object_id='999999',
+            source_type=Attachment.SOURCE_UPLOAD,
+            file=SimpleUploadedFile('orphan.pdf', b'%PDF-1.4 orphan', content_type='application/pdf'),
+        )
+        try:
+            self.client.force_login(self.user)
+            response = self.client.get(reverse('shop-attachment-file', args=[attachment.pk]))
+            self.assertEqual(response.status_code, 404)
+        finally:
+            attachment.file.delete(save=False)
+
     def test_uploaded_report_attachment_is_streamed_only_to_car_members(self):
         report = Report.objects.create(
             car=self.car,
             job_name='Uploaded invoice',
             date_done='2026-08-10',
         )
-        attachment = ReportAttachment.objects.create(
-            report=report,
+        attachment = Attachment.objects.create(
+            content_type=ContentType.objects.get_for_model(report),
+            object_id=str(report.pk),
             file=SimpleUploadedFile(
                 'invoice.pdf',
                 b'%PDF-1.4 invoice',
@@ -985,20 +1012,14 @@ class ReportAttachmentTests(TestCase):
         try:
             self.client.force_login(self.user)
             response = self.client.get(
-                reverse(
-                    'shop-report-attachment-file',
-                    args=[self.car.pk, report.pk, attachment.pk],
-                ),
+                reverse('shop-attachment-file', args=[attachment.pk]),
             )
             self.assertEqual(response.status_code, 200)
             self.assertEqual(b''.join(response.streaming_content), b'%PDF-1.4 invoice')
 
             self.client.force_login(self.stranger)
             forbidden_response = self.client.get(
-                reverse(
-                    'shop-report-attachment-file',
-                    args=[self.car.pk, report.pk, attachment.pk],
-                ),
+                reverse('shop-attachment-file', args=[attachment.pk]),
             )
             self.assertEqual(forbidden_response.status_code, 404)
         finally:
@@ -1012,8 +1033,9 @@ class ReportAttachmentTests(TestCase):
             date_done='2026-08-10',
             note='Completed',
         )
-        ReportAttachment.objects.create(
-            report=report,
+        Attachment.objects.create(
+            content_type=ContentType.objects.get_for_model(report),
+            object_id=str(report.pk),
             source_type='external',
             url='https://drive.google.com/file/d/456/view',
             display_name='Service checklist',
@@ -1072,10 +1094,57 @@ class CSVImporterTests(TestCase):
 
         self.assertFalse(result.has_errors)
         self.assertEqual(result.created_count, 1)
-        report_data = Report.objects.filter(job_name='Brake service').values('documents', 'photos', 'mileage').get()
-        self.assertEqual(report_data['documents'], ['invoice.pdf', 'checklist.pdf'])
-        self.assertEqual(report_data['photos'], ['before.jpg', 'after.jpg'])
-        self.assertEqual(report_data['mileage'], 12345)
+        report = Report.objects.get(job_name='Brake service')
+        self.assertEqual(report.mileage, 12345)
+        document_links = list(
+            report.attachments.filter(source_type=Attachment.SOURCE_EXTERNAL, kind='document')
+            .values_list('display_name', flat=True)
+        )
+        photo_links = list(
+            report.attachments.filter(source_type=Attachment.SOURCE_EXTERNAL, kind='image')
+            .values_list('display_name', flat=True)
+        )
+        self.assertEqual(document_links, ['invoice.pdf', 'checklist.pdf'])
+        self.assertEqual(photo_links, ['before.jpg', 'after.jpg'])
+        self.assertEqual(Attachment.objects.filter(url__gt='').count(), 0)
+
+    def test_report_import_maps_url_values_to_external_links(self):
+        car = Car.objects.create(garage=self.garage, make='Honda', model='Fit', vin='JHMGE88478S012345')
+
+        result = self.importer.import_records(
+            Report,
+            [{
+                'car': str(car.pk),
+                'job_name': 'Brake service',
+                'date_done': '2026-08-02',
+                'documents': 'https://example.com/invoice.pdf',
+            }],
+            context=ImportContext(garage=self.garage),
+        )
+
+        self.assertFalse(result.has_errors)
+        report = Report.objects.get(job_name='Brake service')
+        attachment = report.attachments.get()
+        self.assertEqual(attachment.url, 'https://example.com/invoice.pdf')
+        self.assertEqual(attachment.display_name, 'invoice.pdf')
+        self.assertEqual(attachment.kind, 'document')
+
+    def test_report_import_rejects_unsafe_attachment_links(self):
+        car = Car.objects.create(garage=self.garage, make='Honda', model='Fit', vin='JHMGE88478S012346')
+
+        result = self.importer.import_records(
+            Report,
+            [{
+                'car': str(car.pk),
+                'job_name': 'Brake service',
+                'date_done': '2026-08-03',
+                'documents': 'javascript:alert(1)',
+            }],
+            context=ImportContext(garage=self.garage),
+        )
+
+        self.assertTrue(result.has_errors)
+        self.assertIn('Entries must be URLs', result.errors[0].message)
 
     def test_workjob_import_rejects_unknown_car(self):
         result = self.importer.import_records(
@@ -1275,14 +1344,30 @@ class GarageExportServiceTests(TestCase):
             title='Do Not Export',
         )
 
-        Report.objects.create(
+        brake_report = Report.objects.create(
             car=self.primary_car,
             mileage=120000,
             job_name='Brake Service',
             assigned_to=self.owner,
             date_done=timezone.now().date(),
-            documents=['invoice.pdf'],
-            photos=['before.jpg', 'after.jpg'],
+        )
+        ContentType.objects.get_for_model(brake_report)
+        Attachment.objects.create(
+            content_type=ContentType.objects.get_for_model(brake_report),
+            object_id=str(brake_report.pk),
+            source_type=Attachment.SOURCE_UPLOAD,
+            file=SimpleUploadedFile('invoice.pdf', b'%PDF-1.4 invoice', content_type='application/pdf'),
+            display_name='invoice.pdf',
+            mime_type='application/pdf',
+            kind='document',
+        )
+        Attachment.objects.create(
+            content_type=ContentType.objects.get_for_model(brake_report),
+            object_id=str(brake_report.pk),
+            source_type=Attachment.SOURCE_EXTERNAL,
+            url='https://example.com/before.jpg',
+            display_name='before.jpg',
+            kind='link',
         )
         Report.objects.create(
             car=self.other_car,
@@ -1314,8 +1399,7 @@ class GarageExportServiceTests(TestCase):
         report_rows = list(workbook['reports_import'].iter_rows(min_row=2, values_only=True))
         self.assertEqual(len(report_rows), 1)
         self.assertEqual(report_rows[0][4], 'Brake Service')
-        self.assertEqual(report_rows[0][12], 'invoice.pdf')
-        self.assertEqual(report_rows[0][13], 'before.jpg\nafter.jpg')
+        self.assertEqual(report_rows[0][12], 'invoice.pdf\nhttps://example.com/before.jpg')
 
 
 class GarageExportViewTests(TestCase):
@@ -1750,8 +1834,6 @@ class AdditionalCoverageRegressionTests(TestCase):
                 'mileage': '10000',
                 'job_name': 'Oil service',
                 'date_done': '2026-08-12',
-                'documents': 'invoice.pdf',
-                'photos': 'before.jpg',
                 'external_links': 'https://example.com/invoice',
                 'note': 'Completed',
                 'additional_information': 'Used synthetic oil',
@@ -1796,8 +1878,6 @@ class AdditionalCoverageRegressionTests(TestCase):
                 'mileage': '10001',
                 'job_name': 'Oil service',
                 'date_done': '2026-08-12',
-                'documents': 'invoice.pdf',
-                'photos': 'before.jpg',
                 'external_links': 'https://example.com/invoice',
                 'note': 'Completed and rechecked',
                 'additional_information': 'Used synthetic oil and filter',
@@ -2016,13 +2096,14 @@ class ImporterCoverageTests(TestCase):
 
     def test_prepare_report_record_with_description_alias(self):
         importer = CSVImporter()
-        data, warnings = importer._prepare_report_record(
+        data, warnings, attachment_plan = importer._prepare_report_record(
             {'description': 'Annual service', 'date': '2026-08-20'},
             ImportContext(car=self.car),
         )
         self.assertEqual(data['job_name'], 'Annual service')
         self.assertEqual(data['date_done'], date(2026, 8, 20))
         self.assertEqual(data['additional_information'], '')
+        self.assertEqual(attachment_plan, [])
 
     def test_prepare_report_record_requires_job_name_and_date(self):
         importer = CSVImporter()
@@ -2462,29 +2543,34 @@ class AuthAndInputCoverageTests(TestCase):
             'mileage': '125000',
             'job_name': 'Brake service',
             'date_done': '2026-08-09',
-            'documents': 'invoice.pdf\nchecklist.pdf',
-            'photos': 'before.jpg\nafter.jpg',
             'external_links': 'https://example.com/one\nhttps://example.com/two',
             'note': 'Performed service.',
             'additional_information': 'Used OEM parts',
         })
         self.assertTrue(report_form.is_valid())
-        self.assertEqual(report_form.cleaned_data['documents'], ['invoice.pdf', 'checklist.pdf'])
-        self.assertEqual(report_form.cleaned_data['photos'], ['before.jpg', 'after.jpg'])
         self.assertEqual(report_form.cleaned_data['external_links'], ['https://example.com/one', 'https://example.com/two'])
 
     def test_known_shop_proof_form_rejects_invalid_files(self):
-        form = KnownShopProofForm(data={'title': 'Proof', 'content': 'Valid proof'}, files={'file': SimpleUploadedFile('bad.txt', b'nope', content_type='text/plain')})
+        form = KnownShopProofForm(
+            data={'title': 'Proof', 'content': 'Valid proof'},
+            files={'attachments': SimpleUploadedFile('bad.txt', b'nope', content_type='text/plain')},
+        )
         self.assertFalse(form.is_valid())
-        self.assertIn('file', form.errors)
+        self.assertIn('attachments', form.errors)
 
         spoofed_pdf = SimpleUploadedFile('spoofed.pdf', b'not a pdf', content_type='application/pdf')
-        spoofed_form = KnownShopProofForm(data={'title': 'Proof', 'content': 'Invalid proof'}, files={'file': spoofed_pdf})
+        spoofed_form = KnownShopProofForm(
+            data={'title': 'Proof', 'content': 'Invalid proof'},
+            files={'attachments': spoofed_pdf},
+        )
         self.assertFalse(spoofed_form.is_valid())
-        self.assertIn('file', spoofed_form.errors)
+        self.assertIn('attachments', spoofed_form.errors)
 
-        pdf = SimpleUploadedFile('valid.pdf', b'%PDF-1.4', content_type='application/pdf')
-        valid_form = KnownShopProofForm(data={'title': 'Proof', 'content': 'Valid proof'}, files={'file': pdf})
+        pdf = SimpleUploadedFile('valid.pdf', PDF_SIGNATURE, content_type='application/pdf')
+        valid_form = KnownShopProofForm(
+            data={'title': 'Proof', 'content': 'Valid proof'},
+            files={'attachments': pdf},
+        )
         self.assertTrue(valid_form.is_valid())
 
     def test_orm_assignment_guards_reject_non_mechanics(self):
@@ -2796,11 +2882,11 @@ class ViewCoverageTests(TestCase):
             data={
                 'title': 'Bad proof',
                 'content': 'No file',
-                'file': SimpleUploadedFile('not-pdf.txt', b'not a pdf', content_type='text/plain'),
+                'attachments': SimpleUploadedFile('not-pdf.txt', b'not a pdf', content_type='text/plain'),
             },
         )
         self.assertEqual(invalid_proof_response.status_code, 200)
-        self.assertIn('file', invalid_proof_response.context['form'].errors)
+        self.assertIn('attachments', invalid_proof_response.context['form'].errors)
 
         # Non-manager cannot add proof
         self.client.force_login(self.stranger)
@@ -2813,8 +2899,13 @@ class ViewCoverageTests(TestCase):
         self.client.force_login(self.owner)
         shop = KnownShop.objects.create(name='No Proof Shop', created_by=self.owner)
         proof = KnownShopProof.objects.create(shop=shop, title='No file')
+        attachment = Attachment.objects.create(
+            content_type=ContentType.objects.get_for_model(proof),
+            object_id=str(proof.pk),
+            source_type=Attachment.SOURCE_UPLOAD,
+        )
 
-        response = self.client.get(reverse('shop-known-shop-proof-file', args=[shop.pk, proof.pk]))
+        response = self.client.get(reverse('shop-attachment-file', args=[attachment.pk]))
         self.assertEqual(response.status_code, 404)
 
     def test_car_import_branches(self):
@@ -2938,26 +3029,28 @@ class ViewCoverageTests(TestCase):
     def test_report_attachment_file_branches(self):
         self.client.force_login(self.owner)
         report = Report.objects.create(car=self.car, job_name='Attachment test', date_done='2026-08-20')
-        attachment = ReportAttachment.objects.create(
-            report=report,
-            source_type=ReportAttachment.SOURCE_UPLOAD,
+        attachment = Attachment.objects.create(
+            content_type=ContentType.objects.get_for_model(report),
+            object_id=str(report.pk),
+            source_type=Attachment.SOURCE_UPLOAD,
             file=SimpleUploadedFile('report.pdf', b'%PDF-1.4 report', content_type='application/pdf'),
         )
 
         try:
             response = self.client.get(
-                reverse('shop-report-attachment-file', args=[self.car.pk, report.pk, attachment.pk]),
+                reverse('shop-attachment-file', args=[attachment.pk]),
             )
             self.assertEqual(response.status_code, 200)
         finally:
             attachment.file.delete(save=False)
 
-        empty_attachment = ReportAttachment.objects.create(
-            report=report,
-            source_type=ReportAttachment.SOURCE_UPLOAD,
+        empty_attachment = Attachment.objects.create(
+            content_type=ContentType.objects.get_for_model(report),
+            object_id=str(report.pk),
+            source_type=Attachment.SOURCE_UPLOAD,
         )
         response = self.client.get(
-            reverse('shop-report-attachment-file', args=[self.car.pk, report.pk, empty_attachment.pk]),
+            reverse('shop-attachment-file', args=[empty_attachment.pk]),
         )
         self.assertEqual(response.status_code, 404)
 
@@ -3010,3 +3103,166 @@ class ViewCoverageTests(TestCase):
             data={'make': '', 'model': ''},
         )
         self.assertEqual(invalid_update.status_code, 200)
+
+
+class SecurityHardeningTests(TestCase):
+    """Regression tests for security audit fixes."""
+
+    def setUp(self) -> None:
+        self.owner = ShopUser.objects.create_user(
+            username='security-owner',
+            email='security-owner@example.com',
+            password='pass1234',
+        )
+        self.garage = Garage.objects.create(name='Security Garage', created_by=self.owner)
+        GarageMembership.objects.create(
+            garage=self.garage,
+            user=self.owner,
+            role=GarageMembership.ROLE_OWNER,
+        )
+        self.car = Car.objects.create(
+            garage=self.garage,
+            make='Toyota',
+            model='Yaris',
+            vin='JTDKB20U793512349',
+        )
+
+    def test_login_page_rejects_javascript_next_url(self):
+        response = self.client.get(reverse('shop-login'), {'next': 'javascript:alert(document.cookie)'})
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'javascript:alert')
+        self.assertContains(response, "const nextUrl = '/';")
+
+    def test_theme_view_rejects_absolute_next_url(self):
+        response = self.client.get(reverse('shop-theme', args=['light']), {'next': 'https://evil.example.com'})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse('shop-index'))
+
+    def test_theme_view_allows_local_next_url(self):
+        response = self.client.get(reverse('shop-theme', args=['dark']), {'next': '/cars/'})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/cars/')
+
+    def test_report_attachment_rejects_disallowed_extension(self):
+        form = ReportForm(
+            data={
+                'mileage': '',
+                'job_name': 'Oil change',
+                'date_done': '2026-01-15',
+                'note': '',
+                'additional_information': '',
+            },
+            files={
+                'attachments': SimpleUploadedFile(
+                    'payload.html',
+                    b'<html></html>',
+                    content_type='image/jpeg',
+                ),
+            },
+            user=self.owner,
+            garage=self.garage,
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn('attachments', form.errors)
+
+    def test_report_attachment_rejects_spoofed_magic_bytes(self):
+        form = ReportForm(
+            data={
+                'mileage': '',
+                'job_name': 'Oil change',
+                'date_done': '2026-01-15',
+                'note': '',
+                'additional_information': '',
+            },
+            files={
+                'attachments': SimpleUploadedFile(
+                    'payload.png',
+                    b'<html><script>alert(1)</script></html>',
+                    content_type='image/png',
+                ),
+            },
+            user=self.owner,
+            garage=self.garage,
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn('attachments', form.errors)
+
+    def test_report_attachment_rejects_oversized_upload(self):
+        from shop.forms.base import ATTACHMENT_MAX_UPLOAD_BYTES
+
+        form = ReportForm(
+            data={
+                'mileage': '',
+                'job_name': 'Oil change',
+                'date_done': '2026-01-15',
+                'note': '',
+                'additional_information': '',
+            },
+            files={
+                'attachments': SimpleUploadedFile(
+                    'large.png',
+                    PNG_SIGNATURE + b'0' * (ATTACHMENT_MAX_UPLOAD_BYTES + 1),
+                    content_type='image/png',
+                ),
+            },
+            user=self.owner,
+            garage=self.garage,
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn('attachments', form.errors)
+
+    def test_report_attachment_rejects_too_many_files(self):
+        from shop.forms.base import ATTACHMENT_MAX_FILES
+
+        form = ReportForm(
+            data={
+                'mileage': '',
+                'job_name': 'Oil change',
+                'date_done': '2026-01-15',
+                'note': '',
+                'additional_information': '',
+            },
+            files={
+                'attachments': [
+                    SimpleUploadedFile(f'photo-{index}.png', PNG_SIGNATURE, content_type='image/png')
+                    for index in range(ATTACHMENT_MAX_FILES + 1)
+                ],
+            },
+            user=self.owner,
+            garage=self.garage,
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn('attachments', form.errors)
+
+    def test_set_test_session_is_disabled_in_production(self):
+        response = self.client.get(reverse('shop-set-test-session'), {'email': 'e2e@example.com'})
+        self.assertEqual(response.status_code, 404)
+
+    @override_settings(DEBUG=True)
+    def test_set_test_session_signs_user_in_when_debug(self):
+        response = self.client.get(
+            reverse('shop-set-test-session'),
+            {'email': 'e2e-user@example.com', 'next': '/cars/'},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/cars/')
+        self.assertTrue(self.client.session.get('_auth_user_id'))
+
+    @override_settings(DEBUG=True)
+    def test_set_test_session_requires_email(self):
+        response = self.client.get(reverse('shop-set-test-session'), {'next': '/cars/'})
+        self.assertEqual(response.status_code, 400)
+
+    def test_excel_export_neutralizes_formula_injection(self):
+        self.garage.name = "=cmd|'/c calc'!A0"
+        self.garage.save(update_fields=['name'])
+        workbook_file = export_garage_to_excel(self.garage)
+        workbook = load_workbook(filename=BytesIO(workbook_file.content))
+        garage_name_cell = workbook['garage'].cell(row=2, column=2).value
+        self.assertEqual(garage_name_cell, "'=cmd|'/c calc'!A0")
+
+    def test_known_shop_create_invalid_post_returns_form_not_500(self):
+        self.client.force_login(self.owner)
+        response = self.client.post(reverse('shop-known-shop-create'), data={'name': ''})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Add shop')

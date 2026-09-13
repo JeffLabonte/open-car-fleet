@@ -1,4 +1,5 @@
 from car_docs.models import CarDoc
+from shop.models.attachment import Attachment
 from shop.models.car import Car, CarPart, CarPartStatusHistory
 from shop.models.garage import (
     Garage,
@@ -8,7 +9,7 @@ from shop.models.garage import (
     KnownShopProof,
 )
 from shop.models.job import WorkJob
-from shop.models.report import Report, ReportAttachment
+from shop.models.report import Report
 from shop.models.user import ShopUser
 
 __all__ = [
@@ -23,6 +24,6 @@ __all__ = [
     "KnownShopProof",
     "WorkJob",
     "Report",
-    "ReportAttachment",
+    "Attachment",
     "ShopUser",
 ]

@@ -1,10 +1,19 @@
 from django.contrib import admin
+from django.contrib.contenttypes.admin import GenericTabularInline
 
+from shop.models.attachment import Attachment
 from shop.models.car import Car
 from shop.models.garage import Garage, GarageInvitation, GarageMembership, KnownShop
 from shop.models.job import WorkJob
 from shop.models.report import Report
 from shop.models.user import ShopUser
+
+
+class AttachmentInline(GenericTabularInline):
+    model = Attachment
+    extra = 0
+    fields = ('source_type', 'kind', 'file', 'url', 'display_name', 'mime_type', 'order')
+    readonly_fields = ('created_at',)
 
 
 @admin.register(Car)
@@ -18,6 +27,7 @@ class ReportAdmin(admin.ModelAdmin):
 	list_display = ("job_name", "car", "date_done", "assigned_to", "assigned_shop")
 	list_filter = ("date_done",)
 	search_fields = ("job_name", "note")
+	inlines = (AttachmentInline,)
 
 
 @admin.register(WorkJob)
@@ -58,4 +68,16 @@ class GarageInvitationAdmin(admin.ModelAdmin):
 class KnownShopAdmin(admin.ModelAdmin):
 	list_display = ("name", "email", "phone")
 	search_fields = ("name", "email", "phone")
+	inlines = (AttachmentInline,)
+
+
+@admin.register(Attachment)
+class AttachmentAdmin(admin.ModelAdmin):
+	list_display = ("display_name", "kind", "source_type", "parent_label")
+	list_filter = ("kind", "source_type")
+	search_fields = ("display_name", "url")
+
+	@admin.display(description='Parent')
+	def parent_label(self, obj):
+		return f'{obj.content_type.name}: {obj.object_id}'
 

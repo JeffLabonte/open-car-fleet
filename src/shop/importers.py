@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -19,6 +20,7 @@ from shop.models.report import Report
 
 
 VIN_BAD_CHARS = set("IOQ")
+UNSAFE_URL_SCHEMES = {'javascript', 'data', 'vbscript', 'blob', 'file'}
 
 
 class ImportValidationError(Exception):
@@ -131,13 +133,14 @@ class CSVImporter:
         )
 
         objects: list[models.Model] = []
+        attachment_plans: list[list[dict[str, Any]]] = []
         for index, record in enumerate(records, start=1):
             if not isinstance(record, dict):
                 result.errors.append(ImportIssue(index, f"Record is not an object: {record!r}"))
                 continue
 
             try:
-                instance_data, warnings = self._prepare_record(model, record, normalized_context)
+                instance_data, warnings, attachment_plan = self._prepare_record(model, record, normalized_context)
             except ImportValidationError as exc:
                 result.errors.append(ImportIssue(index, str(exc)))
                 continue
@@ -157,6 +160,7 @@ class CSVImporter:
                 continue
 
             objects.append(instance)
+            attachment_plans.append(attachment_plan)
 
         if result.has_errors:
             return result
@@ -168,11 +172,35 @@ class CSVImporter:
         try:
             with transaction.atomic():
                 model.objects.bulk_create(objects, batch_size=batch_size)
+                for instance, attachment_plan in zip(objects, attachment_plans):
+                    self._create_external_attachments(instance, attachment_plan)
         except IntegrityError as exc:
             raise ImportValidationError(_("Database error while importing data: %(error)s") % {'error': exc}) from exc
 
         result.created_count = len(objects)
         return result
+
+    def _create_external_attachments(self, instance: models.Model, attachment_plan: list[dict[str, Any]]) -> None:
+        """Store legacy documents/photos column values as external link attachments."""
+        from django.contrib.contenttypes.models import ContentType
+
+        from shop.models.attachment import Attachment
+
+        if not attachment_plan:
+            return
+        content_type = ContentType.objects.get_for_model(instance)
+        for index, item in enumerate(attachment_plan):
+            value = item['value']
+            parsed = urlparse(value)
+            is_url = parsed.scheme in {'http', 'https'} and bool(parsed.netloc)
+            Attachment.objects.create(
+                content_type=content_type,
+                object_id=str(instance.pk),
+                source_type=Attachment.SOURCE_EXTERNAL,
+                kind=item['kind'],
+                url=value if is_url else '',
+                display_name=value if not is_url else value.rstrip('/').rsplit('/', 1)[-1] or f'link-{index + 1}',
+            )
 
     def resolve_model(self, model_name: str) -> type[models.Model]:
         model = self.model_map.get(model_name.lower())
@@ -187,11 +215,11 @@ class CSVImporter:
         model: type[models.Model],
         record: dict[str, Any],
         context: ImportContext,
-    ) -> tuple[dict[str, Any], list[str]]:
+    ) -> tuple[dict[str, Any], list[str], list[dict[str, Any]]]:
         if model is Car:
-            return self._prepare_car_record(record, context)
+            return (*self._prepare_car_record(record, context), [])
         if model is WorkJob:
-            return self._prepare_workjob_record(record, context)
+            return (*self._prepare_workjob_record(record, context), [])
         if model is Report:
             return self._prepare_report_record(record, context)
         raise ImportValidationError(_("Unsupported model '%(model)s'.") % {'model': model.__name__})
@@ -246,7 +274,7 @@ class CSVImporter:
         self,
         record: dict[str, Any],
         context: ImportContext,
-    ) -> tuple[dict[str, Any], list[str]]:
+    ) -> tuple[dict[str, Any], list[str], list[dict[str, Any]]]:
         job_name = self._clean_optional_text(record.get("job_name")) or self._clean_optional_text(record.get("description"))
         if not job_name:
             raise ImportValidationError(_("Field 'job_name' is required."))
@@ -255,6 +283,7 @@ class CSVImporter:
         if date_done is None:
             raise ImportValidationError(_("Field 'date_done' is required."))
 
+        attachment_plan = self._report_attachment_plan(record)
         data = {
             "car": self._resolve_car(record.get("car"), context),
             "mileage": self._coerce_optional_int(record.get("mileage"), field_name="mileage"),
@@ -262,8 +291,6 @@ class CSVImporter:
             "assigned_to": self._resolve_mechanic(record.get("assigned_to"), context=context),
             "assigned_shop": self._resolve_shop(record.get("assigned_shop")),
             "date_done": date_done,
-            "documents": self._coerce_string_list(record.get("documents"), field_name="documents"),
-            "photos": self._coerce_string_list(record.get("photos"), field_name="photos"),
             "note": self._clean_optional_text(record.get("note")) or "",
             "additional_information": (
                 self._clean_optional_text(record.get("additional_information"))
@@ -273,9 +300,29 @@ class CSVImporter:
             ),
         }
         self._validate_assignment_target(data["assigned_to"], data["assigned_shop"])
-        used_keys = set(data.keys()) | {"description", "date", "details", "extra_information", "related_date", "completed"}
+        used_keys = set(data.keys()) | {"description", "date", "details", "extra_information", "related_date", "completed", "attachments", "documents", "photos"}
         warnings = self._ignored_field_warnings(record, used_keys)
-        return data, warnings
+        return data, warnings, attachment_plan
+
+    def _report_attachment_plan(self, record: dict[str, Any]) -> list[dict[str, Any]]:
+        """Normalize legacy documents/photos/attachments columns into attachment rows."""
+        plan: list[dict[str, Any]] = []
+        document_items = self._validate_link_list(
+            self._coerce_string_list(record.get("documents"), field_name="documents")
+        )
+        photo_items = self._validate_link_list(
+            self._coerce_string_list(record.get("photos"), field_name="photos")
+        )
+        link_items = self._validate_link_list(
+            self._coerce_string_list(record.get("attachments"), field_name="attachments")
+        )
+        for item in document_items:
+            plan.append({"kind": "document", "value": item})
+        for item in photo_items:
+            plan.append({"kind": "image", "value": item})
+        for item in link_items:
+            plan.append({"kind": "document", "value": item})
+        return plan
 
     def _resolve_car(self, raw_value: Any, context: ImportContext) -> Car:
         if context.car is not None:
@@ -446,6 +493,13 @@ class CSVImporter:
         if isinstance(value, str):
             return [item.strip() for item in value.splitlines() if item.strip()]
         raise ImportValidationError(_("Field '%(field)s' must be a list or newline-delimited string.") % {'field': field_name})
+
+    def _validate_link_list(self, items: list[str]) -> list[str]:
+        """Reject URL schemes that could execute script if rendered as links."""
+        for item in items:
+            if urlparse(item).scheme.lower() in UNSAFE_URL_SCHEMES:
+                raise ImportValidationError(_("Entries must be URLs (http/https) or plain paths: %(value)s") % {'value': item})
+        return items
 
     def _normalize_vin(self, value: Any) -> str | None:
         cleaned = self._clean_optional_text(value)

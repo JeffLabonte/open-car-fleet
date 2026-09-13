@@ -1,0 +1,51 @@
+{% load i18n %}
+{% comment %}
+Unified attachment section: current attachments (if any) plus the dropzone
+upload component. Include at the bottom of every create/update form.
+
+  {% include 'shop/partials/_attachments_section.html' with field=form.attachments current_attachments=parent.attachments.all %}
+{% endcomment %}
+{% if current_attachments %}
+  <div class="field" data-testid="current-attachments">
+    <label class="label">{% translate 'Current attachments' %}</label>
+    <ul>
+      {% for attachment in current_attachments %}
+        <li data-testid="current-attachment">
+          {% if attachment.source_type == 'external' %}
+            {% if attachment.url %}
+              <a href="{{ attachment.url }}" target="_blank" rel="noopener noreferrer">{{ attachment.display_name|default:attachment.url }}</a>
+            {% else %}
+              {{ attachment.display_name }}
+            {% endif %}
+          {% else %}
+            <a href="{% url 'shop-attachment-file' attachment.pk %}" target="_blank" rel="noopener noreferrer">{{ attachment.display_name|default:attachment.file.name }}</a>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endif %}
+<div class="field" data-testid="attachment-upload-section">
+  <label class="label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+  <div class="control">
+    <div class="file is-boxed is-fullwidth" id="attachment-dropzone">
+      <label class="file-label">
+        {{ field }}
+        <span class="file-cta">
+          <span class="file-label">{% translate 'Choose files or drag and drop here' %}</span>
+        </span>
+      </label>
+    </div>
+  </div>
+  <div class="is-flex is-justify-content-space-between is-align-items-center mt-3">
+    <p class="is-size-7 has-text-grey mb-0">{% translate 'You can add more files by dropping them multiple times.' %}</p>
+    <button class="button is-small is-light" type="button" id="attachment-clear-button">{% translate 'Clear selected files' %}</button>
+  </div>
+  <div id="attachment-preview-list" class="content mt-3"></div>
+  {% if field.help_text %}
+    <p class="help">{{ field.help_text }}</p>
+  {% endif %}
+  {% for error in field.errors %}
+    <p class="help is-danger">{{ error }}</p>
+  {% endfor %}
+</div>

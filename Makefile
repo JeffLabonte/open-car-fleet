@@ -79,14 +79,14 @@ test-e2e:
 	@server_pid=''; \
 	cleanup() { if [ -n "$$server_pid" ]; then kill "$$server_pid" 2>/dev/null || true; fi; }; \
 	trap cleanup EXIT INT TERM; \
-	HANKO_API_URL='' $(PYTHON) src/manage.py runserver $(E2E_HOST):$(E2E_PORT) --noreload > /tmp/open-car-fleet-e2e.log 2>&1 & \
+	DEBUG=True HANKO_API_URL='' $(PYTHON) src/manage.py runserver $(E2E_HOST):$(E2E_PORT) --noreload > /tmp/open-car-fleet-e2e.log 2>&1 & \
 	server_pid=$$!; \
 	for attempt in $$(seq 1 $(E2E_WAIT_SECONDS)); do \
 		if curl --fail --silent $(E2E_BASE_URL)/login/ >/dev/null; then break; fi; \
 		if [ "$$attempt" -eq "$(E2E_WAIT_SECONDS)" ]; then cat /tmp/open-car-fleet-e2e.log; exit 1; fi; \
 		sleep 1; \
 	done; \
-	HANKO_API_URL='' E2E_BASE_URL=$(E2E_BASE_URL) $(POETRY) run pytest -q -n0 tests/e2e
+	DEBUG=True HANKO_API_URL='' E2E_BASE_URL=$(E2E_BASE_URL) $(POETRY) run pytest -q -n0 tests/e2e
 
 db-snapshot: db-up db-wait
 	@mkdir -p db_backups

@@ -1,20 +1,25 @@
+from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
 from car_docs.forms import CarDocForm
 from car_docs.models import CarDoc
+from shop.models.attachment import Attachment
 from shop.models.car import Car
 from shop.models.garage import Garage, GarageMembership
 from shop.models.user import ShopUser
 
+PDF_SIGNATURE = b'%PDF-1.4'
+PNG_SIGNATURE = b'\x89PNG\r\n\x1a\n' + b'\x00\x00\x00\x0dIHDR'
 
-class CarDocPdfUploadTests(TestCase):
+
+class CarDocAttachmentValidationTests(TestCase):
     def test_car_doc_form_rejects_spoofed_pdf_content(self):
         form = CarDocForm(
             data={'title': 'Malware'},
             files={
-                'file': SimpleUploadedFile(
+                'attachments': SimpleUploadedFile(
                     'malware.pdf',
                     b'MZ-not-a-pdf',
                     content_type='application/pdf',
@@ -23,14 +28,55 @@ class CarDocPdfUploadTests(TestCase):
         )
 
         self.assertFalse(form.is_valid())
-        self.assertIn('file', form.errors)
+        self.assertIn('attachments', form.errors)
 
-    def test_car_doc_accepts_pdf_upload(self):
-        user = ShopUser.objects.create_user(username='pdf-user', email='pdf@example.com', password='pass1234')
-        garage = Garage.objects.create(name='Garage One', created_by=user)
-        GarageMembership.objects.create(garage=garage, user=user, role=GarageMembership.ROLE_OWNER)
-        car = Car.objects.create(
-            garage=garage,
+    def test_car_doc_form_rejects_plain_text_upload(self):
+        form = CarDocForm(
+            data={'title': 'Notes'},
+            files={
+                'attachments': SimpleUploadedFile('notes.txt', b'hello', content_type='text/plain'),
+            },
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('attachments', form.errors)
+
+    def test_car_doc_form_accepts_valid_pdf_upload(self):
+        form = CarDocForm(
+            data={'title': 'Manual', 'content': 'Owner manual'},
+            files={
+                'attachments': SimpleUploadedFile(
+                    'manual.pdf',
+                    PDF_SIGNATURE + b' manual',
+                    content_type='application/pdf',
+                ),
+            },
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_car_doc_form_accepts_valid_image_upload(self):
+        form = CarDocForm(
+            data={'title': 'Photo'},
+            files={
+                'attachments': SimpleUploadedFile('photo.png', PNG_SIGNATURE, content_type='image/png'),
+            },
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+
+
+class CarDocAttachmentStorageTests(TestCase):
+    def setUp(self) -> None:
+        self.owner = ShopUser.objects.create_user(
+            username='pdf-user',
+            email='pdf@example.com',
+            password='pass1234',
+        )
+        self.garage = Garage.objects.create(name='Garage One', created_by=self.owner)
+        GarageMembership.objects.create(garage=self.garage, user=self.owner, role=GarageMembership.ROLE_OWNER)
+        self.car = Car.objects.create(
+            garage=self.garage,
             make='Ford',
             model='Transit',
             colour='Blue',
@@ -39,38 +85,37 @@ class CarDocPdfUploadTests(TestCase):
             license_plate='ABC-123',
         )
 
-        pdf = SimpleUploadedFile('manual.pdf', b'%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF', content_type='application/pdf')
-
-        doc = CarDoc.objects.create(
-            car=car,
-            title='Owner manual',
-            content='PDF reference doc',
-            file=pdf,
+    def _create_doc_with_pdf(self, title: str) -> tuple[CarDoc, Attachment]:
+        doc = CarDoc.objects.create(car=self.car, title=title, content='PDF reference doc')
+        attachment = Attachment.objects.create(
+            content_type=ContentType.objects.get_for_model(doc),
+            object_id=str(doc.pk),
+            file=SimpleUploadedFile('manual.pdf', PDF_SIGNATURE + b' manual', content_type='application/pdf'),
         )
+        return doc, attachment
 
-        pdf.seek(0)
-        with open(doc.file.path, 'rb') as uploaded_file:
-            saved_contents = uploaded_file.read()
+    def test_car_doc_accepts_pdf_upload(self):
+        doc, attachment = self._create_doc_with_pdf('Owner manual')
+        self.addCleanup(attachment.file.delete, save=False)
 
-        self.assertTrue(doc.file.name.lower().endswith('.pdf'))
-        self.assertEqual(saved_contents, pdf.read())
+        attachment.file.seek(0)
+        with attachment.file.open('rb') as stored_file:
+            saved_contents = stored_file.read()
+
+        self.assertTrue(attachment.file.name.lower().endswith('.pdf'))
+        self.assertEqual(saved_contents, PDF_SIGNATURE + b' manual')
+        self.assertEqual(attachment.kind, 'document')
+        self.assertEqual(doc.attachments.count(), 1)
 
     def test_deleting_car_doc_removes_uploaded_file(self):
-        user = ShopUser.objects.create_user(username='delete-pdf-user', email='delete-pdf@example.com', password='pass1234')
-        garage = Garage.objects.create(name='Delete Garage', created_by=user)
-        GarageMembership.objects.create(garage=garage, user=user, role=GarageMembership.ROLE_OWNER)
-        car = Car.objects.create(garage=garage, make='Ford', model='Transit', vin='1HGBH41JXMN109187')
-        doc = CarDoc.objects.create(
-            car=car,
-            title='Delete me',
-            file=SimpleUploadedFile('delete-me.pdf', b'%PDF-1.4', content_type='application/pdf'),
-        )
-        file_name = doc.file.name
+        doc, attachment = self._create_doc_with_pdf('Delete me')
+        file_name = attachment.file.name
 
         doc.delete()
 
         self.assertFalse(CarDoc.objects.filter(title='Delete me').exists())
-        self.assertFalse(doc.file.storage.exists(file_name))
+        self.assertFalse(Attachment.objects.filter(pk=attachment.pk).exists())
+        self.assertFalse(attachment.file.storage.exists(file_name))
 
 
 class CarDocFileAccessTests(TestCase):
@@ -97,9 +142,10 @@ class CarDocFileAccessTests(TestCase):
             model='Focus',
             vin='1FAHP3F28CL512345',
         )
-        self.doc = CarDoc.objects.create(
-            car=self.car,
-            title='Registration',
+        self.doc = CarDoc.objects.create(car=self.car, title='Registration')
+        self.attachment = Attachment.objects.create(
+            content_type=ContentType.objects.get_for_model(self.doc),
+            object_id=str(self.doc.pk),
             file=SimpleUploadedFile(
                 'registration.pdf',
                 b'%PDF-1.4 protected document',
@@ -108,19 +154,20 @@ class CarDocFileAccessTests(TestCase):
         )
 
     def tearDown(self) -> None:
-        self.doc.file.delete(save=False)
+        self.attachment.file.delete(save=False)
 
     def test_authenticated_garage_member_can_stream_car_document(self):
         self.client.force_login(self.owner)
 
-        response = self.client.get(reverse('shop-car-doc-file', args=[self.car.pk, self.doc.pk]))
+        response = self.client.get(reverse('shop-attachment-file', args=[self.attachment.pk]))
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['Content-Type'], 'application/pdf')
         self.assertEqual(b''.join(response.streaming_content), b'%PDF-1.4 protected document')
+        self.assertEqual(response['X-Content-Type-Options'], 'nosniff')
 
     def test_anonymous_user_is_redirected_from_car_document_file(self):
-        response = self.client.get(reverse('shop-car-doc-file', args=[self.car.pk, self.doc.pk]))
+        response = self.client.get(reverse('shop-attachment-file', args=[self.attachment.pk]))
 
         self.assertEqual(response.status_code, 302)
         self.assertIn(reverse('shop-login'), response['Location'])
@@ -128,14 +175,14 @@ class CarDocFileAccessTests(TestCase):
     def test_user_outside_the_garage_cannot_stream_car_document(self):
         self.client.force_login(self.stranger)
 
-        response = self.client.get(reverse('shop-car-doc-file', args=[self.car.pk, self.doc.pk]))
+        response = self.client.get(reverse('shop-attachment-file', args=[self.attachment.pk]))
 
         self.assertEqual(response.status_code, 404)
 
     def test_raw_media_url_does_not_expose_car_document(self):
         self.client.force_login(self.owner)
 
-        response = self.client.get(self.doc.file.url)
+        response = self.client.get(self.attachment.file.url)
 
         self.assertEqual(response.status_code, 404)
 
@@ -166,11 +213,16 @@ class CarDocFileAccessTests(TestCase):
             data={
                 'title': 'Created document',
                 'content': 'Created content',
-                'file': SimpleUploadedFile('created.pdf', b'%PDF-1.4 created', content_type='application/pdf'),
+                'attachments': SimpleUploadedFile(
+                    'created.pdf',
+                    PDF_SIGNATURE + b' created',
+                    content_type='application/pdf',
+                ),
             },
         )
         self.assertEqual(create_response.status_code, 302)
         created_doc = CarDoc.objects.get(title='Created document')
+        self.assertTrue(created_doc.attachments.filter(kind='document').exists())
 
         self.assertEqual(
             self.client.get(reverse('shop-car-doc-update', args=[self.car.pk, self.doc.pk])).status_code,

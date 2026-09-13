@@ -1,7 +1,7 @@
+from django.contrib.contenttypes.fields import GenericRelation
 from django.db import models
-from django.db.models.signals import post_delete
-from django.dispatch import receiver
 
+from shop.models.attachment import Attachment
 from shop.models.car import Car
 
 
@@ -11,7 +11,7 @@ class CarDoc(models.Model):
     car = models.ForeignKey(Car, on_delete=models.CASCADE, related_name='docs')
     title = models.CharField(max_length=255)
     content = models.TextField(blank=True)
-    file = models.FileField(upload_to='car_docs/', blank=True, null=True)
+    attachments = GenericRelation(Attachment)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -20,9 +20,3 @@ class CarDoc(models.Model):
 
     def __str__(self) -> str:
         return f"{self.title} ({self.car})"
-
-
-@receiver(post_delete, sender=CarDoc)
-def delete_car_doc_file(sender: type[CarDoc], instance: CarDoc, **kwargs: object) -> None:
-    if instance.file:
-        instance.file.delete(save=False)
