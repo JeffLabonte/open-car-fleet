@@ -7,7 +7,7 @@ def copy_report_attachments(apps, schema_editor):
     ContentType = apps.get_model('contenttypes', 'ContentType')
     Attachment = apps.get_model('shop', 'Attachment')
 
-    report_type = ContentType.objects.get(app_label='shop', model='report')
+    report_type = ContentType.objects.get_or_create(app_label='shop', model='report')[0]
     for source in ReportAttachment.objects.all().order_by('pk').iterator():
         display_name = source.display_name
         if not display_name and source.file:
@@ -32,7 +32,7 @@ def copy_known_shop_proof_files(apps, schema_editor):
     ContentType = apps.get_model('contenttypes', 'ContentType')
     Attachment = apps.get_model('shop', 'Attachment')
 
-    proof_type = ContentType.objects.get(app_label='shop', model='knownshopproof')
+    proof_type = ContentType.objects.get_or_create(app_label='shop', model='knownshopproof')[0]
     for proof in KnownShopProof.objects.filter(file__isnull=False).exclude(file='').iterator():
         name = proof.file.name
         attachment = Attachment.objects.create(
@@ -50,8 +50,8 @@ def copy_known_shop_proof_files(apps, schema_editor):
 def uncopy(apps, schema_editor):
     Attachment = apps.get_model('shop', 'Attachment')
     ContentType = apps.get_model('contenttypes', 'ContentType')
-    report_type = ContentType.objects.get(app_label='shop', model='report')
-    proof_type = ContentType.objects.get(app_label='shop', model='knownshopproof')
+    report_type = ContentType.objects.get_or_create(app_label='shop', model='report')[0]
+    proof_type = ContentType.objects.get_or_create(app_label='shop', model='knownshopproof')[0]
     Attachment.objects.filter(content_type__in=[report_type, proof_type]).delete()
 
 

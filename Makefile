@@ -9,6 +9,19 @@ E2E_HOST ?= 127.0.0.1
 E2E_PORT ?= 8000
 E2E_BASE_URL ?= http://$(E2E_HOST):$(E2E_PORT)
 E2E_WAIT_SECONDS ?= 60
+# Dedicated SQLite database shared by the e2e server and the pytest process.
+# POSTGRES_* must stay empty so both processes resolve to this file.
+E2E_DB ?= /tmp/open-car-fleet-e2e-$(E2E_PORT).sqlite3
+E2E_DJANGO_ENV = \
+	DEBUG=True \
+	HANKO_API_URL='' \
+	DJANGO_SETTINGS_MODULE=settings.test_settings \
+	E2E_DB_PATH=$(E2E_DB) \
+	POSTGRES_DB= \
+	POSTGRES_USER= \
+	POSTGRES_PASSWORD= \
+	POSTGRES_HOST= \
+	POSTGRES_PORT=
 
 install:
 	$(POETRY) install --no-root --with test
@@ -75,18 +88,19 @@ test-coverage:
 
 test-e2e:
 	$(POETRY) install --no-root --with test,e2e
-	$(PYTHON) src/manage.py migrate --noinput
+	rm -f $(E2E_DB)
+	$(E2E_DJANGO_ENV) $(PYTHON) src/manage.py migrate --noinput
 	@server_pid=''; \
 	cleanup() { if [ -n "$$server_pid" ]; then kill "$$server_pid" 2>/dev/null || true; fi; }; \
 	trap cleanup EXIT INT TERM; \
-	DEBUG=True HANKO_API_URL='' $(PYTHON) src/manage.py runserver $(E2E_HOST):$(E2E_PORT) --noreload > /tmp/open-car-fleet-e2e.log 2>&1 & \
+	$(E2E_DJANGO_ENV) $(PYTHON) src/manage.py runserver $(E2E_HOST):$(E2E_PORT) --noreload > /tmp/open-car-fleet-e2e.log 2>&1 & \
 	server_pid=$$!; \
 	for attempt in $$(seq 1 $(E2E_WAIT_SECONDS)); do \
 		if curl --fail --silent $(E2E_BASE_URL)/login/ >/dev/null; then break; fi; \
 		if [ "$$attempt" -eq "$(E2E_WAIT_SECONDS)" ]; then cat /tmp/open-car-fleet-e2e.log; exit 1; fi; \
 		sleep 1; \
 	done; \
-	DEBUG=True HANKO_API_URL='' E2E_BASE_URL=$(E2E_BASE_URL) $(POETRY) run pytest -q -n0 tests/e2e
+	$(E2E_DJANGO_ENV) E2E_BASE_URL=$(E2E_BASE_URL) $(POETRY) run pytest -q -n0 tests/e2e
 
 db-snapshot: db-up db-wait
 	@mkdir -p db_backups

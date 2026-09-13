@@ -7,7 +7,7 @@ def copy_car_doc_files(apps, schema_editor):
     ContentType = apps.get_model('contenttypes', 'ContentType')
     Attachment = apps.get_model('shop', 'Attachment')
 
-    doc_type = ContentType.objects.get(app_label='car_docs', model='cardoc')
+    doc_type, _ = ContentType.objects.get_or_create(app_label='car_docs', model='cardoc')
     for doc in CarDoc.objects.filter(file__isnull=False).exclude(file='').iterator():
         name = doc.file.name
         attachment = Attachment.objects.create(
@@ -24,7 +24,7 @@ def copy_car_doc_files(apps, schema_editor):
 
 def uncopy_car_doc_files(apps, schema_editor):
     Attachment = apps.get_model('shop', 'Attachment')
-    doc_type = ContentType.objects.get(app_label='car_docs', model='cardoc')
+    doc_type, _ = ContentType.objects.get_or_create(app_label='car_docs', model='cardoc')
     Attachment.objects.filter(content_type=doc_type).delete()
 
 
