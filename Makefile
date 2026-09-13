@@ -1,4 +1,4 @@
-.PHONY: install db-up db-wait db-stop db-reset db-snapshot migrate run test test-fast test-bdd test-coverage test-e2e translations
+.PHONY: install db-up db-wait db-stop db-reset db-snapshot migrate run test test-serial test-profile test-fast test-bdd test-coverage test-e2e check-migrations translations
 
 POETRY ?= poetry
 PYTHON ?= $(POETRY) run python
@@ -55,6 +55,15 @@ run: install db-up migrate
 test:
 	$(POETRY) run pytest -q
 
+test-serial:
+	$(POETRY) run pytest -q -n0
+
+test-profile:
+	$(POETRY) run pytest -q -n0 --durations=25
+
+check-migrations:
+	DEBUG=True DJANGO_SECRET_KEY=check-only-secret $(PYTHON) src/manage.py makemigrations --check --no-input
+
 test-fast:
 	$(POETRY) run pytest -q src/shop/tests.py -k FormEditableFieldsCoverageTests
 
@@ -77,7 +86,7 @@ test-e2e:
 		if [ "$$attempt" -eq "$(E2E_WAIT_SECONDS)" ]; then cat /tmp/open-car-fleet-e2e.log; exit 1; fi; \
 		sleep 1; \
 	done; \
-	HANKO_API_URL='' E2E_BASE_URL=$(E2E_BASE_URL) $(POETRY) run pytest -q tests/e2e
+	HANKO_API_URL='' E2E_BASE_URL=$(E2E_BASE_URL) $(POETRY) run pytest -q -n0 tests/e2e
 
 db-snapshot: db-up db-wait
 	@mkdir -p db_backups

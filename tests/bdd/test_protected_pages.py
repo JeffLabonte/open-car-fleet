@@ -2,6 +2,10 @@ from django.test import Client
 from django.urls import reverse
 from pytest_bdd import given, scenarios, then, when
 
+import pytest
+
+pytestmark = pytest.mark.django_db
+
 
 scenarios('features/protected_pages.feature')
 
