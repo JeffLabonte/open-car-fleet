@@ -291,9 +291,30 @@
 }
 
 @media (min-width: 64rem) {
-  .split--fleet {
+  .split--fleet,
+  .split--aside {
     grid-template-columns: minmax(0, 1fr) 19rem;
     align-items: start;
+  }
+}
+
+.form-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: 1fr;
+}
+
+.form-grid .field {
+  margin: 0;
+}
+
+.field--full {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 48rem) {
+  .form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

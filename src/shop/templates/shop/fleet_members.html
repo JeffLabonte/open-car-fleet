@@ -1,70 +1,74 @@
-{% extends 'shop/index.html' %}
+{% extends 'shop/base.html' %}
 {% load i18n %}
 
 {% block content %}
-  <div class="page-header">
-    <div>
-      <h1 class="title page-title">{{ title }}</h1>
-      <p class="page-subtitle">{{ subtitle }}</p>
-    </div>
+  <header class="page-header">
+    {% include 'shop/partials/_page_header.html' with heading=title subheading=subtitle %}
     <div class="page-actions">
       <a class="button is-light" href="{% url 'shop-garage-detail' garage.pk %}">{% translate 'Back to fleet' %}</a>
-      <a class="button is-link is-light" href="{% url 'shop-garage-share' garage.pk %}">{% translate 'Invite member' %}</a>
+      <a class="button is-link" href="{% url 'shop-garage-share' garage.pk %}">
+        {% include 'shop/partials/_icon.html' with name='share' %}
+        <span>{% translate 'Invite member' %}</span>
+      </a>
     </div>
-  </div>
+  </header>
 
-  <div class="table-container content-card">
-    <table class="table is-fullwidth is-striped is-hoverable">
-      <thead>
-        <tr>
-          <th>{% translate 'User' %}</th>
-          <th>{% translate 'Role' %}</th>
-          <th>{% translate 'Joined' %}</th>
-          <th>{% translate 'Actions' %}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for membership in members %}
+  <div class="table-container">
+    <div class="table-wrap">
+      <table class="table is-fullwidth is-striped is-hoverable table--responsive" data-testid="members-table">
+        <thead>
           <tr>
-            <td>
-              {{ membership.user.display_name|default:membership.user.username }}<br>
-              <small class="has-text-grey">{{ membership.user.email }}</small>
-            </td>
-            <td>{{ membership.get_role_display }}</td>
-            <td>{{ membership.created_at|date:'F j, Y, g:i a' }}</td>
-            <td>
-              {% if can_manage_members and membership.user != request.user %}
-                <form method="post" action="{% url 'shop-garage-member-role' garage.pk membership.pk %}" class="is-inline-block">
-                  {% csrf_token %}
-                  <div class="field has-addons">
-                    <div class="control">
-                      <div class="select is-small">
-                        <select name="role" aria-label="{% translate 'Change role' %}">
-                          {% for value, label in can_change_roles %}
-                            <option value="{{ value }}" {% if membership.role == value %}selected{% endif %}>{{ label }}</option>
-                          {% endfor %}
-                        </select>
+            <th scope="col">{% translate 'User' %}</th>
+            <th scope="col">{% translate 'Role' %}</th>
+            <th scope="col">{% translate 'Joined' %}</th>
+            <th scope="col">{% translate 'Actions' %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for membership in members %}
+            <tr data-testid="member-row">
+              <td data-label="{% translate 'User' %}">
+                {{ membership.user.display_name|default:membership.user.username }}<br>
+                <small class="has-text-grey">{{ membership.user.email }}</small>
+              </td>
+              <td data-label="{% translate 'Role' %}">
+                {% include 'shop/partials/_status_badge.html' with status=membership.role label=membership.get_role_display %}
+              </td>
+              <td data-label="{% translate 'Joined' %}">{{ membership.created_at|date:'F j, Y, g:i a' }}</td>
+              <td data-label="">
+                {% if can_manage_members and membership.user != request.user %}
+                  <form method="post" action="{% url 'shop-garage-member-role' garage.pk membership.pk %}" class="is-inline-block">
+                    {% csrf_token %}
+                    <div class="field has-addons mb-0">
+                      <div class="control">
+                        <div class="select is-small">
+                          <select name="role" aria-label="{% translate 'Change role' %}">
+                            {% for value, label in can_change_roles %}
+                              <option value="{{ value }}" {% if membership.role == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                          </select>
+                        </div>
+                      </div>
+                      <div class="control">
+                        <button class="button is-small is-link" type="submit">{% translate 'Update' %}</button>
                       </div>
                     </div>
-                    <div class="control">
-                      <button class="button is-small is-link" type="submit">{% translate 'Update' %}</button>
-                    </div>
-                  </div>
-                </form>
-                <form method="post" action="{% url 'shop-garage-member-remove' garage.pk membership.pk %}" class="is-inline-block ml-2">
-                  {% csrf_token %}
-                  {% translate 'Remove this member?' as remove_confirmation %}
-                  <button class="button is-small is-danger is-light" type="submit" onclick="return confirm('{{ remove_confirmation|escapejs }}')">{% translate 'Remove' %}</button>
-                </form>
-              {% endif %}
-            </td>
-          </tr>
-        {% empty %}
-          <tr>
-            <td colspan="4" class="has-text-centered has-text-grey">{% translate 'No members found.' %}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+                  </form>
+                  <form method="post" action="{% url 'shop-garage-member-remove' garage.pk membership.pk %}" class="is-inline-block ml-2">
+                    {% csrf_token %}
+                    {% translate 'Remove this member?' as remove_confirmation %}
+                    <button class="button is-small is-danger" type="submit" formaction="{% url 'shop-garage-member-remove' garage.pk membership.pk %}" aria-label="{{ remove_confirmation }}" data-testid="remove-member-button">{% translate 'Remove' %}</button>
+                  </form>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="4" class="has-text-centered has-text-grey" data-label="">{% translate 'No members found.' %}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
 {% endblock %}

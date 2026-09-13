@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Open Car Fleet\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-13 03:01+0000\n"
+"POT-Creation-Date: 2026-09-13 04:01+0000\n"
 "PO-Revision-Date: 2026-09-13 02:13+0000\n"
 "Last-Translator: Open Car Fleet <noreply@opencarfleet.ca>\n"
 "Language-Team: fr_CA <LL@li.org>\n"
@@ -12,30 +12,30 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: src/car_docs/forms.py:13 src/car_docs/forms.py:18
+#: src/car_docs/forms.py:14 src/shop/forms/report.py:18
+#: src/shop/forms/shop.py:34
+msgid "Upload one or more photos, videos, or documents."
+msgstr "Téléversez une ou plusieurs photos, vidéos ou documents."
+
+#: src/car_docs/forms.py:21 src/car_docs/forms.py:26
 msgid "Document title"
 msgstr "Titre du document"
 
-#: src/car_docs/forms.py:14 src/shop/forms/car.py:22 src/shop/forms/job.py:54
-#: src/shop/forms/shop.py:17 src/shop/forms/shop.py:34
+#: src/car_docs/forms.py:22 src/shop/forms/car.py:22 src/shop/forms/job.py:54
+#: src/shop/forms/shop.py:17 src/shop/forms/shop.py:42
 #: src/shop/templates/shop/car_detail.html:78
 #: src/shop/templates/shop/car_detail.html:91
 msgid "Notes"
 msgstr "Notes"
 
-#: src/car_docs/forms.py:15 src/shop/forms/shop.py:35
-msgid "PDF file"
-msgstr "Fichier PDF"
-
-#: src/car_docs/forms.py:19
-msgid "Add notes, instructions, or summary details..."
-msgstr "Ajoutez des notes, des instructions ou des détails de résumé..."
+#: src/car_docs/forms.py:23 src/shop/forms/report.py:60
+#: src/shop/forms/shop.py:43
+msgid "Attachments"
+msgstr "Pièces jointes"
 
 #: src/car_docs/forms.py:27
-msgid "Only valid PDF files can be uploaded for car documents."
-msgstr ""
-"Seuls les fichiers PDF valides peuvent être téléversés pour les documents du "
-"véhicule."
+msgid "Add notes, instructions, or summary details..."
+msgstr "Ajoutez des notes, des instructions ou des détails de résumé..."
 
 #: src/car_docs/templates/car_docs/confirm_delete.html:7
 msgid "Delete document"
@@ -49,8 +49,8 @@ msgstr ""
 "Voulez-vous vraiment supprimer <strong>%(title)s</strong> pour %(name)s ?"
 
 #: src/car_docs/templates/car_docs/confirm_delete.html:16
-#: src/car_docs/templates/car_docs/detail.html:27
-#: src/car_docs/templates/car_docs/list.html:45
+#: src/car_docs/templates/car_docs/detail.html:30
+#: src/car_docs/templates/car_docs/list.html:47
 #: src/shop/templates/shop/car_detail.html:15
 #: src/shop/templates/shop/car_detail.html:54
 #: src/shop/templates/shop/car_list.html:50
@@ -59,18 +59,18 @@ msgid "Delete"
 msgstr "Supprimer"
 
 #: src/car_docs/templates/car_docs/confirm_delete.html:19
-#: src/car_docs/templates/car_docs/form.html:35
+#: src/car_docs/templates/car_docs/form.html:41
 #: src/shop/templates/shop/car_detail.html:53
-#: src/shop/templates/shop/car_form.html:36
-#: src/shop/templates/shop/car_import.html:41
+#: src/shop/templates/shop/car_form.html:27
+#: src/shop/templates/shop/car_import.html:32
 #: src/shop/templates/shop/car_list.html:72
-#: src/shop/templates/shop/fleet_form.html:36
-#: src/shop/templates/shop/fleet_import.html:41
-#: src/shop/templates/shop/part_form.html:36
-#: src/shop/templates/shop/report_form.html:93
-#: src/shop/templates/shop/shop_form.html:20
-#: src/shop/templates/shop/shop_proof_form.html:21
-#: src/shop/templates/shop/workjob_form.html:36
+#: src/shop/templates/shop/fleet_form.html:27
+#: src/shop/templates/shop/fleet_import.html:32
+#: src/shop/templates/shop/part_form.html:27
+#: src/shop/templates/shop/report_form.html:31
+#: src/shop/templates/shop/shop_form.html:27
+#: src/shop/templates/shop/shop_proof_form.html:32
+#: src/shop/templates/shop/workjob_form.html:27
 msgid "Cancel"
 msgstr "Annuler"
 
@@ -79,21 +79,17 @@ msgstr "Annuler"
 msgid "For %(name)s"
 msgstr "Pour %(name)s"
 
-#: src/car_docs/templates/car_docs/detail.html:13
-msgid "Open PDF in new tab"
-msgstr "Ouvrir le PDF dans un nouvel onglet"
-
-#: src/car_docs/templates/car_docs/detail.html:20
+#: src/car_docs/templates/car_docs/detail.html:23
 msgid "No document content added yet."
 msgstr "Aucun contenu de document ajouté pour le moment."
 
-#: src/car_docs/templates/car_docs/detail.html:23
+#: src/car_docs/templates/car_docs/detail.html:26
 #, python-format
 msgid "Updated: %(updated)s"
 msgstr "Mise à jour : %(updated)s"
 
-#: src/car_docs/templates/car_docs/detail.html:26
-#: src/car_docs/templates/car_docs/list.html:44
+#: src/car_docs/templates/car_docs/detail.html:29
+#: src/car_docs/templates/car_docs/list.html:46
 #: src/shop/templates/shop/car_detail.html:14
 #: src/shop/templates/shop/car_detail.html:107
 #: src/shop/templates/shop/car_detail.html:179
@@ -101,35 +97,35 @@ msgstr "Mise à jour : %(updated)s"
 msgid "Edit"
 msgstr "Modifier"
 
-#: src/car_docs/templates/car_docs/detail.html:28
+#: src/car_docs/templates/car_docs/detail.html:31
 msgid "Back to documents"
 msgstr "Retour aux documents"
 
 #: src/car_docs/templates/car_docs/form.html:7
-#: src/car_docs/templates/car_docs/list.html:18 src/car_docs/views.py:69
+#: src/car_docs/templates/car_docs/list.html:18 src/car_docs/views.py:61
 msgid "Add document"
 msgstr "Ajouter un document"
 
-#: src/car_docs/templates/car_docs/form.html:7 src/car_docs/views.py:94
+#: src/car_docs/templates/car_docs/form.html:7 src/car_docs/views.py:88
 msgid "Edit document"
 msgstr "Modifier le document"
 
-#: src/car_docs/templates/car_docs/form.html:32
-#: src/shop/templates/shop/car_form.html:33
-#: src/shop/templates/shop/fleet_form.html:33
-#: src/shop/templates/shop/part_form.html:33
-#: src/shop/templates/shop/report_form.html:90
-#: src/shop/templates/shop/workjob_form.html:33
+#: src/car_docs/templates/car_docs/form.html:38
+#: src/shop/templates/shop/car_form.html:24
+#: src/shop/templates/shop/fleet_form.html:24
+#: src/shop/templates/shop/part_form.html:24
+#: src/shop/templates/shop/report_form.html:28
+#: src/shop/templates/shop/workjob_form.html:24
 msgid "Create"
 msgstr "Créer"
 
-#: src/car_docs/templates/car_docs/form.html:32
-#: src/shop/templates/shop/car_form.html:33
-#: src/shop/templates/shop/fleet_form.html:33
-#: src/shop/templates/shop/fleet_members.html:50
-#: src/shop/templates/shop/part_form.html:33
-#: src/shop/templates/shop/report_form.html:90
-#: src/shop/templates/shop/workjob_form.html:33
+#: src/car_docs/templates/car_docs/form.html:38
+#: src/shop/templates/shop/car_form.html:24
+#: src/shop/templates/shop/fleet_form.html:24
+#: src/shop/templates/shop/fleet_members.html:53
+#: src/shop/templates/shop/part_form.html:24
+#: src/shop/templates/shop/report_form.html:28
+#: src/shop/templates/shop/workjob_form.html:24
 msgid "Update"
 msgstr "Mettre à jour"
 
@@ -154,19 +150,20 @@ msgstr "Mise à jour"
 #: src/shop/templates/shop/car_detail.html:80
 #: src/shop/templates/shop/car_detail.html:150
 #: src/shop/templates/shop/car_list.html:26
-#: src/shop/templates/shop/fleet_members.html:23
+#: src/shop/templates/shop/fleet_members.html:24
 msgid "Actions"
 msgstr "Actions"
 
-#: src/car_docs/templates/car_docs/list.html:43
+#: src/car_docs/templates/car_docs/list.html:45
+#: src/shop/templates/shop/shop_list.html:38
 msgid "View"
 msgstr "Consulter"
 
-#: src/car_docs/templates/car_docs/list.html:55
+#: src/car_docs/templates/car_docs/list.html:57
 msgid "No documents have been added for this car yet."
 msgstr "Aucun document n'a été ajouté pour cette voiture pour le moment."
 
-#: src/car_docs/templates/car_docs/list.html:60
+#: src/car_docs/templates/car_docs/list.html:62
 msgid "Back to car"
 msgstr "Retour au véhicule"
 
@@ -183,51 +180,47 @@ msgstr "Notes et documents de référence du véhicule"
 msgid "Document details"
 msgstr "Détails du document"
 
-#: src/car_docs/views.py:45
-msgid "Document has no file."
-msgstr "Le document n'a aucun fichier."
-
-#: src/car_docs/views.py:53
+#: src/car_docs/views.py:43
 msgid "You do not have permission to add documents to this car."
 msgstr "Vous n'avez pas la permission d'ajouter des documents à cette voiture."
 
-#: src/car_docs/views.py:61
+#: src/car_docs/views.py:53
 msgid "Document added successfully."
 msgstr "Document ajouté avec succès."
 
-#: src/car_docs/views.py:70
+#: src/car_docs/views.py:62
 msgid "Add notes or supporting information"
 msgstr "Ajoutez des notes ou des informations complémentaires"
 
-#: src/car_docs/views.py:78
+#: src/car_docs/views.py:70
 msgid "You do not have permission to update documents for this car."
 msgstr ""
 "Vous n'avez pas la permission de mettre à jour les documents de cette "
 "voiture."
 
-#: src/car_docs/views.py:85
+#: src/car_docs/views.py:79
 msgid "Document updated successfully."
 msgstr "Document mis à jour avec succès."
 
-#: src/car_docs/views.py:95
+#: src/car_docs/views.py:89
 msgid "Update the vehicle note"
 msgstr "Mettre à jour la note du véhicule"
 
-#: src/car_docs/views.py:103
+#: src/car_docs/views.py:97
 msgid "You do not have permission to delete documents from this car."
 msgstr ""
 "Vous n'avez pas la permission de supprimer les documents de cette voiture."
 
-#: src/car_docs/views.py:108
+#: src/car_docs/views.py:102
 msgid "Document deleted successfully."
 msgstr "Document supprimé avec succès."
 
-#: src/car_docs/views.py:113
+#: src/car_docs/views.py:107
 #, python-format
 msgid "Delete %(title)s"
 msgstr "Supprimer %(title)s"
 
-#: src/car_docs/views.py:114
+#: src/car_docs/views.py:108
 msgid "Confirm document removal"
 msgstr "Confirmer la suppression du document"
 
@@ -239,19 +232,38 @@ msgstr "Anglais"
 msgid "Français"
 msgstr "Français"
 
-#: src/shop/forms/base.py:30
+#: src/shop/forms/base.py:60
 msgid "Only users converted to mechanics can be selected."
 msgstr ""
 "Seuls les utilisateurs convertis en mécaniciens peuvent être sélectionnés."
 
-#: src/shop/forms/base.py:35
+#: src/shop/forms/base.py:65
 msgid "Assign to a known shop instead of a mechanic user."
 msgstr "Attribuez le travail à un atelier connu plutôt qu'à un mécanicien."
 
-#: src/shop/forms/base.py:40 src/shop/importers.py:379
+#: src/shop/forms/base.py:70 src/shop/importers.py:420
 msgid "Assign either a mechanic user or a known shop, not both."
 msgstr ""
 "Attribuez soit un mécanicien, soit un atelier connu, mais pas les deux."
+
+#: src/shop/forms/base.py:121
+#, python-format
+msgid "No more than %(limit)s attachments may be uploaded at once."
+msgstr ""
+"Pas plus de %(limit)s pièces jointes ne peuvent être téléversées à la fois."
+
+#: src/shop/forms/base.py:130
+#, python-format
+msgid "Uploaded attachments must be no larger than %(limit)s MB."
+msgstr "Les pièces jointes téléversées ne doivent pas dépasser %(limit)s Mo."
+
+#: src/shop/forms/base.py:134 src/shop/forms/base.py:136
+msgid "Unsupported attachment file type."
+msgstr "Type de fichier joint non pris en charge."
+
+#: src/shop/forms/base.py:138
+msgid "Attachment contents do not match its file type."
+msgstr "Le contenu de la pièce jointe ne correspond pas à son type de fichier."
 
 #: src/shop/forms/car.py:20
 msgid "Part name"
@@ -309,8 +321,8 @@ msgstr "Couleur"
 
 #: src/shop/forms/car.py:47 src/shop/forms/car.py:58
 #: src/shop/templates/shop/car_detail.html:39
-#: src/shop/templates/shop/car_detail.html:281
-#: src/shop/templates/shop/car_detail.html:289
+#: src/shop/templates/shop/car_detail.html:283
+#: src/shop/templates/shop/car_detail.html:291
 #: src/shop/templates/shop/car_list.html:25
 #: src/shop/templates/shop/car_list.html:46
 #: src/shop/templates/shop/fleet_detail.html:43
@@ -319,14 +331,14 @@ msgid "Year"
 msgstr "Année"
 
 #: src/shop/forms/car.py:48 src/shop/forms/car.py:59
-#: src/shop/forms/report.py:125
+#: src/shop/forms/report.py:53
 msgid "Mileage"
 msgstr "Kilométrage"
 
 #: src/shop/forms/car.py:49 src/shop/forms/car.py:60
 #: src/shop/templates/shop/car_detail.html:40
-#: src/shop/templates/shop/car_detail.html:282
-#: src/shop/templates/shop/car_detail.html:290
+#: src/shop/templates/shop/car_detail.html:284
+#: src/shop/templates/shop/car_detail.html:292
 #: src/shop/templates/shop/fleet_detail.html:44
 #: src/shop/templates/shop/fleet_detail.html:54
 msgid "VIN"
@@ -350,13 +362,13 @@ msgstr "Vous pouvez seulement sélectionner un garage dont vous êtes membre."
 msgid "Enter a realistic year between 1886 and %(max)d."
 msgstr "Entrez une année réaliste entre 1886 et %(max)d."
 
-#: src/shop/forms/car.py:94 src/shop/importers.py:469
+#: src/shop/forms/car.py:94 src/shop/importers.py:510
 #: src/shop/models/car.py:123
 msgid "VIN contains invalid characters (I, O, Q are not allowed)."
 msgstr ""
 "Le NIV contient des caractères non valides (I, O et Q ne sont pas permis)."
 
-#: src/shop/forms/car.py:96 src/shop/importers.py:471
+#: src/shop/forms/car.py:96 src/shop/importers.py:512
 #: src/shop/models/car.py:125
 msgid "VIN must be 11-17 alphanumeric characters (no I/O/Q)."
 msgstr ""
@@ -366,11 +378,11 @@ msgstr ""
 msgid "A car with this VIN already exists."
 msgstr "Une voiture avec ce NIV existe déjà."
 
-#: src/shop/forms/car.py:110 src/shop/importers.py:480
+#: src/shop/forms/car.py:110 src/shop/importers.py:521
 msgid "License plate must be 20 characters or fewer."
 msgstr "La plaque d'immatriculation doit contenir au plus 20 caractères."
 
-#: src/shop/forms/car.py:112 src/shop/importers.py:482
+#: src/shop/forms/car.py:112 src/shop/importers.py:523
 #: src/shop/models/car.py:128
 msgid "License plate contains invalid characters."
 msgstr "La plaque d'immatriculation contient des caractères non valides."
@@ -413,8 +425,8 @@ msgid "Invitation expiry in days (1-90)."
 msgstr "Expiration de l'invitation en jours (1-90)."
 
 #: src/shop/forms/garage.py:42 src/shop/forms/garage.py:73
-#: src/shop/templates/shop/fleet_members.html:21
-#: src/shop/templates/shop/fleet_share.html:54
+#: src/shop/templates/shop/fleet_members.html:22
+#: src/shop/templates/shop/fleet_members.html:34
 msgid "Role"
 msgstr "Rôle"
 
@@ -494,13 +506,13 @@ msgstr "Type d'entretien"
 msgid "Additional notes"
 msgstr "Notes supplémentaires"
 
-#: src/shop/forms/job.py:46 src/shop/forms/report.py:127
+#: src/shop/forms/job.py:46 src/shop/forms/report.py:55
 #: src/shop/templates/shop/car_detail.html:146
 #: src/shop/templates/shop/car_detail.html:163
 msgid "Assigned to"
 msgstr "Assigné à"
 
-#: src/shop/forms/job.py:47 src/shop/forms/report.py:128
+#: src/shop/forms/job.py:47 src/shop/forms/report.py:56
 msgid "Known shop"
 msgstr "Atelier connu"
 
@@ -524,23 +536,11 @@ msgstr "Urgence"
 msgid "Required items"
 msgstr "Articles requis"
 
-#: src/shop/forms/report.py:62
-msgid "Uploaded attachments must be no larger than 25 MB."
-msgstr "Les pièces jointes téléversées ne doivent pas dépasser 25 Mo."
-
-#: src/shop/forms/report.py:65 src/shop/forms/report.py:67
-msgid "Unsupported attachment file type."
-msgstr "Type de fichier joint non pris en charge."
-
-#: src/shop/forms/report.py:78
-msgid "Upload one or more photos, videos, or documents."
-msgstr "Téléversez une ou plusieurs photos, vidéos ou documents."
-
-#: src/shop/forms/report.py:85
+#: src/shop/forms/report.py:25
 msgid "One external link per line (OneDrive, Google Drive, etc.)"
 msgstr "Un lien externe par ligne (OneDrive, Google Drive, etc.)"
 
-#: src/shop/forms/report.py:87
+#: src/shop/forms/report.py:27
 msgid ""
 "Add one external link per line. OneDrive and Google Drive share links work "
 "well."
@@ -548,73 +548,41 @@ msgstr ""
 "Ajoutez un lien externe par ligne. Les liens de partage OneDrive et Google "
 "Drive fonctionnent bien."
 
-#: src/shop/forms/report.py:91
-msgid "One document URL or path per line"
-msgstr "Une URL ou un chemin de document par ligne"
-
-#: src/shop/forms/report.py:92
-msgid "Add one document URL or path per line."
-msgstr "Ajoutez une URL ou un chemin de document par ligne."
-
-#: src/shop/forms/report.py:96
-msgid "One photo URL or path per line"
-msgstr "Une URL ou un chemin de photo par ligne"
-
-#: src/shop/forms/report.py:97
-msgid "Add one photo URL or path per line."
-msgstr "Ajoutez une URL ou un chemin de photo par ligne."
-
-#: src/shop/forms/report.py:114
+#: src/shop/forms/report.py:42
 msgid "Mileage at completion"
 msgstr "Kilométrage à la fin des travaux"
 
-#: src/shop/forms/report.py:115 src/shop/forms/report.py:126
+#: src/shop/forms/report.py:43 src/shop/forms/report.py:54
 msgid "Work performed"
 msgstr "Travaux effectués"
 
-#: src/shop/forms/report.py:119
+#: src/shop/forms/report.py:47
 msgid "Write the maintenance report details here"
 msgstr "Rédigez ici les détails du rapport d'entretien"
 
-#: src/shop/forms/report.py:121
+#: src/shop/forms/report.py:49
 msgid "Extra information (parts, warranty notes, follow-up, etc.)"
 msgstr "Informations supplémentaires (pièces, notes de garantie, suivi, etc.)"
 
-#: src/shop/forms/report.py:129
+#: src/shop/forms/report.py:57
 msgid "Date completed"
 msgstr "Date des travaux"
 
-#: src/shop/forms/report.py:130 src/shop/templates/shop/car_detail.html:29
-msgid "Documents"
-msgstr "Documents"
-
-#: src/shop/forms/report.py:131
-msgid "Photos"
-msgstr "Photos"
-
-#: src/shop/forms/report.py:132
+#: src/shop/forms/report.py:58
 msgid "Maintenance report"
 msgstr "Rapport d'entretien"
 
-#: src/shop/forms/report.py:133
+#: src/shop/forms/report.py:59
 msgid "Additional information"
 msgstr "Informations supplémentaires"
 
-#: src/shop/forms/report.py:134 src/shop/templates/shop/report_form.html:36
-msgid "Attachments"
-msgstr "Pièces jointes"
-
-#: src/shop/forms/report.py:135
+#: src/shop/forms/report.py:61
 msgid "External links"
 msgstr "Liens externes"
 
-#: src/shop/forms/report.py:153
+#: src/shop/forms/report.py:81
 msgid "External links must use http:// or https://."
 msgstr "Les liens externes doivent utiliser http:// ou https://."
-
-#: src/shop/forms/report.py:167
-msgid "Entries must be URLs (http/https) or plain paths."
-msgstr "Les entrées doivent être des URL (http/https) ou des chemins d'accès."
 
 #: src/shop/forms/shop.py:13
 msgid "Shop name"
@@ -632,7 +600,7 @@ msgstr "Téléphone"
 msgid "Address"
 msgstr "Adresse"
 
-#: src/shop/forms/shop.py:33
+#: src/shop/forms/shop.py:41
 msgid "Proof title"
 msgstr "Titre de la preuve"
 
@@ -656,61 +624,61 @@ msgstr "Format CSV non valide dans %(source)s : %(error)s"
 msgid "Unable to decode %(source)s as UTF-8."
 msgstr "Impossible de décoder %(source)s en UTF-8."
 
-#: src/shop/importers.py:174
+#: src/shop/importers.py:178
 #, python-format
 msgid "Database error while importing data: %(error)s"
 msgstr ""
 "Erreur de base de données lors de l'importation des données : %(error)s"
 
-#: src/shop/importers.py:183
+#: src/shop/importers.py:209
 #, python-format
 msgid "Unsupported model '%(model)s'. Supported models: Car, WorkJob, Report."
 msgstr ""
 "Modèle non pris en charge : « %(model)s ». Modèles pris en charge : Car, "
 "WorkJob, Report."
 
-#: src/shop/importers.py:199
+#: src/shop/importers.py:225
 #, python-format
 msgid "Unsupported model '%(model)s'."
 msgstr "Modèle non pris en charge : « %(model)s »."
 
-#: src/shop/importers.py:208
+#: src/shop/importers.py:234
 msgid "A target garage is required when importing cars."
 msgstr "Un garage cible est requis pour importer des voitures."
 
-#: src/shop/importers.py:254
+#: src/shop/importers.py:280
 msgid "Field 'job_name' is required."
 msgstr "Le champ « job_name » est obligatoire."
 
-#: src/shop/importers.py:258
+#: src/shop/importers.py:284
 msgid "Field 'date_done' is required."
 msgstr "Le champ « date_done » est obligatoire."
 
-#: src/shop/importers.py:294
+#: src/shop/importers.py:335
 msgid "A target garage or car context is required."
 msgstr "Un garage cible ou un contexte de voiture est requis."
 
-#: src/shop/importers.py:297
+#: src/shop/importers.py:338
 msgid "Car reference is required."
 msgstr "La référence de la voiture est obligatoire."
 
-#: src/shop/importers.py:302
+#: src/shop/importers.py:343
 msgid "Car reference cannot be empty."
 msgstr "La référence de la voiture ne peut pas être vide."
 
-#: src/shop/importers.py:307 src/shop/importers.py:327
+#: src/shop/importers.py:348 src/shop/importers.py:368
 #, python-format
 msgid "Car not found for id '%(value)s'."
 msgstr "Voiture introuvable pour l'identifiant « %(value)s »."
 
-#: src/shop/importers.py:317
+#: src/shop/importers.py:358
 #, python-format
 msgid "Car reference '%(value)s' matches multiple cars by %(field)s."
 msgstr ""
 "La référence de voiture « %(value)s » correspond à plusieurs voitures selon "
 "%(field)s."
 
-#: src/shop/importers.py:321
+#: src/shop/importers.py:362
 #, python-format
 msgid ""
 "Car not found for reference '%(value)s'. Use car id, VIN, license plate, or "
@@ -719,7 +687,7 @@ msgstr ""
 "Voiture introuvable pour la référence « %(value)s ». Utilisez l'identifiant "
 "de la voiture, le NIV, la plaque d'immatriculation ou le nom usuel."
 
-#: src/shop/importers.py:348
+#: src/shop/importers.py:389
 #, python-format
 msgid ""
 "Mechanic not found for reference '%(value)s'. Use username or email for an "
@@ -728,12 +696,12 @@ msgstr ""
 "Mécanicien introuvable pour la référence « %(value)s ». Utilisez le nom "
 "d'utilisateur ou le courriel d'un mécanicien existant."
 
-#: src/shop/importers.py:354
+#: src/shop/importers.py:395
 #, python-format
 msgid "Mechanic not found for id '%(value)s'."
 msgstr "Mécanicien introuvable pour l'identifiant « %(value)s »."
 
-#: src/shop/importers.py:369
+#: src/shop/importers.py:410
 #, python-format
 msgid ""
 "Known shop not found for reference '%(value)s'. Use an existing shop name or "
@@ -742,49 +710,51 @@ msgstr ""
 "Atelier connu introuvable pour la référence « %(value)s ». Utilisez le nom "
 "ou le courriel d'un atelier existant."
 
-#: src/shop/importers.py:375
+#: src/shop/importers.py:416
 #, python-format
 msgid "Known shop not found for id '%(value)s'."
 msgstr "Atelier connu introuvable pour l'identifiant « %(value)s »."
 
-#: src/shop/importers.py:384
+#: src/shop/importers.py:425
 #, python-format
 msgid "Field '%(field)s' is required."
 msgstr "Le champ « %(field)s » est obligatoire."
 
-#: src/shop/importers.py:399
+#: src/shop/importers.py:440
 #, python-format
 msgid "Field '%(field)s' must be an integer."
 msgstr "Le champ « %(field)s » doit être un nombre entier."
 
-#: src/shop/importers.py:401
+#: src/shop/importers.py:442
 #, python-format
 msgid "Field '%(field)s' must not be negative."
 msgstr "Le champ « %(field)s » ne doit pas être négatif."
 
-#: src/shop/importers.py:414
+#: src/shop/importers.py:455
 #, python-format
 msgid "Field '%(field)s' must be a boolean."
 msgstr "Le champ « %(field)s » doit être un booléen."
 
-#: src/shop/importers.py:438 src/shop/importers.py:440
+#: src/shop/importers.py:479 src/shop/importers.py:481
 #, python-format
 msgid "Unsupported date format: %(value)r"
 msgstr "Format de date non pris en charge : %(value)r"
 
-#: src/shop/importers.py:454
+#: src/shop/importers.py:495
 #, python-format
 msgid "Field '%(field)s' must be a list or newline-delimited string."
 msgstr ""
 "Le champ « %(field)s » doit être une liste ou une chaîne délimitée par des "
 "sauts de ligne."
 
-#: src/shop/importers.py:460
+#: src/shop/importers.py:501
 #, python-format
 msgid "Entries must be URLs (http/https) or plain paths: %(value)s"
-msgstr "Les entrées doivent être des URL (http/https) ou des chemins d'accès : %(value)s"
+msgstr ""
+"Les entrées doivent être des URL (http/https) ou des chemins d'accès : "
+"%(value)s"
 
-#: src/shop/importers.py:489
+#: src/shop/importers.py:530
 #, python-format
 msgid "Ignored fields: %(fields)s"
 msgstr "Champs ignorés : %(fields)s"
@@ -818,19 +788,19 @@ msgstr "Remplacée"
 msgid "Available"
 msgstr "Disponible"
 
-#: src/shop/models/garage.py:55
+#: src/shop/models/garage.py:54
 msgid "Owner"
 msgstr "Propriétaire"
 
-#: src/shop/models/garage.py:56
+#: src/shop/models/garage.py:55
 msgid "Admin"
 msgstr "Admin"
 
-#: src/shop/models/garage.py:57
+#: src/shop/models/garage.py:56
 msgid "Mechanic"
 msgstr "Mécanicien"
 
-#: src/shop/models/garage.py:58
+#: src/shop/models/garage.py:57
 msgid "Viewer"
 msgstr "Observateur"
 
@@ -855,7 +825,7 @@ msgstr "Terminé"
 msgid "Cancelled"
 msgstr "Annulé"
 
-#: src/shop/models/job.py:72 src/shop/models/report.py:59
+#: src/shop/models/job.py:72 src/shop/models/report.py:58
 msgid "Assigned user must be a mechanic."
 msgstr "L'utilisateur assigné doit être un mécanicien."
 
@@ -879,6 +849,10 @@ msgstr "Ajouter un travail planifié"
 #: src/shop/templates/shop/car_detail.html:24
 msgid "Import work jobs or reports"
 msgstr "Importer des travaux ou des rapports"
+
+#: src/shop/templates/shop/car_detail.html:29
+msgid "Documents"
+msgstr "Documents"
 
 #: src/shop/templates/shop/car_detail.html:31
 msgid "Back to list"
@@ -1007,32 +981,24 @@ msgstr "Aucun détail de rapport d'entretien fourni."
 msgid "Additional information:"
 msgstr "Informations supplémentaires :"
 
-#: src/shop/templates/shop/car_detail.html:230
-msgid "Documents:"
-msgstr "Documents :"
-
-#: src/shop/templates/shop/car_detail.html:231
-msgid "Photos:"
-msgstr "Photos :"
-
-#: src/shop/templates/shop/car_detail.html:234
+#: src/shop/templates/shop/car_detail.html:232
 msgid "Attachments:"
 msgstr "Pièces jointes :"
 
-#: src/shop/templates/shop/car_detail.html:250
+#: src/shop/templates/shop/car_detail.html:252
 msgid "Your browser does not support embedded videos."
 msgstr "Votre navigateur ne prend pas en charge les vidéos intégrées."
 
-#: src/shop/templates/shop/car_detail.html:266
+#: src/shop/templates/shop/car_detail.html:268
 msgid "No completed maintenance reports found for this car."
 msgstr "Aucun rapport d'entretien terminé trouvé pour cette voiture."
 
-#: src/shop/templates/shop/car_detail.html:271
+#: src/shop/templates/shop/car_detail.html:273
 msgid "Related cars"
 msgstr "Voitures connexes"
 
-#: src/shop/templates/shop/car_detail.html:280
-#: src/shop/templates/shop/car_detail.html:288
+#: src/shop/templates/shop/car_detail.html:282
+#: src/shop/templates/shop/car_detail.html:290
 #: src/shop/templates/shop/car_list.html:23
 #: src/shop/templates/shop/car_list.html:32
 #: src/shop/templates/shop/fleet_detail.html:40
@@ -1040,7 +1006,7 @@ msgstr "Voitures connexes"
 msgid "Name"
 msgstr "Nom"
 
-#: src/shop/templates/shop/car_detail.html:299
+#: src/shop/templates/shop/car_detail.html:301
 msgid "No related cars with the same make and model."
 msgstr "Aucune voiture de la même marque et du même modèle."
 
@@ -1070,8 +1036,8 @@ msgstr ""
 "La voiture sélectionnée est appliquée automatiquement. Le fichier CSV n'a "
 "pas besoin d'un champ car sauf si vous souhaitez une vérification explicite."
 
-#: src/shop/templates/shop/car_import.html:38
-#: src/shop/templates/shop/fleet_import.html:38
+#: src/shop/templates/shop/car_import.html:29
+#: src/shop/templates/shop/fleet_import.html:29
 msgid "Run import"
 msgstr "Lancer l'importation"
 
@@ -1136,7 +1102,7 @@ msgstr "Ajouter une voiture"
 msgid "No cars in this fleet yet."
 msgstr "Aucune voiture dans ce parc pour le moment."
 
-#: src/shop/templates/shop/fleet_detail.html:73 src/shop/views.py:194
+#: src/shop/templates/shop/fleet_detail.html:73 src/shop/views.py:222
 msgid "Fleet details"
 msgstr "Détails du parc"
 
@@ -1157,7 +1123,7 @@ msgstr[1] "%(counter)s voitures"
 msgid "Created"
 msgstr "Créé le"
 
-#: src/shop/templates/shop/fleet_form.html:6 src/shop/views.py:223
+#: src/shop/templates/shop/fleet_form.html:6 src/shop/views.py:251
 msgid "Create Fleet"
 msgstr "Créer un parc"
 
@@ -1186,7 +1152,7 @@ msgstr ""
 "rapports, ouvrez la page de la voiture une fois créée et utilisez son action "
 "d'importation."
 
-#: src/shop/templates/shop/fleet_invitation_accept.html:6 src/shop/views.py:619
+#: src/shop/templates/shop/fleet_invitation_accept.html:6 src/shop/views.py:643
 msgid "Accept fleet invitation"
 msgstr "Accepter l'invitation au parc"
 
@@ -1207,16 +1173,16 @@ msgstr ""
 msgid "Message from inviter:"
 msgstr "Message de l'invitant :"
 
-#: src/shop/templates/shop/fleet_invitation_accept.html:26
+#: src/shop/templates/shop/fleet_invitation_accept.html:25
 msgid "Accept invitation"
 msgstr "Accepter l'invitation"
 
-#: src/shop/templates/shop/fleet_invitation_accept.html:32
+#: src/shop/templates/shop/fleet_invitation_accept.html:29
 msgid "Decline"
 msgstr "Refuser"
 
 #: src/shop/templates/shop/fleet_list.html:6
-#: src/shop/templates/shop/partials/_nav.html:11 src/shop/views.py:171
+#: src/shop/templates/shop/partials/_nav.html:11 src/shop/views.py:199
 msgid "My Fleets"
 msgstr "Mes parcs"
 
@@ -1233,74 +1199,70 @@ msgstr "Créer un parc"
 msgid "You are not a member of any fleet yet."
 msgstr "Vous n'êtes membre d'aucun parc pour le moment."
 
-#: src/shop/templates/shop/fleet_members.html:11
+#: src/shop/templates/shop/fleet_members.html:8
 msgid "Back to fleet"
 msgstr "Retour au parc"
 
-#: src/shop/templates/shop/fleet_members.html:12
+#: src/shop/templates/shop/fleet_members.html:11
 msgid "Invite member"
 msgstr "Inviter un membre"
 
-#: src/shop/templates/shop/fleet_members.html:20
+#: src/shop/templates/shop/fleet_members.html:21
+#: src/shop/templates/shop/fleet_members.html:30
 msgid "User"
 msgstr "Utilisateur"
 
-#: src/shop/templates/shop/fleet_members.html:22
+#: src/shop/templates/shop/fleet_members.html:23
+#: src/shop/templates/shop/fleet_members.html:37
 msgid "Joined"
 msgstr "Membre depuis"
 
-#: src/shop/templates/shop/fleet_members.html:42
+#: src/shop/templates/shop/fleet_members.html:45
 msgid "Change role"
 msgstr "Changer le rôle"
 
-#: src/shop/templates/shop/fleet_members.html:56
+#: src/shop/templates/shop/fleet_members.html:59
 msgid "Remove this member?"
 msgstr "Supprimer ce membre ?"
 
-#: src/shop/templates/shop/fleet_members.html:57
+#: src/shop/templates/shop/fleet_members.html:60
 msgid "Remove"
 msgstr "Supprimer"
 
-#: src/shop/templates/shop/fleet_members.html:64
+#: src/shop/templates/shop/fleet_members.html:67
 msgid "No members found."
 msgstr "Aucun membre trouvé."
 
 #: src/shop/templates/shop/fleet_share.html:8
-msgid "Share Fleet:"
-msgstr "Partage du parc :"
-
-#: src/shop/templates/shop/fleet_share.html:9
-msgid ""
-"Invite a member by email. They must sign in with that same email to accept."
-msgstr ""
-"Invitez un membre par courriel. Il devra se connecter avec ce même courriel "
-"pour accepter."
-
-#: src/shop/templates/shop/fleet_share.html:36
-msgid "Send invitation"
-msgstr "Envoyer l'invitation"
-
-#: src/shop/templates/shop/fleet_share.html:39
+#: src/shop/templates/shop/fleet_share.html:35
 msgid "Back"
 msgstr "Retour"
 
-#: src/shop/templates/shop/fleet_share.html:48
+#: src/shop/templates/shop/fleet_share.html:14
+msgid "Share Fleet:"
+msgstr "Partage du parc :"
+
+#: src/shop/templates/shop/fleet_share.html:32
+msgid "Send invitation"
+msgstr "Envoyer l'invitation"
+
+#: src/shop/templates/shop/fleet_share.html:42
 msgid "Pending invitations"
 msgstr "Invitations en attente"
 
-#: src/shop/templates/shop/fleet_share.html:55
+#: src/shop/templates/shop/fleet_share.html:51
 msgid "Sent"
 msgstr "Envoyée"
 
-#: src/shop/templates/shop/fleet_share.html:57
+#: src/shop/templates/shop/fleet_share.html:53
 msgid "Expires"
 msgstr "Expire le"
 
-#: src/shop/templates/shop/fleet_share.html:63
+#: src/shop/templates/shop/fleet_share.html:59
 msgid "No pending invitations."
 msgstr "Aucune invitation en attente."
 
-#: src/shop/templates/shop/fleet_share.html:66
+#: src/shop/templates/shop/fleet_share.html:62
 msgid "Manage members"
 msgstr "Gérer les membres"
 
@@ -1323,6 +1285,22 @@ msgstr "Ajouter un état de pièce"
 #: src/shop/templates/shop/part_form.html:6
 msgid "Edit Part Status"
 msgstr "Modifier l'état de la pièce"
+
+#: src/shop/templates/shop/partials/_attachments_section.html:10
+msgid "Current attachments"
+msgstr "Pièces jointes actuelles"
+
+#: src/shop/templates/shop/partials/_attachments_section.html:35
+msgid "Choose files or drag and drop here"
+msgstr "Choisissez des fichiers ou déposez-les ici"
+
+#: src/shop/templates/shop/partials/_attachments_section.html:41
+msgid "You can add more files by dropping them multiple times."
+msgstr "Vous pouvez ajouter d'autres fichiers en les déposant plusieurs fois."
+
+#: src/shop/templates/shop/partials/_attachments_section.html:42
+msgid "Clear selected files"
+msgstr "Effacer les fichiers sélectionnés"
 
 #: src/shop/templates/shop/partials/_fleet_card.html:9
 msgid "Manage"
@@ -1355,8 +1333,7 @@ msgstr "Navigation principale"
 msgid "Open Fleets"
 msgstr "Open Fleets"
 
-#: src/shop/templates/shop/partials/_nav.html:19
-#: src/shop/templates/shop/shop_list.html:7 src/shop/views.py:482
+#: src/shop/templates/shop/partials/_nav.html:19 src/shop/views.py:510
 msgid "Known shops"
 msgstr "Ateliers connus"
 
@@ -1397,29 +1374,11 @@ msgstr "Ajouter un rapport d'entretien"
 msgid "Edit Maintenance Report"
 msgstr "Modifier le rapport d'entretien"
 
-#: src/shop/templates/shop/report_form.html:18
-msgid "Current attachments"
-msgstr "Pièces jointes actuelles"
-
-#: src/shop/templates/shop/report_form.html:42
-msgid "Choose files or drag and drop here"
-msgstr "Choisissez des fichiers ou déposez-les ici"
-
-#: src/shop/templates/shop/report_form.html:48
-msgid "You can add more files by dropping them multiple times."
-msgstr "Vous pouvez ajouter d'autres fichiers en les déposant plusieurs fois."
-
-#: src/shop/templates/shop/report_form.html:49
-msgid "Clear selected files"
-msgstr "Effacer les fichiers sélectionnés"
-
-#: src/shop/templates/shop/shop_detail.html:8
-msgid "Shop details and supporting proofs."
-msgstr "Détails de l'atelier et preuves à l'appui."
-
-#: src/shop/templates/shop/shop_detail.html:11
+#: src/shop/templates/shop/shop_detail.html:10
+#: src/shop/templates/shop/shop_detail.html:65
+#: src/shop/templates/shop/shop_list.html:39
 #: src/shop/templates/shop/shop_proof_form.html:6
-#: src/shop/templates/shop/shop_proof_form.html:20
+#: src/shop/templates/shop/shop_proof_form.html:29
 msgid "Add proof"
 msgstr "Ajouter une preuve"
 
@@ -1431,50 +1390,46 @@ msgstr "Retour aux ateliers"
 msgid "Contact details"
 msgstr "Coordonnées"
 
-#: src/shop/templates/shop/shop_detail.html:18
+#: src/shop/templates/shop/shop_detail.html:20
 msgid "Address:"
 msgstr "Adresse :"
 
-#: src/shop/templates/shop/shop_detail.html:19
+#: src/shop/templates/shop/shop_detail.html:23
 msgid "Phone:"
 msgstr "Téléphone :"
 
-#: src/shop/templates/shop/shop_detail.html:20
+#: src/shop/templates/shop/shop_detail.html:26
 msgid "Email:"
 msgstr "Courriel :"
 
-#: src/shop/templates/shop/shop_detail.html:25
+#: src/shop/templates/shop/shop_detail.html:33
 msgid "Proofs"
 msgstr "Preuves"
 
-#: src/shop/templates/shop/shop_detail.html:32
-msgid "Open PDF proof"
-msgstr "Ouvrir la preuve PDF"
-
-#: src/shop/templates/shop/shop_detail.html:38
+#: src/shop/templates/shop/shop_detail.html:65
 msgid "No proofs have been added yet."
 msgstr "Aucune preuve n'a été ajoutée pour le moment."
 
-#: src/shop/templates/shop/shop_form.html:6 src/shop/views.py:502
+#: src/shop/templates/shop/shop_form.html:6 src/shop/views.py:530
 msgid "Add known shop"
 msgstr "Ajouter un atelier connu"
 
-#: src/shop/templates/shop/shop_form.html:19
-#: src/shop/templates/shop/shop_list.html:11
+#: src/shop/templates/shop/shop_form.html:24
+#: src/shop/templates/shop/shop_list.html:10
+#: src/shop/templates/shop/shop_list.html:46
 msgid "Add shop"
 msgstr "Ajouter un atelier"
 
-#: src/shop/templates/shop/shop_list.html:8
-msgid "Keep trusted repair shops and their supporting proofs together."
-msgstr ""
-"Gardez les ateliers de réparation de confiance et leurs preuves à l'appui au "
-"même endroit."
+#: src/shop/templates/shop/shop_list.html:34
+#, fuzzy, python-format
+#| msgid "%(counter)s car"
+#| msgid_plural "%(counter)s cars"
+msgid "%(counter)s proof"
+msgid_plural "%(counter)s proofs"
+msgstr[0] "%(counter)s voiture"
+msgstr[1] "%(counter)s voitures"
 
-#: src/shop/templates/shop/shop_list.html:25
-msgid "proofs"
-msgstr "preuves"
-
-#: src/shop/templates/shop/shop_list.html:32
+#: src/shop/templates/shop/shop_list.html:46
 msgid "No known shops have been added yet."
 msgstr "Aucun atelier connu n'a été ajouté pour le moment."
 
@@ -1490,322 +1445,389 @@ msgstr "Ajouter un travail planifié"
 msgid "Edit Planned Work"
 msgstr "Modifier le travail planifié"
 
-#: src/shop/views.py:98
+#: src/shop/views.py:102
 msgid "Login"
 msgstr "Connexion"
 
-#: src/shop/views.py:99
+#: src/shop/views.py:103
 msgid "Authenticate with Hanko to continue"
 msgstr "Authentifiez-vous avec Hanko pour continuer"
 
-#: src/shop/views.py:172
+#: src/shop/views.py:131
+msgid "Not found."
+msgstr "Introuvable."
+
+#: src/shop/views.py:200
 msgid "Fleets you belong to"
 msgstr "Les parcs auxquels vous appartenez"
 
-#: src/shop/views.py:212
+#: src/shop/views.py:240
 msgid "Fleet created successfully."
 msgstr "Parc créé avec succès."
 
-#: src/shop/views.py:224
+#: src/shop/views.py:252
 msgid "Set up a new shared workspace for your vehicles"
 msgstr "Créez un espace de travail partagé pour vos véhicules"
 
-#: src/shop/views.py:248
+#: src/shop/views.py:276
 msgid "You do not have permission to share this fleet."
 msgstr "Vous n'avez pas la permission de partager ce parc."
 
-#: src/shop/views.py:260
+#: src/shop/views.py:288
 #, python-format
 msgid "%(email)s is already a member of this fleet."
 msgstr "%(email)s est déjà membre de ce parc."
 
-#: src/shop/views.py:272
+#: src/shop/views.py:300
 #, python-format
 msgid "Updated pending invitation for %(email)s."
 msgstr "Invitation en attente mise à jour pour %(email)s."
 
-#: src/shop/views.py:293
+#: src/shop/views.py:321
 #, python-format
 msgid "Invitation sent to %(email)s."
 msgstr "Invitation envoyée à %(email)s."
 
-#: src/shop/views.py:298
+#: src/shop/views.py:326
 #, python-format
 msgid "Invitation created for %(email)s, but the email could not be sent. "
 msgstr ""
 "Invitation créée pour %(email)s, mais le courriel n'a pas pu être envoyé. "
 
-#: src/shop/views.py:301
+#: src/shop/views.py:329
 #, python-format
 msgid "Share this link manually: %(url)s"
 msgstr "Partagez ce lien manuellement : %(url)s"
 
-#: src/shop/views.py:320
+#: src/shop/views.py:348
 #, python-format
 msgid "Share %(name)s"
 msgstr "Partager %(name)s"
 
-#: src/shop/views.py:321
+#: src/shop/views.py:349
 msgid "Invite people to collaborate in this fleet"
 msgstr "Invitez des personnes à collaborer sur ce parc"
 
-#: src/shop/views.py:331
+#: src/shop/views.py:359
 msgid "You do not have permission to manage fleet members."
 msgstr "Vous n'avez pas la permission de gérer les membres du parc."
 
-#: src/shop/views.py:349
+#: src/shop/views.py:377
 #, python-format
 msgid "Members of %(name)s"
 msgstr "Membres de %(name)s"
 
-#: src/shop/views.py:350
+#: src/shop/views.py:378
 msgid "Manage access and roles"
 msgstr "Gérer les accès et les rôles"
 
-#: src/shop/views.py:361
+#: src/shop/views.py:389
 msgid "You do not have permission to change member roles."
 msgstr "Vous n'avez pas la permission de changer les rôles des membres."
 
-#: src/shop/views.py:371 src/shop/views.py:395
+#: src/shop/views.py:399 src/shop/views.py:423
 msgid "Cannot remove the last owner of the fleet."
 msgstr "Impossible de supprimer le dernier propriétaire du parc."
 
-#: src/shop/views.py:375
+#: src/shop/views.py:403
 msgid "Role updated successfully."
 msgstr "Rôle mis à jour avec succès."
 
-#: src/shop/views.py:377
+#: src/shop/views.py:405
 msgid "Invalid role selected."
 msgstr "Rôle sélectionné non valide."
 
-#: src/shop/views.py:388
+#: src/shop/views.py:416
 msgid "You do not have permission to remove members."
 msgstr "Vous n'avez pas la permission de supprimer des membres."
 
-#: src/shop/views.py:399
+#: src/shop/views.py:427
 msgid "Member removed successfully."
 msgstr "Membre supprimé avec succès."
 
-#: src/shop/views.py:407
+#: src/shop/views.py:435
 msgid "You do not have permission to import data into this fleet."
 msgstr "Vous n'avez pas la permission d'importer des données dans ce parc."
 
-#: src/shop/views.py:433 src/shop/views.py:582
+#: src/shop/views.py:461 src/shop/views.py:606
 msgid "Import validation failed. Fix the file and try again."
 msgstr ""
 "La validation de l'importation a échoué. Corrigez le fichier et réessayez."
 
-#: src/shop/views.py:438 src/shop/views.py:587
+#: src/shop/views.py:466 src/shop/views.py:611
 #, python-format
 msgid "Dry run complete for %(model)s: %(count)s records validated."
 msgstr "%(model)s : simulation terminée, %(count)s enregistrements validés."
 
-#: src/shop/views.py:443
+#: src/shop/views.py:471
 #, python-format
 msgid "Imported %(count)s records into %(garage)s."
 msgstr "%(count)s enregistrements importés dans %(garage)s."
 
-#: src/shop/views.py:455
+#: src/shop/views.py:483
 #, python-format
 msgid "Import cars into %(name)s"
 msgstr "Importer des voitures dans %(name)s"
 
-#: src/shop/views.py:456
+#: src/shop/views.py:484
 msgid "Upload normalized CSV for cars assigned to this fleet"
 msgstr "Téléversez un CSV normalisé pour les voitures assignées à ce parc"
 
-#: src/shop/views.py:465
+#: src/shop/views.py:493
 msgid "You do not have permission to export data from this fleet."
 msgstr "Vous n'avez pas la permission d'exporter les données de ce parc."
 
-#: src/shop/views.py:483
+#: src/shop/views.py:511
 msgid "Keep trusted repair shops and their supporting proofs together"
 msgstr ""
 "Gardez les ateliers de réparation de confiance et leurs preuves à l'appui au "
 "même endroit"
 
-#: src/shop/views.py:495
+#: src/shop/views.py:523
 msgid "Shop added successfully."
 msgstr "Atelier ajouté avec succès."
 
-#: src/shop/views.py:503
+#: src/shop/views.py:531
 msgid "Save a shop now and add supporting proofs over time"
 msgstr ""
 "Enregistrez un atelier maintenant et ajoutez des preuves au fil du temps"
 
-#: src/shop/views.py:513
+#: src/shop/views.py:541
 msgid "Shop details and supporting proofs"
 msgstr "Détails de l'atelier et preuves à l'appui"
 
-#: src/shop/views.py:521
+#: src/shop/views.py:549
 msgid "You do not have permission to add proof for this shop."
 msgstr "Vous n'avez pas la permission d'ajouter une preuve à cet atelier."
 
-#: src/shop/views.py:529
+#: src/shop/views.py:563
 msgid "Proof added successfully."
 msgstr "Preuve ajoutée avec succès."
 
-#: src/shop/views.py:536
+#: src/shop/views.py:570
 #, python-format
 msgid "Add proof for %(name)s"
 msgstr "Ajouter une preuve pour %(name)s"
 
-#: src/shop/views.py:537
+#: src/shop/views.py:571
 msgid "Add a document or notes supporting this shop"
 msgstr "Ajoutez un document ou des notes à l'appui de cet atelier"
 
-#: src/shop/views.py:547
-msgid "Proof has no file."
-msgstr "La preuve n'a aucun fichier."
-
-#: src/shop/views.py:555
+#: src/shop/views.py:579
 msgid "You do not have permission to import data into this car."
 msgstr ""
 "Vous n'avez pas la permission d'importer des données dans cette voiture."
 
-#: src/shop/views.py:577 src/shop/views.py:581
+#: src/shop/views.py:601 src/shop/views.py:605
 #, python-format
 msgid "Record %(number)s: %(message)s"
 msgstr "Enregistrement %(number)s : %(message)s"
 
-#: src/shop/views.py:592
+#: src/shop/views.py:616
 #, python-format
 msgid "Imported %(count)s records for %(car)s."
 msgstr "%(count)s enregistrements importés pour %(car)s."
 
-#: src/shop/views.py:607
+#: src/shop/views.py:631
 #, python-format
 msgid "Import records for %(name)s"
 msgstr "Importer des enregistrements pour %(name)s"
 
-#: src/shop/views.py:608
+#: src/shop/views.py:632
 msgid "Upload normalized CSV for work jobs or reports tied to this car"
 msgstr ""
 "Téléversez un CSV normalisé pour les travaux ou rapports de cette voiture"
 
-#: src/shop/views.py:633 src/shop/views.py:684
+#: src/shop/views.py:657 src/shop/views.py:708
 msgid "This invitation is no longer active."
 msgstr "Cette invitation n'est plus active."
 
-#: src/shop/views.py:639 src/shop/views.py:690
+#: src/shop/views.py:663 src/shop/views.py:714
 msgid "This invitation has expired."
 msgstr "Cette invitation a expiré."
 
-#: src/shop/views.py:647
+#: src/shop/views.py:671
 #, python-format
 msgid "Sign in with %(email)s to accept this invitation."
 msgstr "Connectez-vous avec %(email)s pour accepter cette invitation."
 
-#: src/shop/views.py:669
+#: src/shop/views.py:693
 #, python-format
 msgid "You have joined '%(fleet)s'."
 msgstr "Vous avez rejoint « %(fleet)s »."
 
-#: src/shop/views.py:671
+#: src/shop/views.py:695
 #, python-format
 msgid "You are already a member of '%(fleet)s'."
 msgstr "Vous êtes déjà membre de « %(fleet)s »."
 
-#: src/shop/views.py:698
+#: src/shop/views.py:722
 #, python-format
 msgid "Sign in with %(email)s to decline this invitation."
 msgstr "Connectez-vous avec %(email)s pour refuser cette invitation."
 
-#: src/shop/views.py:706
+#: src/shop/views.py:730
 msgid "Invitation declined."
 msgstr "Invitation refusée."
 
-#: src/shop/views.py:723
+#: src/shop/views.py:747
 msgid "You do not have permission to delete this car."
 msgstr "Vous n'avez pas la permission de supprimer cette voiture."
 
-#: src/shop/views.py:727
+#: src/shop/views.py:751
 msgid "Car deleted successfully."
 msgstr "Voiture supprimée avec succès."
 
-#: src/shop/views.py:773
+#: src/shop/views.py:797
 msgid "You do not have permission to add a car to this fleet."
 msgstr "Vous n'avez pas la permission d'ajouter une voiture à ce parc."
 
-#: src/shop/views.py:776
+#: src/shop/views.py:800
 msgid "Car created successfully."
 msgstr "Voiture créée avec succès."
 
-#: src/shop/views.py:788
+#: src/shop/views.py:812
 msgid "You do not have permission to edit this car."
 msgstr "Vous n'avez pas la permission de modifier cette voiture."
 
-#: src/shop/views.py:796
+#: src/shop/views.py:820
 msgid "You do not have permission to move this car to the selected fleet."
 msgstr ""
 "Vous n'avez pas la permission de déplacer cette voiture vers le parc "
 "sélectionné."
 
-#: src/shop/views.py:799
+#: src/shop/views.py:823
 msgid "Car updated successfully."
 msgstr "Voiture mise à jour avec succès."
 
-#: src/shop/views.py:810
+#: src/shop/views.py:834
 msgid "You do not have permission to add parts to this car."
 msgstr "Vous n'avez pas la permission d'ajouter des pièces à cette voiture."
 
-#: src/shop/views.py:818
+#: src/shop/views.py:842
 msgid "Part status added successfully."
 msgstr "État de la pièce ajouté avec succès."
 
-#: src/shop/views.py:829
+#: src/shop/views.py:853
 msgid "You do not have permission to update parts for this car."
 msgstr ""
 "Vous n'avez pas la permission de mettre à jour les pièces de cette voiture."
 
-#: src/shop/views.py:836
+#: src/shop/views.py:860
 msgid "Part status updated successfully."
 msgstr "État de la pièce mis à jour avec succès."
 
-#: src/shop/views.py:847
+#: src/shop/views.py:871
 msgid "You do not have permission to add planned work to this car."
 msgstr ""
 "Vous n'avez pas la permission d'ajouter des travaux planifiés à cette "
 "voiture."
 
-#: src/shop/views.py:855
+#: src/shop/views.py:879
 msgid "Planned work added successfully."
 msgstr "Travail planifié ajouté avec succès."
 
-#: src/shop/views.py:866
+#: src/shop/views.py:890
 msgid "You do not have permission to update planned work for this car."
 msgstr ""
 "Vous n'avez pas la permission de mettre à jour les travaux planifiés de "
 "cette voiture."
 
-#: src/shop/views.py:873
+#: src/shop/views.py:897
 msgid "Planned work updated successfully."
 msgstr "Travail planifié mis à jour avec succès."
 
-#: src/shop/views.py:914
+#: src/shop/views.py:924
+msgid "Attachment not found."
+msgstr "Pièce jointe introuvable."
+
+#: src/shop/views.py:926
 msgid "Attachment has no file."
 msgstr "La pièce jointe n'a aucun fichier."
 
-#: src/shop/views.py:927
+#: src/shop/views.py:940
 msgid "You do not have permission to add reports to this car."
 msgstr "Vous n'avez pas la permission d'ajouter des rapports à cette voiture."
 
-#: src/shop/views.py:937
+#: src/shop/views.py:954
 msgid "Maintenance report added successfully."
 msgstr "Rapport d'entretien ajouté avec succès."
 
-#: src/shop/views.py:948
+#: src/shop/views.py:965
 msgid "You do not have permission to update reports for this car."
 msgstr ""
 "Vous n'avez pas la permission de mettre à jour les rapports de cette voiture."
 
-#: src/shop/views.py:957
+#: src/shop/views.py:978
 msgid "Maintenance report updated successfully."
 msgstr "Rapport d'entretien mis à jour avec succès."
 
-#: src/shop/views.py:968
+#: src/shop/views.py:989
 msgid "Logged out successfully."
 msgstr "Déconnexion réussie."
+
+#~ msgid ""
+#~ "Invite a member by email. They must sign in with that same email to "
+#~ "accept."
+#~ msgstr ""
+#~ "Invitez un membre par courriel. Il devra se connecter avec ce même "
+#~ "courriel pour accepter."
+
+#~ msgid "Shop details and supporting proofs."
+#~ msgstr "Détails de l'atelier et preuves à l'appui."
+
+#~ msgid "Keep trusted repair shops and their supporting proofs together."
+#~ msgstr ""
+#~ "Gardez les ateliers de réparation de confiance et leurs preuves à l'appui "
+#~ "au même endroit."
+
+#~ msgid "proofs"
+#~ msgstr "preuves"
+
+#~ msgid "PDF file"
+#~ msgstr "Fichier PDF"
+
+#~ msgid "Only valid PDF files can be uploaded for car documents."
+#~ msgstr ""
+#~ "Seuls les fichiers PDF valides peuvent être téléversés pour les documents "
+#~ "du véhicule."
+
+#~ msgid "Open PDF in new tab"
+#~ msgstr "Ouvrir le PDF dans un nouvel onglet"
+
+#~ msgid "Document has no file."
+#~ msgstr "Le document n'a aucun fichier."
+
+#~ msgid "One document URL or path per line"
+#~ msgstr "Une URL ou un chemin de document par ligne"
+
+#~ msgid "Add one document URL or path per line."
+#~ msgstr "Ajoutez une URL ou un chemin de document par ligne."
+
+#~ msgid "One photo URL or path per line"
+#~ msgstr "Une URL ou un chemin de photo par ligne"
+
+#~ msgid "Add one photo URL or path per line."
+#~ msgstr "Ajoutez une URL ou un chemin de photo par ligne."
+
+#~ msgid "Photos"
+#~ msgstr "Photos"
+
+#~ msgid "Entries must be URLs (http/https) or plain paths."
+#~ msgstr ""
+#~ "Les entrées doivent être des URL (http/https) ou des chemins d'accès."
+
+#~ msgid "Documents:"
+#~ msgstr "Documents :"
+
+#~ msgid "Photos:"
+#~ msgstr "Photos :"
+
+#~ msgid "Open PDF proof"
+#~ msgstr "Ouvrir la preuve PDF"
+
+#~ msgid "Proof has no file."
+#~ msgstr "La preuve n'a aucun fichier."
 
 #~ msgid "Make:"
 #~ msgstr "Marque :"

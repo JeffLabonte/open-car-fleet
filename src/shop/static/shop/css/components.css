@@ -297,6 +297,12 @@
   padding-right: 2.4rem;
 }
 
+.select.is-small select {
+  min-height: 2.25rem;
+  padding: 0.25rem 2rem 0.25rem 0.6rem;
+  font-size: 0.8125rem;
+}
+
 .file {
   display: flex;
   width: 100%;
@@ -834,7 +840,8 @@
   gap: 0.6rem;
 }
 
-.vehicle-attributes {
+.vehicle-attributes,
+.attr-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
   gap: var(--space-3);

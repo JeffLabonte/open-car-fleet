@@ -1,35 +1,48 @@
-{% extends 'shop/index.html' %}
+{% extends 'shop/base.html' %}
 {% load i18n %}
 
 {% block content %}
-  <div class="page-header">
-    <div>
-      <h1 class="title page-title">{% translate 'Known shops' %}</h1>
-      <p class="page-subtitle">{% translate 'Keep trusted repair shops and their supporting proofs together.' %}</p>
-    </div>
+  <header class="page-header">
+    {% include 'shop/partials/_page_header.html' with heading=title subheading=subtitle %}
     <div class="page-actions">
-      <a class="button is-primary" href="{% url 'shop-known-shop-create' %}">{% translate 'Add shop' %}</a>
+      <a class="button is-primary" href="{% url 'shop-known-shop-create' %}">
+        {% include 'shop/partials/_icon.html' with name='plus' %}
+        <span>{% translate 'Add shop' %}</span>
+      </a>
     </div>
-  </div>
+  </header>
 
   {% if shops %}
-    <div class="columns is-multiline">
+    <div class="card-grid" data-testid="shop-grid">
       {% for shop in shops %}
-        <div class="column is-half">
-          <div class="box content-card">
-            <h2 class="title is-4 mb-2"><a href="{% url 'shop-known-shop-detail' shop.pk %}">{{ shop.name }}</a></h2>
-            {% if shop.address %}<p>{{ shop.address }}</p>{% endif %}
-            {% if shop.phone or shop.email %}
-              <p class="has-text-grey mt-2">{{ shop.phone }}{% if shop.phone and shop.email %} · {% endif %}{{ shop.email }}</p>
-            {% endif %}
-            <p class="mt-4">{{ shop.proofs.count }} {% translate 'proofs' %}</p>
+        <article class="fleet-card content-card" data-testid="shop-card">
+          <div class="fleet-card__head">
+            <h2 class="fleet-card__title">
+              <a href="{% url 'shop-known-shop-detail' shop.pk %}">{{ shop.name }}</a>
+            </h2>
           </div>
-        </div>
+          {% if shop.address %}
+            <p class="fleet-card__desc">{{ shop.address }}</p>
+          {% endif %}
+          <div class="fleet-card__meta">
+            {% if shop.phone %}<span class="chip">{{ shop.phone }}</span>{% endif %}
+            {% if shop.email %}<span class="chip">{{ shop.email }}</span>{% endif %}
+          </div>
+          <div class="fleet-card__meta">
+            <span class="chip">
+              {% include 'shop/partials/_icon.html' with name='doc' %}
+              {% blocktranslate count counter=shop.proofs.count %}{{ counter }} proof{% plural %}{{ counter }} proofs{% endblocktranslate %}
+            </span>
+          </div>
+          <div class="fleet-card__actions">
+            <a class="button is-light is-small" href="{% url 'shop-known-shop-detail' shop.pk %}">{% translate 'View' %}</a>
+            <a class="button is-light is-small" href="{% url 'shop-known-shop-proof-create' shop.pk %}">{% translate 'Add proof' %}</a>
+          </div>
+        </article>
       {% endfor %}
     </div>
   {% else %}
-    <div class="empty-state">
-      {% translate 'No known shops have been added yet.' %}
-    </div>
+    {% url 'shop-known-shop-create' as add_shop_url %}
+    {% include 'shop/partials/_empty_state.html' with empty_message=_('No known shops have been added yet.') empty_action_url=add_shop_url empty_action_label=_('Add shop') %}
   {% endif %}
 {% endblock %}

@@ -1,71 +1,66 @@
-{% extends 'shop/index.html' %}
+{% extends 'shop/base.html' %}
 {% load i18n %}
 
 {% block content %}
-  <div class="columns">
-    <div class="column is-two-thirds">
-      <div class="box">
-        <h1 class="title">{% translate 'Share Fleet:' %} {{ garage.name }}</h1>
-        <p class="mb-4">{% translate 'Invite a member by email. They must sign in with that same email to accept.' %}</p>
+  <header class="page-header">
+    {% include 'shop/partials/_page_header.html' with heading=title subheading=subtitle %}
+    <div class="page-actions">
+      <a class="button is-light" href="{% url 'shop-garage-detail' garage.pk %}">{% translate 'Back' %}</a>
+    </div>
+  </header>
 
-        <form method="post" novalidate>
-          {% csrf_token %}
-          {% if form.non_field_errors %}
-            <div class="notification is-danger">
-              {{ form.non_field_errors }}
-            </div>
-          {% endif %}
+  <div class="split split--aside">
+    <section class="box" data-testid="invite-form">
+      <h2 class="title is-4 mb-4">{% translate 'Share Fleet:' %} {{ garage.name }}</h2>
 
-          {% for field in form.visible_fields %}
-            <div class="field">
-              {{ field.label_tag }}
-              <div class="control">
-                {{ field }}
-              </div>
-              {% if field.help_text %}
-                <p class="help">{{ field.help_text }}</p>
-              {% endif %}
-              {% for error in field.errors %}
-                <p class="help is-danger">{{ error }}</p>
-              {% endfor %}
-            </div>
-          {% endfor %}
-
-          <div class="field is-grouped">
-            <div class="control">
-              <button class="button is-primary" type="submit">{% translate 'Send invitation' %}</button>
-            </div>
-            <div class="control">
-              <a class="button is-light" href="{% url 'shop-garage-detail' garage.pk %}">{% translate 'Back' %}</a>
-            </div>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+          <div class="notification is-danger mb-4">
+            {{ form.non_field_errors }}
           </div>
-        </form>
-      </div>
-    </div>
-
-    <div class="column">
-      <div class="box">
-        <h2 class="title is-5">{% translate 'Pending invitations' %}</h2>
-        {% if pending_invitations %}
-          <ul>
-            {% for invite in pending_invitations %}
-              <li class="mb-3">
-                <strong>{{ invite.invited_email }}</strong><br>
-                <small>{% translate 'Role' %}: {{ invite.get_role_display }}</small><br>
-                <small>{% translate 'Sent' %} {{ invite.created_at|date:'F j, Y, g:i a' }}</small><br>
-                {% if invite.expires_at %}
-                  <small>{% translate 'Expires' %} {{ invite.expires_at|date:'F j, Y, g:i a' }}</small>
-                {% endif %}
-              </li>
-            {% endfor %}
-          </ul>
-        {% else %}
-          <p>{% translate 'No pending invitations.' %}</p>
         {% endif %}
-        <div class="mt-4">
-          <a class="button is-light is-small" href="{% url 'shop-garage-members' garage.pk %}">{% translate 'Manage members' %}</a>
+
+        <div class="form-grid">
+          {% for field in form.visible_fields %}
+            {% include 'shop/partials/_form_field.html' %}
+          {% endfor %}
         </div>
+
+        <div class="field is-grouped">
+          <div class="control">
+            <button class="button is-primary" type="submit">{% translate 'Send invitation' %}</button>
+          </div>
+          <div class="control">
+            <a class="button is-light" href="{% url 'shop-garage-detail' garage.pk %}">{% translate 'Back' %}</a>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <aside class="content-card" data-testid="pending-invitations">
+      <h2 class="title is-4 mb-3">{% translate 'Pending invitations' %}</h2>
+      {% if pending_invitations %}
+        <ul class="content">
+          {% for invite in pending_invitations %}
+            <li class="mb-3">
+              <strong>{{ invite.invited_email }}</strong>
+              <div class="mt-2">
+                {% include 'shop/partials/_status_badge.html' with status=invite.role label=invite.get_role_display %}
+              </div>
+              <p class="help mt-2 mb-0">{% translate 'Sent' %} {{ invite.created_at|date:'F j, Y, g:i a' }}</p>
+              {% if invite.expires_at %}
+                <p class="help mb-0">{% translate 'Expires' %} {{ invite.expires_at|date:'F j, Y, g:i a' }}</p>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="has-text-grey">{% translate 'No pending invitations.' %}</p>
+      {% endif %}
+      <div class="mt-4">
+        <a class="button is-light is-small" href="{% url 'shop-garage-members' garage.pk %}">{% translate 'Manage members' %}</a>
       </div>
-    </div>
+    </aside>
   </div>
 {% endblock %}

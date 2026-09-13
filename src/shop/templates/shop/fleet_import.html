@@ -1,37 +1,28 @@
-{% extends 'shop/index.html' %}
+{% extends 'shop/base.html' %}
 {% load i18n %}
 
 {% block content %}
-  <div class="box">
-    <h1 class="title">{% translate 'Import cars into' %} {{ garage.name }}</h1>
-    <p class="subtitle">{% translate 'Use one normalized CSV file per import. Every imported car will be assigned to this fleet.' %}</p>
+  <section class="box" data-testid="fleet-import-form">
+    <h1 class="title mb-2">{% translate 'Import cars into' %} {{ garage.name }}</h1>
+    <p class="subtitle mb-4">{% translate 'Use one normalized CSV file per import. Every imported car will be assigned to this fleet.' %}</p>
 
     <form method="post" enctype="multipart/form-data" novalidate>
       {% csrf_token %}
       {% if form.non_field_errors %}
-        <div class="notification is-danger">
+        <div class="notification is-danger mb-4">
           {{ form.non_field_errors }}
         </div>
       {% endif %}
 
-      <div class="notification is-info is-light">
+      <div class="notification is-info mb-4">
         {% translate 'This page only imports cars. To import work jobs or reports, open the car page after the car exists and use its import action.' %}
       </div>
 
-      {% for field in form.visible_fields %}
-        <div class="field">
-          {{ field.label_tag }}
-          <div class="control">
-            {{ field }}
-          </div>
-          {% if field.help_text %}
-            <p class="help">{{ field.help_text }}</p>
-          {% endif %}
-          {% for error in field.errors %}
-            <p class="help is-danger">{{ error }}</p>
-          {% endfor %}
-        </div>
-      {% endfor %}
+      <div class="form-grid">
+        {% for field in form.visible_fields %}
+          {% include 'shop/partials/_form_field.html' %}
+        {% endfor %}
+      </div>
 
       <div class="field is-grouped">
         <div class="control">
@@ -42,5 +33,5 @@
         </div>
       </div>
     </form>
-  </div>
+  </section>
 {% endblock %}

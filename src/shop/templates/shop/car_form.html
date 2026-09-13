@@ -1,32 +1,23 @@
-{% extends 'shop/index.html' %}
+{% extends 'shop/base.html' %}
 {% load i18n %}
 
 {% block content %}
-  <div class="box">
-    <h1 class="title">{% if is_create %}{% translate 'Add Car' %}{% else %}{% translate 'Edit Car' %}{% endif %}</h1>
+  <section class="box" data-testid="car-form">
+    <h1 class="title mb-4">{% if is_create %}{% translate 'Add Car' %}{% else %}{% translate 'Edit Car' %}{% endif %}</h1>
 
     <form method="post" novalidate>
       {% csrf_token %}
       {% if form.non_field_errors %}
-        <div class="notification is-danger">
+        <div class="notification is-danger mb-4">
           {{ form.non_field_errors }}
         </div>
       {% endif %}
 
-      {% for field in form.visible_fields %}
-        <div class="field">
-          {{ field.label_tag }}
-          <div class="control">
-            {{ field }}
-          </div>
-          {% if field.help_text %}
-            <p class="help">{{ field.help_text }}</p>
-          {% endif %}
-          {% for error in field.errors %}
-            <p class="help is-danger">{{ error }}</p>
-          {% endfor %}
-        </div>
-      {% endfor %}
+      <div class="form-grid">
+        {% for field in form.visible_fields %}
+          {% include 'shop/partials/_form_field.html' %}
+        {% endfor %}
+      </div>
 
       <div class="field is-grouped">
         <div class="control">
@@ -37,5 +28,5 @@
         </div>
       </div>
     </form>
-  </div>
+  </section>
 {% endblock %}
