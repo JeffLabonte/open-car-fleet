@@ -40,6 +40,19 @@ class WorkJobForm(LineListFieldMixin, AssignedToShopFormMixin, forms.ModelForm):
             'urgency': forms.Select(attrs={'class': 'input'}),
             'notes': forms.Textarea(attrs={'class': 'textarea', 'rows': 4, 'placeholder': _('Additional notes')}),
         }
+        labels = {
+            'title': _('Work title'),
+            'maintenance_type': _('Maintenance type'),
+            'assigned_to': _('Assigned to'),
+            'assigned_shop': _('Known shop'),
+            'planned_date': _('Planned date'),
+            'done_date': _('Completion date'),
+            'status': _('Status'),
+            'is_done': _('Completed'),
+            'urgency': _('Urgency'),
+            'required_items': _('Required items'),
+            'notes': _('Notes'),
+        }
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         user = kwargs.pop('user', None)

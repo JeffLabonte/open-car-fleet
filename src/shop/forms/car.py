@@ -16,6 +16,11 @@ class CarPartForm(forms.ModelForm):
     class Meta:
         model = CarPart
         fields = ['name', 'status', 'notes']
+        labels = {
+            'name': _('Part name'),
+            'status': _('Status'),
+            'notes': _('Notes'),
+        }
         widgets = {
             'name': forms.TextInput(attrs={'class': 'input', 'placeholder': _('Part or component name')}),
             'status': forms.Select(attrs={'class': 'input'}),
@@ -33,6 +38,17 @@ class CarBaseForm(forms.ModelForm):
     class Meta:
         model = Car
         fields = ['garage', 'usual_name', 'make', 'model', 'colour', 'year', 'mileage', 'vin', 'license_plate']
+        labels = {
+            'garage': _('Fleet'),
+            'usual_name': _('Usual name'),
+            'make': _('Make'),
+            'model': _('Model'),
+            'colour': _('Colour'),
+            'year': _('Year'),
+            'mileage': _('Mileage'),
+            'vin': _('VIN'),
+            'license_plate': _('License plate'),
+        }
         widgets = {
             'garage': forms.Select(attrs={'class': 'input'}),
             'usual_name': forms.TextInput(attrs={'class': 'input', 'placeholder': _('Optional nickname')}),

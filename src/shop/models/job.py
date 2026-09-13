@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.utils.translation import gettext_lazy as _
 
 from shop.models.car import Car
 from shop.models.garage import KnownShop
@@ -12,8 +13,8 @@ class WorkJob(models.Model):
     """
 
     URGENCY_CHOICES = [
-        ("soon", "Planned Very Soon"),
-        ("ahead", "Planned Ahead"),
+        ("soon", _("Planned Very Soon")),
+        ("ahead", _("Planned Ahead")),
     ]
 
     STATUS_PENDING = "pending"
@@ -22,10 +23,10 @@ class WorkJob(models.Model):
     STATUS_CANCELLED = "cancelled"
 
     STATUS_CHOICES = [
-        (STATUS_PENDING, "Pending"),
-        (STATUS_IN_PROGRESS, "In Progress"),
-        (STATUS_DONE, "Done"),
-        (STATUS_CANCELLED, "Cancelled"),
+        (STATUS_PENDING, _("Pending")),
+        (STATUS_IN_PROGRESS, _("In Progress")),
+        (STATUS_DONE, _("Done")),
+        (STATUS_CANCELLED, _("Cancelled")),
     ]
 
     car = models.ForeignKey(Car, related_name="work_jobs", on_delete=models.CASCADE)
@@ -68,7 +69,7 @@ class WorkJob(models.Model):
         if self.assigned_to and not getattr(self.assigned_to, "is_mechanic", False):
             from django.core.exceptions import ValidationError
 
-            raise ValidationError({"assigned_to": "Assigned user must be a mechanic."})
+            raise ValidationError({"assigned_to": _("Assigned user must be a mechanic.")})
 
     def save(self, *args, **kwargs):
         self.clean()

@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET
 
 from car_docs.forms import CarDocForm
@@ -18,8 +19,8 @@ def car_doc_list(request, car_pk):
     return render(request, 'car_docs/list.html', {
         'car': car,
         'docs': docs,
-        'title': f'Documents for {car.usual_name or car.make}',
-        'subtitle': 'Vehicle notes and reference material',
+        'title': _('Documents for %(name)s') % {'name': car.usual_name or car.make},
+        'subtitle': _('Vehicle notes and reference material'),
     })
 
 
@@ -31,7 +32,7 @@ def car_doc_detail(request, car_pk, pk):
         'car': car,
         'doc': doc,
         'title': doc.title,
-        'subtitle': 'Document details',
+        'subtitle': _('Document details'),
     })
 
 
@@ -41,7 +42,7 @@ def car_doc_file(request, car_pk, pk):
     car = get_object_or_404(user_cars_queryset(request.user), pk=car_pk)
     doc = get_object_or_404(user_car_docs_queryset(request.user), pk=pk, car=car)
     if not doc.file:
-        raise Http404('Document has no file.')
+        raise Http404(_('Document has no file.'))
     return FileResponse(doc.file.open('rb'), content_type='application/pdf')
 
 
@@ -49,7 +50,7 @@ def car_doc_file(request, car_pk, pk):
 def car_doc_create(request, car_pk):
     car = get_object_or_404(user_cars_queryset(request.user).select_related('garage'), pk=car_pk)
     if not GarageSharingPermissions(request.user, car.garage).can_edit_garage_data:
-        messages.error(request, 'You do not have permission to add documents to this car.')
+        messages.error(request, _('You do not have permission to add documents to this car.'))
         return redirect(reverse('shop-car-doc-list', args=[car.pk]))
     if request.method == 'POST':
         form = CarDocForm(request.POST, request.FILES)
@@ -57,7 +58,7 @@ def car_doc_create(request, car_pk):
             doc = form.save(commit=False)
             doc.car = car
             doc.save()
-            messages.success(request, 'Document added successfully.')
+            messages.success(request, _('Document added successfully.'))
             return redirect(reverse('shop-car-doc-list', args=[car.pk]))
     else:
         form = CarDocForm()
@@ -65,8 +66,8 @@ def car_doc_create(request, car_pk):
         'form': form,
         'car': car,
         'is_create': True,
-        'title': 'Add document',
-        'subtitle': 'Add notes or supporting information',
+        'title': _('Add document'),
+        'subtitle': _('Add notes or supporting information'),
     })
 
 
@@ -74,14 +75,14 @@ def car_doc_create(request, car_pk):
 def car_doc_update(request, car_pk, pk):
     car = get_object_or_404(user_cars_queryset(request.user).select_related('garage'), pk=car_pk)
     if not GarageSharingPermissions(request.user, car.garage).can_edit_garage_data:
-        messages.error(request, 'You do not have permission to update documents for this car.')
+        messages.error(request, _('You do not have permission to update documents for this car.'))
         return redirect(reverse('shop-car-doc-list', args=[car.pk]))
     doc = get_object_or_404(user_car_docs_queryset(request.user), pk=pk, car=car)
     if request.method == 'POST':
         form = CarDocForm(request.POST, request.FILES, instance=doc)
         if form.is_valid():
             form.save()
-            messages.success(request, 'Document updated successfully.')
+            messages.success(request, _('Document updated successfully.'))
             return redirect(reverse('shop-car-doc-detail', args=[car.pk, doc.pk]))
     else:
         form = CarDocForm(instance=doc)
@@ -90,8 +91,8 @@ def car_doc_update(request, car_pk, pk):
         'car': car,
         'doc': doc,
         'is_create': False,
-        'title': 'Edit document',
-        'subtitle': 'Update the vehicle note',
+        'title': _('Edit document'),
+        'subtitle': _('Update the vehicle note'),
     })
 
 
@@ -99,16 +100,16 @@ def car_doc_update(request, car_pk, pk):
 def car_doc_delete(request, car_pk, pk):
     car = get_object_or_404(user_cars_queryset(request.user).select_related('garage'), pk=car_pk)
     if not GarageSharingPermissions(request.user, car.garage).can_edit_garage_data:
-        messages.error(request, 'You do not have permission to delete documents from this car.')
+        messages.error(request, _('You do not have permission to delete documents from this car.'))
         return redirect(reverse('shop-car-doc-list', args=[car.pk]))
     doc = get_object_or_404(CarDoc, pk=pk, car=car)
     if request.method == 'POST':
         doc.delete()
-        messages.success(request, 'Document deleted successfully.')
+        messages.success(request, _('Document deleted successfully.'))
         return redirect(reverse('shop-car-doc-list', args=[car.pk]))
     return render(request, 'car_docs/confirm_delete.html', {
         'car': car,
         'doc': doc,
-        'title': f'Delete {doc.title}',
-        'subtitle': 'Confirm document removal',
+        'title': _('Delete %(title)s') % {'title': doc.title},
+        'subtitle': _('Confirm document removal'),
     })

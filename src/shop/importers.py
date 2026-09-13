@@ -10,6 +10,7 @@ from typing import Any
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, models, transaction
+from django.utils.translation import gettext as _
 
 from shop.models.car import Car
 from shop.models.garage import Garage, KnownShop
@@ -60,14 +61,14 @@ class CSVImporter:
     def parse_csv_file(self, csv_file: str | Path) -> list[dict[str, Any]]:
         path = Path(csv_file)
         if not path.exists():
-            raise ImportValidationError(f"CSV file not found: {path}")
+            raise ImportValidationError(_("CSV file not found: %(path)s") % {'path': path})
 
         try:
             # utf-8-sig strips the BOM Excel adds to "CSV UTF-8" exports, so headers
             # like "\ufeffvin" don't break field matching; plain UTF-8 files are unaffected.
             raw_content = path.read_text(encoding="utf-8-sig")
         except UnicodeDecodeError as exc:
-            raise ImportValidationError(f"Unable to decode CSV file '{path.name}' as UTF-8.") from exc
+            raise ImportValidationError(_("Unable to decode CSV file '%(name)s' as UTF-8.") % {'name': path.name}) from exc
 
         return self.parse_csv_content(raw_content, source_name=path.name)
 
@@ -80,7 +81,7 @@ class CSVImporter:
             reader = csv.DictReader(io.StringIO(raw_content), dialect=dialect)
             rows = list(reader)
         except csv.Error as exc:
-            raise ImportValidationError(f"Invalid CSV format in {source_name}: {exc}") from exc
+            raise ImportValidationError(_("Invalid CSV format in %(source)s: %(error)s") % {'source': source_name, 'error': exc}) from exc
 
         if reader.fieldnames is None:
             return []
@@ -107,7 +108,7 @@ class CSVImporter:
         try:
             raw_content = raw_bytes.decode("utf-8-sig")
         except UnicodeDecodeError as exc:
-            raise ImportValidationError(f"Unable to decode {source_name} as UTF-8.") from exc
+            raise ImportValidationError(_("Unable to decode %(source)s as UTF-8.") % {'source': source_name}) from exc
 
         return self.parse_csv_content(raw_content, source_name=source_name)
 
@@ -168,7 +169,7 @@ class CSVImporter:
             with transaction.atomic():
                 model.objects.bulk_create(objects, batch_size=batch_size)
         except IntegrityError as exc:
-            raise ImportValidationError(f"Database error while importing data: {exc}") from exc
+            raise ImportValidationError(_("Database error while importing data: %(error)s") % {'error': exc}) from exc
 
         result.created_count = len(objects)
         return result
@@ -177,7 +178,7 @@ class CSVImporter:
         model = self.model_map.get(model_name.lower())
         if model is None:
             raise ImportValidationError(
-                f"Unsupported model '{model_name}'. Supported models: Car, WorkJob, Report."
+                _("Unsupported model '%(model)s'. Supported models: Car, WorkJob, Report.") % {'model': model_name}
             )
         return model
 
@@ -193,7 +194,7 @@ class CSVImporter:
             return self._prepare_workjob_record(record, context)
         if model is Report:
             return self._prepare_report_record(record, context)
-        raise ImportValidationError(f"Unsupported model '{model.__name__}'.")
+        raise ImportValidationError(_("Unsupported model '%(model)s'.") % {'model': model.__name__})
 
     def _prepare_car_record(
         self,
@@ -202,7 +203,7 @@ class CSVImporter:
     ) -> tuple[dict[str, Any], list[str]]:
         garage = context.garage
         if garage is None:
-            raise ImportValidationError("A target garage is required when importing cars.")
+            raise ImportValidationError(_("A target garage is required when importing cars."))
 
         data = {
             "garage": garage,
@@ -248,11 +249,11 @@ class CSVImporter:
     ) -> tuple[dict[str, Any], list[str]]:
         job_name = self._clean_optional_text(record.get("job_name")) or self._clean_optional_text(record.get("description"))
         if not job_name:
-            raise ImportValidationError("Field 'job_name' is required.")
+            raise ImportValidationError(_("Field 'job_name' is required."))
 
         date_done = self._parse_date_value(record.get("date_done")) or self._parse_date_value(record.get("date"))
         if date_done is None:
-            raise ImportValidationError("Field 'date_done' is required.")
+            raise ImportValidationError(_("Field 'date_done' is required."))
 
         data = {
             "car": self._resolve_car(record.get("car"), context),
@@ -284,20 +285,20 @@ class CSVImporter:
         elif context.garage is not None:
             queryset = Car.objects.filter(garage=context.garage)
         else:
-            raise ImportValidationError('A target garage or car context is required.')
+            raise ImportValidationError(_('A target garage or car context is required.'))
 
         if raw_value in (None, ""):
-            raise ImportValidationError("Car reference is required.")
+            raise ImportValidationError(_("Car reference is required."))
 
         if isinstance(raw_value, str):
             value = raw_value.strip()
             if not value:
-                raise ImportValidationError("Car reference cannot be empty.")
+                raise ImportValidationError(_("Car reference cannot be empty."))
             if self._looks_like_uuid(value):
                 try:
                     return queryset.get(pk=value)
                 except (Car.DoesNotExist, ValidationError, ValueError) as exc:
-                    raise ImportValidationError(f"Car not found for id '{value}'.") from exc
+                    raise ImportValidationError(_("Car not found for id '%(value)s'.") % {'value': value}) from exc
 
             lookup_fields = ("vin", "license_plate", "usual_name")
             for field_name in lookup_fields:
@@ -307,17 +308,17 @@ class CSVImporter:
                     continue
                 except Car.MultipleObjectsReturned as exc:
                     raise ImportValidationError(
-                        f"Car reference '{value}' matches multiple cars by {field_name}."
+                        _("Car reference '%(value)s' matches multiple cars by %(field)s.") % {'value': value, 'field': field_name}
                     ) from exc
 
             raise ImportValidationError(
-                f"Car not found for reference '{value}'. Use car id, VIN, license plate, or usual name."
+                _("Car not found for reference '%(value)s'. Use car id, VIN, license plate, or usual name.") % {'value': value}
             )
 
         try:
             return queryset.get(pk=raw_value)
         except (Car.DoesNotExist, ValidationError, ValueError) as exc:
-            raise ImportValidationError(f"Car not found for id '{raw_value}'.") from exc
+            raise ImportValidationError(_("Car not found for id '%(value)s'.") % {'value': raw_value}) from exc
 
     def _resolve_mechanic(self, raw_value: Any, context: ImportContext | None = None):
         if raw_value in (None, ""):
@@ -338,13 +339,13 @@ class CSVImporter:
                 return queryset.get(models.Q(email__iexact=value) | models.Q(username__iexact=value))
             except (user_model.DoesNotExist, user_model.MultipleObjectsReturned) as exc:
                 raise ImportValidationError(
-                    f"Mechanic not found for reference '{value}'. Use username or email for an existing mechanic."
+                    _("Mechanic not found for reference '%(value)s'. Use username or email for an existing mechanic.") % {'value': value}
                 ) from exc
 
         try:
             return queryset.get(pk=raw_value)
         except (user_model.DoesNotExist, user_model.MultipleObjectsReturned, ValidationError, ValueError) as exc:
-            raise ImportValidationError(f"Mechanic not found for id '{raw_value}'.") from exc
+            raise ImportValidationError(_("Mechanic not found for id '%(value)s'.") % {'value': raw_value}) from exc
 
     def _resolve_shop(self, raw_value: Any):
         if raw_value in (None, ""):
@@ -359,22 +360,22 @@ class CSVImporter:
                 return queryset.get(models.Q(name__iexact=value) | models.Q(email__iexact=value))
             except (KnownShop.DoesNotExist, KnownShop.MultipleObjectsReturned) as exc:
                 raise ImportValidationError(
-                    f"Known shop not found for reference '{value}'. Use an existing shop name or email."
+                    _("Known shop not found for reference '%(value)s'. Use an existing shop name or email.") % {'value': value}
                 ) from exc
 
         try:
             return queryset.get(pk=raw_value)
         except (KnownShop.DoesNotExist, KnownShop.MultipleObjectsReturned, ValidationError, ValueError) as exc:
-            raise ImportValidationError(f"Known shop not found for id '{raw_value}'.") from exc
+            raise ImportValidationError(_("Known shop not found for id '%(value)s'.") % {'value': raw_value}) from exc
 
     def _validate_assignment_target(self, assigned_to: Any, assigned_shop: Any) -> None:
         if assigned_to is not None and assigned_shop is not None:
-            raise ImportValidationError("Assign either a mechanic user or a known shop, not both.")
+            raise ImportValidationError(_("Assign either a mechanic user or a known shop, not both."))
 
     def _require_text(self, record: dict[str, Any], field_name: str) -> str:
         value = self._clean_optional_text(record.get(field_name))
         if not value:
-            raise ImportValidationError(f"Field '{field_name}' is required.")
+            raise ImportValidationError(_("Field '%(field)s' is required.") % {'field': field_name})
         return value
 
     def _clean_optional_text(self, value: Any) -> str | None:
@@ -389,9 +390,9 @@ class CSVImporter:
         try:
             number = int(str(value).strip())
         except (TypeError, ValueError) as exc:
-            raise ImportValidationError(f"Field '{field_name}' must be an integer.") from exc
+            raise ImportValidationError(_("Field '%(field)s' must be an integer.") % {'field': field_name}) from exc
         if number < 0:
-            raise ImportValidationError(f"Field '{field_name}' must not be negative.")
+            raise ImportValidationError(_("Field '%(field)s' must not be negative.") % {'field': field_name})
         return number
 
     def _coerce_bool(self, value: Any, *, field_name: str) -> bool:
@@ -404,7 +405,7 @@ class CSVImporter:
             return True
         if normalized in {"0", "false", "no", "n"}:
             return False
-        raise ImportValidationError(f"Field '{field_name}' must be a boolean.")
+        raise ImportValidationError(_("Field '%(field)s' must be a boolean.") % {'field': field_name})
 
     def _parse_date_value(self, value: Any) -> date | None:
         if value is None:
@@ -428,9 +429,9 @@ class CSVImporter:
                     if len(parts) == 1:
                         return date(int(parts[0]), 1, 1)
                 except ValueError as exc:
-                    raise ImportValidationError(f"Unsupported date format: {value!r}") from exc
+                    raise ImportValidationError(_("Unsupported date format: %(value)r") % {'value': value}) from exc
 
-        raise ImportValidationError(f"Unsupported date format: {value!r}")
+        raise ImportValidationError(_("Unsupported date format: %(value)r") % {'value': value})
 
     def _coerce_string_list(self, value: Any, *, field_name: str) -> list[str]:
         if value in (None, ""):
@@ -444,7 +445,7 @@ class CSVImporter:
             return items
         if isinstance(value, str):
             return [item.strip() for item in value.splitlines() if item.strip()]
-        raise ImportValidationError(f"Field '{field_name}' must be a list or newline-delimited string.")
+        raise ImportValidationError(_("Field '%(field)s' must be a list or newline-delimited string.") % {'field': field_name})
 
     def _normalize_vin(self, value: Any) -> str | None:
         cleaned = self._clean_optional_text(value)
@@ -452,9 +453,9 @@ class CSVImporter:
             return None
         vin = re.sub(r"\s+", "", cleaned).upper()
         if any(ch in VIN_BAD_CHARS for ch in vin):
-            raise ImportValidationError("VIN contains invalid characters (I, O, Q are not allowed).")
+            raise ImportValidationError(_("VIN contains invalid characters (I, O, Q are not allowed)."))
         if not re.match(r"^[A-HJ-NPR-Z0-9]{11,17}$", vin):
-            raise ImportValidationError("VIN must be 11-17 alphanumeric characters (no I/O/Q).")
+            raise ImportValidationError(_("VIN must be 11-17 alphanumeric characters (no I/O/Q)."))
         return vin
 
     def _normalize_license_plate(self, value: Any) -> str:
@@ -463,16 +464,16 @@ class CSVImporter:
             return ""
         plate = cleaned.upper()
         if len(plate) > 20:
-            raise ImportValidationError("License plate must be 20 characters or fewer.")
+            raise ImportValidationError(_("License plate must be 20 characters or fewer."))
         if not re.match(r"^[A-Z0-9 \-]+$", plate):
-            raise ImportValidationError("License plate contains invalid characters.")
+            raise ImportValidationError(_("License plate contains invalid characters."))
         return plate
 
     def _ignored_field_warnings(self, record: dict[str, Any], used_keys: set[str]) -> list[str]:
         excluded_keys = set(record.keys()) - used_keys
         if not excluded_keys:
             return []
-        return [f"Ignored fields: {sorted(excluded_keys)}"]
+        return [_("Ignored fields: %(fields)s") % {'fields': sorted(excluded_keys)}]
 
     def _looks_like_uuid(self, value: str) -> bool:
         try:

@@ -141,8 +141,8 @@ def index(request: HttpRequest) -> HttpResponse:
         request,
         'shop/fleet_list.html',
         {
-            'title': 'My Fleets',
-            'subtitle': 'Fleets you belong to',
+            'title': _('My Fleets'),
+            'subtitle': _('Fleets you belong to'),
             'garages': garages,
             'manageable_garage_ids': manageable_garage_ids,
         },
@@ -164,7 +164,7 @@ def garage_detail(request: HttpRequest, pk: str) -> HttpResponse:
             'can_edit_garage_data': perms.can_edit_garage_data,
             'cars': cars,
             'title': garage.name,
-            'subtitle': 'Fleet details',
+            'subtitle': _('Fleet details'),
         },
     )
 
@@ -193,8 +193,8 @@ def garage_create(request: HttpRequest) -> HttpResponse:
         {
             'form': form,
             'is_create': True,
-            'title': 'Create Fleet',
-            'subtitle': 'Set up a new shared workspace for your vehicles',
+            'title': _('Create Fleet'),
+            'subtitle': _('Set up a new shared workspace for your vehicles'),
         },
     )
 
@@ -268,9 +268,10 @@ def garage_share(request: HttpRequest, pk: str) -> HttpResponse:
                     messages.warning(
                         request,
                         (
-                            f'Invitation created for {invited_email}, but the email could not be sent. '
-                            f'Share this link manually: {invitation_accept_url}'
-                        ),
+                            _('Invitation created for %(email)s, but the email could not be sent. ')
+                            % {'email': invited_email}
+                        )
+                        + _('Share this link manually: %(url)s') % {'url': invitation_accept_url},
                     )
 
             return redirect(reverse('shop-garage-share', args=[garage.pk]))
@@ -289,8 +290,8 @@ def garage_share(request: HttpRequest, pk: str) -> HttpResponse:
             'garage': garage,
             'form': form,
             'pending_invitations': pending_invitations,
-            'title': f'Share {garage.name}',
-            'subtitle': 'Invite people to collaborate in this fleet',
+            'title': _('Share %(name)s') % {'name': garage.name},
+            'subtitle': _('Invite people to collaborate in this fleet'),
         },
     )
 
@@ -318,8 +319,8 @@ def garage_members(request: HttpRequest, pk: str) -> HttpResponse:
                 for role, label in GarageMembership.ROLE_CHOICES
                 if role in perms.can_change_role_to
             ],
-            'title': f'Members of {garage.name}',
-            'subtitle': 'Manage access and roles',
+            'title': _('Members of %(name)s') % {'name': garage.name},
+            'subtitle': _('Manage access and roles'),
         },
     )
 
@@ -402,17 +403,17 @@ def garage_import(request: HttpRequest, pk: str) -> HttpResponse:
                 if result.has_errors:
                     for error in result.errors:
                         messages.error(request, f"Record {error.record_number}: {error.message}")
-                    form.add_error('import_file', 'Import validation failed. Fix the file and try again.')
+                    form.add_error('import_file', _('Import validation failed. Fix the file and try again.'))
                 else:
                     if dry_run:
                         messages.success(
                             request,
-                            f"Dry run complete for {result.model_label}: {result.created_count} records validated.",
+                            _('Dry run complete for %(model)s: %(count)s records validated.') % {'model': result.model_label, 'count': result.created_count},
                         )
                     else:
                         messages.success(
                             request,
-                            f"Imported {result.created_count} records into {garage.name}.",
+                            _('Imported %(count)s records into %(garage)s.') % {'count': result.created_count, 'garage': garage.name},
                         )
                         return redirect(reverse('shop-garage-detail', args=[garage.pk]))
     else:
@@ -424,8 +425,8 @@ def garage_import(request: HttpRequest, pk: str) -> HttpResponse:
         {
             'form': form,
             'garage': garage,
-            'title': f'Import cars into {garage.name}',
-            'subtitle': 'Upload normalized CSV for cars assigned to this fleet',
+            'title': _('Import cars into %(name)s') % {'name': garage.name},
+            'subtitle': _('Upload normalized CSV for cars assigned to this fleet'),
         },
     )
 
@@ -451,8 +452,8 @@ def known_shop_list(request: HttpRequest) -> HttpResponse:
     shops = user_known_shops_queryset(request.user).prefetch_related('proofs').order_by('name')
     return render(request, 'shop/shop_list.html', {
         'shops': shops,
-        'title': 'Known shops',
-        'subtitle': 'Keep trusted repair shops and their supporting proofs together',
+        'title': _('Known shops'),
+        'subtitle': _('Keep trusted repair shops and their supporting proofs together'),
     })
 
 
@@ -471,8 +472,8 @@ def known_shop_create(request: HttpRequest) -> HttpResponse:
     return render(request, 'shop/shop_form.html', {
         'form': form,
         'is_create': True,
-        'title': 'Add known shop',
-        'subtitle': 'Save a shop now and add supporting proofs over time',
+        'title': _('Add known shop'),
+        'subtitle': _('Save a shop now and add supporting proofs over time'),
     })
 
 
@@ -482,7 +483,7 @@ def known_shop_detail(request: HttpRequest, pk: int) -> HttpResponse:
     return render(request, 'shop/shop_detail.html', {
         'shop': shop,
         'title': shop.name,
-        'subtitle': 'Shop details and supporting proofs',
+        'subtitle': _('Shop details and supporting proofs'),
     })
 
 
@@ -505,8 +506,8 @@ def known_shop_proof_create(request: HttpRequest, shop_pk: int) -> HttpResponse:
     return render(request, 'shop/shop_proof_form.html', {
         'form': form,
         'shop': shop,
-        'title': f'Add proof for {shop.name}',
-        'subtitle': 'Add a document or notes supporting this shop',
+        'title': _('Add proof for %(name)s') % {'name': shop.name},
+        'subtitle': _('Add a document or notes supporting this shop'),
     })
 
 
@@ -516,7 +517,7 @@ def known_shop_proof_file(request: HttpRequest, shop_pk: int, pk: int) -> FileRe
     shop = get_object_or_404(user_known_shops_queryset(request.user), pk=shop_pk)
     proof = get_object_or_404(KnownShopProof, pk=pk, shop=shop)
     if not proof.file:
-        raise Http404('Proof has no file.')
+        raise Http404(_('Proof has no file.'))
     return FileResponse(proof.file.open('rb'), content_type='application/pdf')
 
 
@@ -546,22 +547,22 @@ def car_import(request: HttpRequest, pk: str) -> HttpResponse:
                 form.add_error('import_file', str(exc))
             else:
                 for warning in result.warnings:
-                    messages.warning(request, f"Record {warning.record_number}: {warning.message}")
+                    messages.warning(request, _('Record %(number)s: %(message)s') % {'number': warning.record_number, 'message': warning.message})
 
                 if result.has_errors:
                     for error in result.errors:
-                        messages.error(request, f"Record {error.record_number}: {error.message}")
-                    form.add_error('import_file', 'Import validation failed. Fix the file and try again.')
+                        messages.error(request, _('Record %(number)s: %(message)s') % {'number': error.record_number, 'message': error.message})
+                    form.add_error('import_file', _('Import validation failed. Fix the file and try again.'))
                 else:
                     if dry_run:
                         messages.success(
                             request,
-                            f"Dry run complete for {result.model_label}: {result.created_count} records validated.",
+                            _('Dry run complete for %(model)s: %(count)s records validated.') % {'model': result.model_label, 'count': result.created_count},
                         )
                     else:
                         messages.success(
                             request,
-                            f"Imported {result.created_count} records for {car.usual_name or car.make}.",
+                            _('Imported %(count)s records for %(car)s.') % {'count': result.created_count, 'car': car.usual_name or car.make},
                         )
                         return redirect(reverse('shop-car-detail', args=[car.pk]))
     else:
@@ -576,8 +577,8 @@ def car_import(request: HttpRequest, pk: str) -> HttpResponse:
         {
             'form': form,
             'car': car,
-            'title': f'Import records for {car.usual_name or car.make}',
-            'subtitle': 'Upload normalized CSV for work jobs or reports tied to this car',
+            'title': _('Import records for %(name)s') % {'name': car.usual_name or car.make},
+            'subtitle': _('Upload normalized CSV for work jobs or reports tied to this car'),
         },
     )
 
@@ -616,7 +617,7 @@ def garage_invitation_accept(request: HttpRequest, token: str) -> HttpResponse:
     if not user_email or user_email != invited_email:
         messages.error(
             request,
-            f"Sign in with {invitation.invited_email} to accept this invitation.",
+            _("Sign in with %(email)s to accept this invitation.") % {'email': invitation.invited_email},
         )
         return redirect(reverse('shop-index'))
 
@@ -667,7 +668,7 @@ def garage_invitation_decline(request: HttpRequest, token: str) -> HttpResponse:
     if not user_email or user_email != invited_email:
         messages.error(
             request,
-            f"Sign in with {invitation.invited_email} to decline this invitation.",
+            _("Sign in with %(email)s to decline this invitation.") % {'email': invitation.invited_email},
         )
         return redirect(reverse('shop-index'))
 
@@ -883,7 +884,7 @@ def report_attachment_file(request: HttpRequest, car_pk: str, report_pk: int, pk
         source_type=ReportAttachment.SOURCE_UPLOAD,
     )
     if not attachment.file:
-        raise Http404('Attachment has no file.')
+        raise Http404(_('Attachment has no file.'))
     content_type = mimetypes.guess_type(attachment.file.name)[0] or 'application/octet-stream'
     return FileResponse(attachment.file.open('rb'), content_type=content_type)
 

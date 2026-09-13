@@ -7,10 +7,12 @@ from django.utils.translation import gettext_lazy as _
 
 class BaseImportForm(forms.Form):
     import_file = forms.FileField(
+        label=_("CSV file"),
         widget=forms.ClearableFileInput(attrs={"class": "input", "accept": ".csv,text/csv"}),
         help_text=_("Upload a normalized UTF-8 CSV file. See the README for the exact schema and examples."),
     )
     dry_run = forms.BooleanField(
+        label=_("Validate only"),
         required=False,
         initial=True,
         help_text=_("Validate the file without saving imported records."),
@@ -39,6 +41,7 @@ class CarImportForm(BaseImportForm):
     ]
 
     import_type = forms.ChoiceField(
+        label=_("Import type"),
         choices=IMPORT_CHOICES,
         widget=forms.Select(attrs={"class": "input"}),
         help_text=_("Choose whether this file contains work jobs or reports for this car. The selected car is applied automatically."),

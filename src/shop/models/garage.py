@@ -6,6 +6,7 @@ from django.db import models
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 
 class Garage(models.Model):
@@ -51,10 +52,10 @@ class GarageMembership(models.Model):
     ROLE_MEMBER = ROLE_VIEWER
 
     ROLE_CHOICES = [
-        (ROLE_OWNER, "Owner"),
-        (ROLE_ADMIN, "Admin"),
-        (ROLE_MECHANIC, "Mechanic"),
-        (ROLE_VIEWER, "Viewer"),
+        (ROLE_OWNER, _("Owner")),
+        (ROLE_ADMIN, _("Admin")),
+        (ROLE_MECHANIC, _("Mechanic")),
+        (ROLE_VIEWER, _("Viewer")),
     ]
 
     MANAGEMENT_ROLES = {ROLE_OWNER, ROLE_ADMIN}

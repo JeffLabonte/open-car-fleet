@@ -1,20 +1,22 @@
 {% extends 'shop/index.html' %}
 
+{% load i18n %}
+
 {% block content %}
   <div class="box">
-    <h1 class="title">Delete document</h1>
+    <h1 class="title">{% translate 'Delete document' %}</h1>
     <div class="notification is-warning">
-      Are you sure you want to delete <strong>{{ doc.title }}</strong> for {{ car.usual_name|default:car.make }}?
+      {% blocktranslate with title=doc.title name=car.usual_name|default:car.make %}Are you sure you want to delete <strong>{{ title }}</strong> for {{ name }}?{% endblocktranslate %}
     </div>
 
     <form method="post">
       {% csrf_token %}
       <div class="field is-grouped">
         <div class="control">
-          <button class="button is-danger" type="submit">Delete</button>
+          <button class="button is-danger" type="submit">{% translate 'Delete' %}</button>
         </div>
         <div class="control">
-          <a class="button is-light" href="{% url 'shop-car-doc-detail' car.pk doc.pk %}">Cancel</a>
+          <a class="button is-light" href="{% url 'shop-car-doc-detail' car.pk doc.pk %}">{% translate 'Cancel' %}</a>
         </div>
       </div>
     </form>

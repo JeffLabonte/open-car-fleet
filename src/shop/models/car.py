@@ -2,6 +2,7 @@ import uuid
 import re
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 from shop.models.garage import Garage
 
@@ -17,12 +18,12 @@ class CarPart(models.Model):
     STATUS_AVAILABLE = "available"
 
     STATUS_CHOICES = [
-        (STATUS_NEW, "New"),
-        (STATUS_ORDERED, "Ordered"),
-        (STATUS_PENDING, "Pending"),
-        (STATUS_REPAIRED, "Repaired"),
-        (STATUS_REPLACED, "Replaced"),
-        (STATUS_AVAILABLE, "Available"),
+        (STATUS_NEW, _("New")),
+        (STATUS_ORDERED, _("Ordered")),
+        (STATUS_PENDING, _("Pending")),
+        (STATUS_REPAIRED, _("Repaired")),
+        (STATUS_REPLACED, _("Replaced")),
+        (STATUS_AVAILABLE, _("Available")),
     ]
 
     car = models.ForeignKey("Car", related_name="parts", on_delete=models.CASCADE)
@@ -119,12 +120,12 @@ class Car(models.Model):
         if self.vin:
             vin = re.sub(r'\s+', '', self.vin).upper()
             if any(character in {'I', 'O', 'Q'} for character in vin):
-                raise ValidationError({'vin': 'VIN contains invalid characters (I, O, Q are not allowed).'})
+                raise ValidationError({'vin': _('VIN contains invalid characters (I, O, Q are not allowed).')})
             if not re.fullmatch(r'[A-HJ-NPR-Z0-9]{11,17}', vin):
-                raise ValidationError({'vin': 'VIN must be 11-17 alphanumeric characters (no I/O/Q).'})
+                raise ValidationError({'vin': _('VIN must be 11-17 alphanumeric characters (no I/O/Q).')})
 
         if self.license_plate and not re.fullmatch(r'[A-Za-z0-9 -]{1,20}', self.license_plate):
-            raise ValidationError({'license_plate': 'License plate contains invalid characters.'})
+            raise ValidationError({'license_plate': _('License plate contains invalid characters.')})
 
     def save(self, *args, **kwargs):
         self.clean()

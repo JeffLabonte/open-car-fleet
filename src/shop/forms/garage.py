@@ -9,6 +9,10 @@ class FleetCreateForm(forms.ModelForm):
     class Meta:
         model = Garage
         fields = ['name', 'description']
+        labels = {
+            'name': _('Fleet name'),
+            'description': _('Description'),
+        }
         widgets = {
             'name': forms.TextInput(attrs={'class': 'input', 'placeholder': _('Fleet name')}),
             'description': forms.Textarea(attrs={'class': 'textarea', 'rows': 4, 'placeholder': _('Optional description')})
@@ -17,14 +21,17 @@ class FleetCreateForm(forms.ModelForm):
 
 class FleetInviteForm(forms.Form):
     invited_email = forms.EmailField(
+        label=_('Invited email'),
         widget=forms.EmailInput(attrs={'class': 'input', 'placeholder': 'member@example.com'}),
         help_text=_('We will email this person a fleet invitation link.'),
     )
     message = forms.CharField(
+        label=_('Message'),
         required=False,
         widget=forms.Textarea(attrs={'class': 'textarea', 'rows': 4, 'placeholder': _('Optional message')}),
     )
     expires_in_days = forms.IntegerField(
+        label=_('Expires in days'),
         min_value=1,
         max_value=90,
         initial=14,
@@ -32,6 +39,7 @@ class FleetInviteForm(forms.Form):
         help_text=_('Invitation expiry in days (1-90).'),
     )
     role = forms.ChoiceField(
+        label=_('Role'),
         choices=GarageMembership.ROLE_CHOICES,
         initial=GarageMembership.ROLE_VIEWER,
         required=False,
@@ -62,6 +70,7 @@ class FleetInviteForm(forms.Form):
 
 class GarageMembershipRoleForm(forms.Form):
     role = forms.ChoiceField(
+        label=_('Role'),
         choices=GarageMembership.ROLE_CHOICES,
         widget=forms.Select(attrs={'class': 'input'}),
     )

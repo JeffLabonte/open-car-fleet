@@ -2,6 +2,7 @@ from typing import Any
 
 from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand, CommandError
+from django.utils.translation import gettext as _
 
 from shop.importers import CSVImporter, ImportContext, ImportValidationError
 from shop.models.garage import Garage
@@ -86,4 +87,4 @@ class Command(BaseCommand):
         try:
             return Garage.objects.get(pk=raw_value)
         except (Garage.DoesNotExist, ValidationError, ValueError) as exc:
-            raise ImportValidationError(f"Garage not found for id '{raw_value}'.") from exc
+            raise ImportValidationError(_("Garage not found for id '%(value)s'.") % {'value': raw_value}) from exc

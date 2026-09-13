@@ -2,6 +2,7 @@ from django.conf import settings
 from django.db import models
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
+from django.utils.translation import gettext_lazy as _
 
 from shop.models.car import Car
 from shop.models.garage import KnownShop
@@ -55,7 +56,7 @@ class Report(models.Model):
         if self.assigned_to and not getattr(self.assigned_to, "is_mechanic", False):
             from django.core.exceptions import ValidationError
 
-            raise ValidationError({"assigned_to": "Assigned user must be a mechanic."})
+            raise ValidationError({"assigned_to": _("Assigned user must be a mechanic.")})
 
     def save(self, *args, **kwargs):
         self.clean()

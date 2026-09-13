@@ -1,19 +1,21 @@
 {% extends 'shop/index.html' %}
 
+{% load i18n %}
+
 {% block content %}
   <div class="box">
     <div class="level">
       <div class="level-left">
         <div class="level-item">
           <div>
-            <h1 class="title">{{ car.usual_name|default:car.make }} docs</h1>
-            <p class="subtitle is-6">Notes, service details, and reference info</p>
+            <h1 class="title">{% blocktranslate with name=car.usual_name|default:car.make %}{{ name }} docs{% endblocktranslate %}</h1>
+            <p class="subtitle is-6">{% translate 'Notes, service details, and reference info' %}</p>
           </div>
         </div>
       </div>
       <div class="level-right">
         <div class="level-item">
-          <a class="button is-primary" href="{% url 'shop-car-doc-create' car.pk %}">Add document</a>
+          <a class="button is-primary" href="{% url 'shop-car-doc-create' car.pk %}">{% translate 'Add document' %}</a>
         </div>
       </div>
     </div>
@@ -23,9 +25,9 @@
         <table class="table is-fullwidth is-striped is-hoverable">
           <thead>
             <tr>
-              <th>Title</th>
-              <th>Updated</th>
-              <th>Actions</th>
+              <th>{% translate 'Title' %}</th>
+              <th>{% translate 'Updated' %}</th>
+              <th>{% translate 'Actions' %}</th>
             </tr>
           </thead>
           <tbody>
@@ -38,9 +40,9 @@
                 <td>{{ doc.updated_at|date:'M j, Y' }}</td>
                 <td>
                   <div class="buttons are-small">
-                    <a class="button is-link" href="{% url 'shop-car-doc-detail' car.pk doc.pk %}">View</a>
-                    <a class="button is-light" href="{% url 'shop-car-doc-update' car.pk doc.pk %}">Edit</a>
-                    <a class="button is-danger is-light" href="{% url 'shop-car-doc-delete' car.pk doc.pk %}">Delete</a>
+                    <a class="button is-link" href="{% url 'shop-car-doc-detail' car.pk doc.pk %}">{% translate 'View' %}</a>
+                    <a class="button is-light" href="{% url 'shop-car-doc-update' car.pk doc.pk %}">{% translate 'Edit' %}</a>
+                    <a class="button is-danger is-light" href="{% url 'shop-car-doc-delete' car.pk doc.pk %}">{% translate 'Delete' %}</a>
                   </div>
                 </td>
               </tr>
@@ -50,12 +52,12 @@
       </div>
     {% else %}
       <div class="notification is-info">
-        No documents have been added for this car yet.
+        {% translate 'No documents have been added for this car yet.' %}
       </div>
     {% endif %}
 
     <div class="mt-4">
-      <a class="button is-light" href="{% url 'shop-car-detail' car.pk %}">Back to car</a>
+      <a class="button is-light" href="{% url 'shop-car-detail' car.pk %}">{% translate 'Back to car' %}</a>
     </div>
   </div>
 {% endblock %}

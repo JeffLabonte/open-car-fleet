@@ -31,9 +31,9 @@
       {% endif %}
       {% if can_edit_garage_data %}
         <a class="button is-primary" href="{% url 'shop-workjob-create' car.pk %}">{% translate 'Add planned work' %}</a>
-        <a class="button is-info is-light" href="{% url 'shop-car-import' car.pk %}">Import work jobs or reports</a>
+        <a class="button is-info is-light" href="{% url 'shop-car-import' car.pk %}">{% translate 'Import work jobs or reports' %}</a>
       {% endif %}
-      <a class="button is-light" href="{% url 'shop-car-doc-list' car.pk %}">Documents</a>
+      <a class="button is-light" href="{% url 'shop-car-doc-list' car.pk %}">{% translate 'Documents' %}</a>
       <a class="button is-light" href="{% url 'shop-car-list' %}">{% translate 'Back to list' %}</a>
     </div>
   </div>

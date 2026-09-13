@@ -1,4 +1,5 @@
 from django import forms
+from django.utils.translation import gettext_lazy as _
 
 from shop.models.garage import KnownShop, KnownShopProof
 from shop.file_validation import validate_pdf_upload
@@ -8,6 +9,13 @@ class KnownShopForm(forms.ModelForm):
     class Meta:
         model = KnownShop
         fields = ['name', 'email', 'phone', 'address', 'notes']
+        labels = {
+            'name': _('Shop name'),
+            'email': _('Email'),
+            'phone': _('Phone'),
+            'address': _('Address'),
+            'notes': _('Notes'),
+        }
         widgets = {
             'name': forms.TextInput(attrs={'class': 'input'}),
             'email': forms.EmailInput(attrs={'class': 'input'}),
@@ -21,6 +29,11 @@ class KnownShopProofForm(forms.ModelForm):
     class Meta:
         model = KnownShopProof
         fields = ['title', 'content', 'file']
+        labels = {
+            'title': _('Proof title'),
+            'content': _('Notes'),
+            'file': _('PDF file'),
+        }
         widgets = {
             'title': forms.TextInput(attrs={'class': 'input'}),
             'content': forms.Textarea(attrs={'class': 'textarea', 'rows': 6}),

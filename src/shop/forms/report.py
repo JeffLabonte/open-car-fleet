@@ -51,9 +51,9 @@ class MultipleFileField(forms.FileField):
         if cleaned_file is None:
             return None
         if cleaned_file.size > self.max_upload_bytes:
-            raise forms.ValidationError('Uploaded attachments must be no larger than 25 MB.')
+            raise forms.ValidationError(_('Uploaded attachments must be no larger than 25 MB.'))
         if cleaned_file.content_type not in self.allowed_content_types:
-            raise forms.ValidationError('Unsupported attachment file type.')
+            raise forms.ValidationError(_('Unsupported attachment file type.'))
         return cleaned_file
 
 
@@ -111,8 +111,17 @@ class ReportForm(LineListFieldMixin, AssignedToShopFormMixin, forms.ModelForm):
             ),
         }
         labels = {
+            'mileage': _('Mileage'),
+            'job_name': _('Work performed'),
+            'assigned_to': _('Assigned to'),
+            'assigned_shop': _('Known shop'),
+            'date_done': _('Date completed'),
+            'documents': _('Documents'),
+            'photos': _('Photos'),
             'note': _('Maintenance report'),
             'additional_information': _('Additional information'),
+            'attachments': _('Attachments'),
+            'external_links': _('External links'),
         }
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:

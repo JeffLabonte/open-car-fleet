@@ -2,6 +2,7 @@ from typing import Any
 
 from django.http import Http404
 from django.shortcuts import get_object_or_404
+from django.utils.translation import gettext as _
 
 from shop.models.garage import Garage, GarageMembership
 
@@ -86,7 +87,7 @@ def get_membership_or_404(user: Any, garage: Garage) -> GarageMembership:
     """Return the user's active membership or raise Http404 for IDOR protection."""
     membership = garage.memberships.filter(user=user).first()
     if membership is None:
-        raise Http404('Membership not found.')
+        raise Http404(_('Membership not found.'))
     return membership
 
 
