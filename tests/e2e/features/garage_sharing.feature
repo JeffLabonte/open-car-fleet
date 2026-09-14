@@ -14,6 +14,13 @@ Feature: Garage sharing lifecycle
     Then a pending invitation exists for "viewer@example.com"
     And the invitation role is "Viewer"
 
+  Scenario: Owner cancels a pending invitation
+    Given "owner@example.com" is signed in
+    When they visit the share page for "Shared Fleet"
+    And they invite "viewer@example.com" with role "Viewer"
+    And they cancel the invitation for "viewer@example.com"
+    Then the invitation for "viewer@example.com" is no longer pending
+
   Scenario: Viewer cannot invite others
     Given "viewer@example.com" is a viewer of "Shared Fleet"
     And "viewer@example.com" is signed in

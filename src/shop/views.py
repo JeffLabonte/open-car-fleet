@@ -429,6 +429,26 @@ def garage_member_remove(request: HttpRequest, pk: str, membership_pk: int) -> H
 
 
 @hanko_login_required
+@require_POST
+def garage_invitation_cancel(request: HttpRequest, pk: str, invitation_pk: str) -> HttpResponse:
+    garage = get_object_or_404(user_garages_queryset(request.user), pk=pk)
+    perms = GarageSharingPermissions(request.user, garage)
+    if not perms.can_manage_members:
+        messages.error(request, _('You do not have permission to manage fleet invitations.'))
+        return redirect(reverse('shop-garage-detail', args=[garage.pk]))
+
+    invitation = get_object_or_404(garage.invitations, pk=invitation_pk)
+    if invitation.status != GarageInvitation.STATUS_PENDING:
+        messages.info(request, _('This invitation is no longer active.'))
+        return redirect(reverse('shop-garage-share', args=[garage.pk]))
+
+    invitation.status = GarageInvitation.STATUS_CANCELLED
+    invitation.save(update_fields=['status', 'updated_at'])
+    messages.success(request, _('Invitation to %(email)s cancelled.') % {'email': invitation.invited_email})
+    return redirect(reverse('shop-garage-share', args=[garage.pk]))
+
+
+@hanko_login_required
 def garage_import(request: HttpRequest, pk: str) -> HttpResponse:
     garage = get_object_or_404(user_garages_queryset(request.user), pk=pk)
     if not user_can_manage_garage(request.user, garage):

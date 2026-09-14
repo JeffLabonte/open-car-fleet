@@ -489,3 +489,82 @@ class GarageSharingAcceptDeclineTests(TestCase):
         invitation.refresh_from_db()
         self.assertEqual(invitation.status, GarageInvitation.STATUS_EXPIRED)
         self.assertFalse(GarageMembership.objects.filter(garage=self.garage, user=self.invitee).exists())
+
+
+class GarageInvitationCancelTests(TestCase):
+    def setUp(self) -> None:
+        self.owner = ShopUser.objects.create_user(
+            username='owner',
+            email='owner@example.com',
+            password='pass1234',
+        )
+        self.stranger = ShopUser.objects.create_user(
+            username='stranger',
+            email='stranger@example.com',
+            password='pass1234',
+        )
+        self.garage = Garage.objects.create(name='Cancel Garage', created_by=self.owner)
+        GarageMembership.objects.create(
+            garage=self.garage,
+            user=self.owner,
+            role=GarageMembership.ROLE_OWNER,
+        )
+        GarageMembership.objects.create(
+            garage=self.garage,
+            user=self.stranger,
+            role=GarageMembership.ROLE_VIEWER,
+        )
+        self.invitation = GarageInvitation.objects.create(
+            garage=self.garage,
+            invited_email='pending@example.com',
+            invited_by=self.owner,
+            status=GarageInvitation.STATUS_PENDING,
+            role=GarageMembership.ROLE_VIEWER,
+            expires_at=timezone.now() + timezone.timedelta(days=14),
+        )
+
+    def test_owner_can_cancel_pending_invitation(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            reverse('shop-garage-invitation-cancel', args=[self.garage.pk, self.invitation.pk])
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.invitation.refresh_from_db()
+        self.assertEqual(self.invitation.status, GarageInvitation.STATUS_CANCELLED)
+
+    def test_cancelled_invitation_cannot_be_cancelled_again(self):
+        self.invitation.status = GarageInvitation.STATUS_CANCELLED
+        self.invitation.save()
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            reverse('shop-garage-invitation-cancel', args=[self.garage.pk, self.invitation.pk])
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.invitation.refresh_from_db()
+        self.assertEqual(self.invitation.status, GarageInvitation.STATUS_CANCELLED)
+
+    def test_non_manager_cannot_cancel_invitation(self):
+        self.client.force_login(self.stranger)
+
+        response = self.client.post(
+            reverse('shop-garage-invitation-cancel', args=[self.garage.pk, self.invitation.pk])
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.invitation.refresh_from_db()
+        self.assertEqual(self.invitation.status, GarageInvitation.STATUS_PENDING)
+
+    def test_get_request_does_not_cancel(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(
+            reverse('shop-garage-invitation-cancel', args=[self.garage.pk, self.invitation.pk])
+        )
+
+        self.assertEqual(response.status_code, 405)
+        self.invitation.refresh_from_db()
+        self.assertEqual(self.invitation.status, GarageInvitation.STATUS_PENDING)

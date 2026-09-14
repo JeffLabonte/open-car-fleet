@@ -52,6 +52,11 @@
               {% if invite.expires_at %}
                 <p class="help mb-0">{% translate 'Expires' %} {{ invite.expires_at|date:'F j, Y, g:i a' }}</p>
               {% endif %}
+              <form method="post" action="{% url 'shop-garage-invitation-cancel' garage.pk invite.pk %}" class="mt-2">
+                {% csrf_token %}
+                {% translate 'Cancel this invitation?' as cancel_confirmation %}
+                <button class="button is-small is-danger" type="submit" aria-label="{{ cancel_confirmation }}" data-testid="cancel-invitation-button">{% translate 'Cancel' %}</button>
+              </form>
             </li>
           {% endfor %}
         </ul>

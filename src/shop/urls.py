@@ -19,6 +19,7 @@ urlpatterns = [
     path('garages/<uuid:pk>/members/<int:membership_pk>/remove/', views.garage_member_remove, name='shop-garage-member-remove'),
     path('garages/invitations/accept/<uuid:token>/', views.garage_invitation_accept, name='shop-garage-invitation-accept'),
     path('garages/invitations/decline/<uuid:token>/', views.garage_invitation_decline, name='shop-garage-invitation-decline'),
+    path('garages/<uuid:pk>/invitations/<uuid:invitation_pk>/cancel/', views.garage_invitation_cancel, name='shop-garage-invitation-cancel'),
     path('shops/', views.known_shop_list, name='shop-known-shop-list'),
     path('shops/add/', views.known_shop_create, name='shop-known-shop-create'),
     path('shops/<int:pk>/', views.known_shop_detail, name='shop-known-shop-detail'),

@@ -158,6 +158,23 @@ def pending_invitation_exists(firefox_driver: webdriver.Firefox):
     assert 'viewer@example.com' in firefox_driver.page_source
 
 
+@when('they cancel the invitation for "viewer@example.com"')
+def cancel_invitation(firefox_driver: webdriver.Firefox):
+    wait = WebDriverWait(firefox_driver, 10)
+    item = wait.until(
+        ec.presence_of_element_located((By.XPATH, "//li[contains(., 'viewer@example.com')]"))
+    )
+    item.find_element(By.CSS_SELECTOR, 'button[data-testid="cancel-invitation-button"]').click()
+
+
+@then('the invitation for "viewer@example.com" is no longer pending')
+def invitation_no_longer_pending(firefox_driver: webdriver.Firefox):
+    wait = WebDriverWait(firefox_driver, 10)
+    wait.until(lambda d: 'No pending invitations.' in d.page_source)
+    aside = firefox_driver.find_element(By.CSS_SELECTOR, '[data-testid="pending-invitations"]')
+    assert 'viewer@example.com' not in aside.text
+
+
 @then('the invitation role is "Viewer"')
 def invitation_role_is_viewer(firefox_driver: webdriver.Firefox):
     assert 'Viewer' in firefox_driver.page_source
