@@ -6,6 +6,7 @@ from typing import Any, cast
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.http import FileResponse, Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
@@ -20,6 +21,7 @@ from django.utils.translation import gettext as _
 
 from shop.auth import HankoAuthenticationError, complete_hanko_login, fetch_hanko_userinfo
 from shop.exporters import export_garage_to_excel
+from shop.forms.base import AttachmentField, validate_uploaded_file
 from shop.forms import (
     CarImportForm,
     CarCreateForm,
@@ -569,7 +571,7 @@ def known_shop_proof_create(request: HttpRequest, shop_pk: int) -> HttpResponse:
         messages.error(request, _('You do not have permission to add proof for this shop.'))
         return redirect(reverse('shop-known-shop-list'))
     if request.method == 'POST':
-        form = KnownShopProofForm(request.POST, request.FILES)
+        form = KnownShopProofForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
             with transaction.atomic():
                 proof = form.save(commit=False)
@@ -579,6 +581,7 @@ def known_shop_proof_create(request: HttpRequest, shop_pk: int) -> HttpResponse:
                     proof,
                     form.cleaned_data.get('attachments', []),
                     [],
+                    staged=form.cleaned_data.get('staged_attachments'),
                 )
             messages.success(request, _('Proof added successfully.'))
             return redirect(reverse('shop-known-shop-detail', args=[shop.pk]))
@@ -921,6 +924,65 @@ def workjob_update(request: HttpRequest, car_pk: str, pk: str) -> HttpResponse:
     return render(request, 'shop/workjob_form.html', {'form': form, 'is_create': False, 'car': car, 'work_job': work_job})
 
 
+# Staged uploads (created by the AJAX endpoint before the parent form saves)
+# older than this are purged opportunistically; the purge command runs the
+# same window on a schedule.
+STAGED_ATTACHMENT_MAX_AGE = timedelta(hours=12)
+
+
+def purge_stale_staged_attachments() -> int:
+    """Delete staged uploads no parent form claimed within the retention window."""
+    cutoff = timezone.now() - STAGED_ATTACHMENT_MAX_AGE
+    stale = Attachment.objects.filter(content_type__isnull=True, created_at__lt=cutoff)
+    count = stale.count()
+    stale.delete()
+    return count
+
+
+@hanko_login_required
+@require_POST
+def attachment_upload(request: HttpRequest) -> JsonResponse:
+    """Stage one uploaded file for the submitting user; returns its attachment ID.
+
+    The file is validated with the exact same rules as the classic form
+    path (size, extension, content type, magic bytes). It becomes a real
+    attachment only when the parent form claims it by ID.
+    """
+    purge_stale_staged_attachments()
+    upload = request.FILES.get('file')
+    if upload is None:
+        return JsonResponse({'error': _('No file was uploaded.')}, status=400)
+    try:
+        validate_uploaded_file(upload)
+    except ValidationError as exc:
+        return JsonResponse({'error': exc.messages[0]}, status=400)
+    attachment = Attachment(
+        source_type=Attachment.SOURCE_UPLOAD,
+        uploaded_by=request.user,
+        file=upload,
+        display_name=os.path.basename(upload.name),
+        mime_type=getattr(upload, 'content_type', '') or '',
+    )
+    attachment.save()
+    return JsonResponse({
+        'id': attachment.pk,
+        'name': attachment.display_name,
+        'kind': attachment.kind,
+        'size': upload.size,
+    }, status=201)
+
+
+@hanko_login_required
+@require_POST
+def attachment_delete(request: HttpRequest, pk: int) -> JsonResponse:
+    """Delete a staged upload owned by the requesting user (file removed client-side)."""
+    attachment = get_object_or_404(Attachment, pk=pk)
+    if attachment.content_type_id is not None or attachment.uploaded_by_id != request.user.pk:
+        raise Http404(_('Attachment not found.'))
+    attachment.delete()
+    return JsonResponse({'ok': True})
+
+
 def _user_can_view_attachment(user: Any, attachment: Attachment) -> bool:
     """Authorize attachment downloads through their parent object's permissions."""
     parent = attachment.parent
@@ -970,6 +1032,7 @@ def report_create(request: HttpRequest, car_pk: str) -> HttpResponse:
                     report,
                     form.cleaned_data.get('attachments', []),
                     form.cleaned_data.get('external_links', []),
+                    staged=form.cleaned_data.get('staged_attachments'),
                 )
             messages.success(request, _('Maintenance report added successfully.'))
             return redirect(reverse('shop-car-detail', args=[car.pk]))
@@ -994,6 +1057,7 @@ def report_update(request: HttpRequest, car_pk: str, pk: str) -> HttpResponse:
                     report,
                     form.cleaned_data.get('attachments', []),
                     form.cleaned_data.get('external_links', []),
+                    staged=form.cleaned_data.get('staged_attachments'),
                 )
             messages.success(request, _('Maintenance report updated successfully.'))
             return redirect(reverse('shop-car-detail', args=[car.pk]))

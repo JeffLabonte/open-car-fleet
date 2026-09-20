@@ -26,6 +26,10 @@ _e2e_db_path = os.environ.get('E2E_DB_PATH', '').strip()
 if _e2e_db_path:
     DATABASES['default']['NAME'] = _e2e_db_path
 
+# Never let the pytest suite or the e2e live server reach the real
+# MailerSend API; locmem delivers into django.core.mail.outbox.
+EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
+
 PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.MD5PasswordHasher',
     'django.contrib.auth.hashers.PBKDF2PasswordHasher',

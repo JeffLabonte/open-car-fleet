@@ -9,8 +9,9 @@ from django.utils.translation import gettext_lazy as _
 
 from shop.models.garage import KnownShop
 
-# Per-file upload ceiling for unified attachments (25 MB).
-ATTACHMENT_MAX_UPLOAD_BYTES = 25 * 1024 * 1024
+# Per-file upload ceiling for unified attachments (500 MB), large enough for
+# long phone-recorded mechanic videos.
+ATTACHMENT_MAX_UPLOAD_BYTES = 500 * 1024 * 1024
 # Upper bound of files accepted in a single form submission.
 ATTACHMENT_MAX_FILES = 10
 
@@ -46,6 +47,9 @@ class LineListFieldMixin:
 
 class AssignedToShopFormMixin:
     def __init__(self, *args: Any, user: Any = None, garage: Any = None, **kwargs: Any) -> None:
+        # Store before super().__init__ so StagedAttachmentsMixin (further
+        # down the MRO) can read it without receiving the kwarg itself.
+        self.user = user
         super().__init__(*args, **kwargs)
         self.configure_assigned_fields(user=user, garage=garage)
 
@@ -77,6 +81,47 @@ class MultipleFileInput(forms.FileInput):
     def __init__(self, attrs: dict[str, Any] | None = None, **kwargs: Any) -> None:
         super().__init__(attrs=attrs, **kwargs)
         self.attrs['multiple'] = True
+
+
+def validate_uploaded_file(cleaned_file: Any) -> None:
+    """OWASP upload checks for one cleaned file: size, extension,
+    declared content type, and magic bytes.
+
+    Shared by ``AttachmentField`` (classic form posts) and the AJAX
+    staging endpoint so both paths enforce identical rules. Limits come
+    from ``AttachmentField`` class attributes so tests can patch them in
+    one place.
+    """
+    if cleaned_file.size > AttachmentField.max_upload_bytes:
+        raise forms.ValidationError(
+            _('Uploaded attachments must be no larger than %(limit)s MB.') % {'limit': AttachmentField.max_upload_bytes // (1024 * 1024)}
+        )
+    extension = os.path.splitext(os.path.basename(cleaned_file.name))[1].lower()
+    if extension not in AttachmentField.allowed_extensions:
+        raise forms.ValidationError(_('Unsupported attachment file type.'))
+    if cleaned_file.content_type not in AttachmentField.allowed_content_types:
+        raise forms.ValidationError(_('Unsupported attachment file type.'))
+    if not file_matches_signature(extension, cleaned_file):
+        raise forms.ValidationError(_('Attachment contents do not match its file type.'))
+
+
+def file_matches_signature(extension: str, cleaned_file: Any) -> bool:
+    expected_starts = FILE_SIGNATURES.get(extension)
+    if expected_starts is None:
+        return False
+    try:
+        cleaned_file.seek(0)
+        head = cleaned_file.read(16)
+        cleaned_file.seek(0)
+    except (OSError, ValueError):
+        return False
+    offset_checks = FILE_SIGNATURE_OFFSETS.get(extension)
+    if offset_checks:
+        for offset, needle in offset_checks:
+            if len(head) < offset + len(needle) or head[offset:offset + len(needle)] != needle:
+                return False
+        return True
+    return any(head.startswith(expected) for expected in expected_starts)
 
 
 class AttachmentField(forms.FileField):
@@ -125,33 +170,47 @@ class AttachmentField(forms.FileField):
         cleaned_file = super().clean(data, initial)
         if cleaned_file is None:
             return None
-        if cleaned_file.size > self.max_upload_bytes:
-            raise forms.ValidationError(
-                _('Uploaded attachments must be no larger than %(limit)s MB.') % {'limit': self.max_upload_bytes // (1024 * 1024)}
-            )
-        extension = os.path.splitext(os.path.basename(cleaned_file.name))[1].lower()
-        if extension not in self.allowed_extensions:
-            raise forms.ValidationError(_('Unsupported attachment file type.'))
-        if cleaned_file.content_type not in self.allowed_content_types:
-            raise forms.ValidationError(_('Unsupported attachment file type.'))
-        if not self._matches_file_signature(extension, cleaned_file):
-            raise forms.ValidationError(_('Attachment contents do not match its file type.'))
+        validate_uploaded_file(cleaned_file)
         return cleaned_file
 
-    def _matches_file_signature(self, extension: str, cleaned_file: Any) -> bool:
-        expected_starts = FILE_SIGNATURES.get(extension)
-        if expected_starts is None:
-            return False
-        try:
-            cleaned_file.seek(0)
-            head = cleaned_file.read(16)
-            cleaned_file.seek(0)
-        except (OSError, ValueError):
-            return False
-        offset_checks = FILE_SIGNATURE_OFFSETS.get(extension)
-        if offset_checks:
-            for offset, needle in offset_checks:
-                if len(head) < offset + len(needle) or head[offset:offset + len(needle)] != needle:
-                    return False
-            return True
-        return any(head.startswith(expected) for expected in expected_starts)
+
+class StagedAttachmentsMixin(forms.Form):
+    """Hidden field carrying IDs of files uploaded through the AJAX staging
+    endpoint before the parent form is submitted.
+
+    Only attachments that are still staged (no parent) *and* owned by the
+    submitting user are accepted, so one member cannot claim another
+    member's staged uploads. Requires the form constructor to receive
+    ``user=request.user``.
+    """
+
+    staged_attachments = forms.CharField(required=False, widget=forms.HiddenInput)
+    user: Any = None
+
+    def __init__(self, *args: Any, user: Any = None, **kwargs: Any) -> None:
+        if user is not None:
+            self.user = user
+        super().__init__(*args, **kwargs)
+
+    def clean_staged_attachments(self) -> list[Any]:
+        from shop.models.attachment import Attachment
+
+        raw = self.cleaned_data.get('staged_attachments') or ''
+        unique_ids = list(dict.fromkeys(int(part) for part in str(raw).split(',') if part.strip().isdigit()))
+        if not unique_ids:
+            return []
+        user = self.user
+        if user is None or not getattr(user, 'is_authenticated', False):
+            raise forms.ValidationError(_('Uploaded files could not be matched to your session. Upload them again.'))
+        staged_by_pk = {
+            attachment.pk: attachment
+            for attachment in Attachment.objects.filter(pk__in=unique_ids, object_id='', uploaded_by=user)
+        }
+        if len(staged_by_pk) != len(unique_ids):
+            raise forms.ValidationError(_('Some uploaded files are no longer available. Remove them and upload again.'))
+        staged = [staged_by_pk[pk] for pk in unique_ids]
+        direct_uploads = self.files.getlist('attachments')
+        total = len(staged) + len(direct_uploads)
+        if total > AttachmentField.max_files:
+            raise forms.ValidationError(_('No more than %(limit)s attachments may be uploaded at once.') % {'limit': AttachmentField.max_files})
+        return staged

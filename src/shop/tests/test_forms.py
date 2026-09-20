@@ -40,4 +40,4 @@ class FormEditableFieldsCoverageTests(TestCase):
         expected = self._editable_model_field_names(Report, exclude={'car'})
         actual = set(ReportForm.base_fields.keys())
         self.assertTrue(expected.issubset(actual))
-        self.assertSetEqual(actual - expected, {'attachments', 'external_links'})
+        self.assertSetEqual(actual - expected, {'attachments', 'external_links', 'staged_attachments'})

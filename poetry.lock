@@ -505,6 +505,31 @@ argon2 = ["argon2-cffi (>=23.1.0)"]
 bcrypt = ["bcrypt (>=4.1.1)"]
 
 [[package]]
+name = "django-anymail"
+version = "15.2"
+description = "Django email backends and webhooks for Amazon SES, Brevo,  MailerSend, Mailgun, Mailjet, Mailtrap, Mandrill, Postal, Postmark, Resend,  Scaleway TEM, SendGrid, SparkPost, and Unisender Go  (EmailBackend, transactional email tracking and inbound email signals)"
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "django_anymail-15.2-py3-none-any.whl", hash = "sha256:866ed547e9d3110210e6fad343a2311eead55dbd4d544195fb628d06ae25d737"},
+    {file = "django_anymail-15.2.tar.gz", hash = "sha256:65b26b1c99e6a09051b71b012ac4dfdd75a33aeb057315944dd9fb872cae57cf"},
+]
+
+[package.dependencies]
+django = ">=5.0"
+idna = "*"
+requests = ">=2.4.3"
+urllib3 = ">=1.25.0"
+
+[package.extras]
+amazon-ses = ["amazon-s3-encryption-client-python", "boto3 (>=1.43.6)"]
+postal = ["cryptography"]
+resend = ["svix"]
+sendgrid = ["cryptography"]
+uts46 = ["uts46"]
+
+[[package]]
 name = "django-pytest"
 version = "0.2.0"
 description = "django test runner to use py.test tests"
@@ -1317,4 +1342,4 @@ h11 = ">=0.16.0,<1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12"
-content-hash = "096f2ccc1d1444c8edefb35aed08176697262e2c10c751167247d01477a3058d"
+content-hash = "4b1429eb00372854049b36f95059f24fee5c60fef5c0b6c947476e00da6d5b5a"

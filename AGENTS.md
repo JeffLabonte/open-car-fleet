@@ -25,6 +25,7 @@ poetry run python src/manage.py import_csv WorkJob src/imports/workjobs.csv --ga
 poetry run python src/manage.py import_csv Report src/imports/reports_FMG3809.csv --garage <garage-uuid>
 poetry run python src/manage.py export_garage <garage-uuid> [--output path.xlsx]
 poetry run python src/manage.py convert_user_to_mechanic <email>
+poetry run python src/manage.py send_test_email --to <email> [--from <addr>] [--backend <path>]
 
 # Translations (en-ca / fr-ca)
 poetry run python src/manage.py makemessages -l en_CA -l fr_CA
@@ -39,14 +40,14 @@ Other useful targets: `make db-snapshot` (pg_dump to `db_backups/`), `make db-re
 - Tests need no Postgres or Docker: pytest-env clears `POSTGRES_*` variables before pytest-django initializes the settings module, forcing SQLite.
 - **`make test-e2e` runs the server and pytest against one shared SQLite file** (`E2E_DB`, default `/tmp/open-car-fleet-e2e-<port>.sqlite3`, wiped each run) via `DJANGO_SETTINGS_MODULE=settings.test_settings` + `E2E_DB_PATH`, with `POSTGRES_*` cleared. ORM fixture data is visible to the live server; never point the two processes at different databases.
 - Auth mocking: `@patch('shop.auth.requests.get', ...)` for the Hanko API; authenticate test clients via `self.client.session['hanko_session_token'] = '...'` + `.save()`.
-- Email mocking: `@patch('shop.models.garage.send_mail')` for invitations, `@patch('shop.mailgun_backend.requests.post')` for the Mailgun backend.
+- Email mocking: `@patch('shop.models.garage.send_mail')` for invitations, `@patch('anymail.backends.base_requests.requests.Session', return_value=fake_session)` for the MailerSend/Anymail backend (see `src/shop/tests/test_email.py`). Unit tests and e2e force `django.core.mail.backends.locmem.EmailBackend` in `settings/test_settings.py`.
 - CI is `.github/workflows/test.yml`: the unit suite runs in Fedora and a separate PR job installs Firefox with `browser-actions/setup-firefox@v1` before running `make test-e2e`.
 
 ## Environment & Database
 
 - `settings/settings.py` loads `src/.env` → falls back to checked-in `src/.env.template` → root `.env`/`.env.template` (first value per variable wins). The template has working defaults, so no `.env` is needed for dev or tests.
 - DB: Postgres when `POSTGRES_DB` is set (docker-compose `db` service, postgres:18), else sqlite at `src/db.sqlite3`. Dev server uses Postgres via `make run`.
-- `HANKO_API_URL` is required for real logins; `MAILGUN_API_KEY` / `MAILGUN_SANDBOX_DOMAIN` for invitation emails (custom HTTP backend `shop/mailgun_backend.py`, not SMTP).
+- `HANKO_API_URL` is required for real logins; `MAILERSEND_API_TOKEN` for invitation emails (django-anymail MailerSend backend via `EMAIL_BACKEND`/`ANYMAIL` settings; not SMTP). `DEFAULT_FROM_EMAIL` must be an address on the verified MailerSend domain. Django 6.1 deprecates `EMAIL_BACKEND` (RemovedInDjango70Warning) in favour of its new `MAILERS` framework — Anymail 15.x still targets the classic backend API; revisit when Anymail supports `MAILERS`.
 
 ## Authentication
 

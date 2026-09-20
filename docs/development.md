@@ -57,7 +57,7 @@ Troubleshooting:
 
 - `settings/settings.py` loads `src/.env` → falls back to checked-in `src/.env.template` → root `.env`/`.env.template` (first value per variable wins). The template has working defaults, so no `.env` is needed for dev or tests.
 - DB: Postgres when `POSTGRES_DB` is set (docker-compose `db` service, postgres:18), else sqlite at `src/db.sqlite3`. Dev server uses Postgres via `make run`.
-- `HANKO_API_URL` is required for real logins; `MAILGUN_API_KEY` / `MAILGUN_SANDBOX_DOMAIN` for invitation emails (custom HTTP backend `shop/mailgun_backend.py`, not SMTP).
+- `HANKO_API_URL` is required for real logins; `MAILERSEND_API_TOKEN` for invitation emails (django-anymail MailerSend backend via `EMAIL_BACKEND`/`ANYMAIL` settings; not SMTP). `DEFAULT_FROM_EMAIL` must be an address on the verified MailerSend domain. Django 6.1 deprecates `EMAIL_BACKEND` in favour of its new `MAILERS` framework — Anymail 15.x still targets the classic backend API; revisit when Anymail supports `MAILERS`.
 
 ## Test suites
 
@@ -83,8 +83,8 @@ poetry run pytest src/shop/tests/test_auth.py::TestClass::test_name    # single 
 - pytest-django is configured through `pytest.ini`; tests collect from `src` and `tests/bdd`.
 - Shop unit tests live in the `src/shop/tests/` package, one module per domain: `test_auth`, `test_garage_sharing`, `test_shops`, `test_cars`, `test_forms`, `test_attachments`, `test_importers`, `test_exporters`, `test_views`, `test_security`. Shared fakes and file signatures are in `src/shop/tests/helpers.py`.
 - Auth mocking: `@patch('shop.auth.requests.get', ...)` for the Hanko API; authenticate test clients via `self.client.session['hanko_session_token'] = '...'` + `.save()`.
-- Email mocking: `@patch('shop.models.garage.send_mail')` for invitations, `@patch('shop.mailgun_backend.requests.post')` for the Mailgun backend.
-- `settings/test_settings.py` adds fast password hashing (MD5) and a per-process temporary `MEDIA_ROOT`.
+- Email mocking: `@patch('shop.models.garage.send_mail')` for invitations, `@patch('anymail.backends.base_requests.requests.Session', return_value=fake_session)` for the MailerSend/Anymail backend (see `src/shop/tests/test_email.py`).
+- `settings/test_settings.py` adds fast password hashing (MD5), a per-process temporary `MEDIA_ROOT`, and forces `django.core.mail.backends.locmem.EmailBackend` so no test reaches the MailerSend API.
 
 ### End-to-end suite (`make test-e2e`)
 

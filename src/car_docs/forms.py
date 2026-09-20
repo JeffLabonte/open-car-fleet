@@ -2,10 +2,10 @@ from django import forms
 from django.utils.translation import gettext_lazy as _
 
 from car_docs.models import CarDoc
-from shop.forms.base import AttachmentField, MultipleFileInput
+from shop.forms.base import AttachmentField, MultipleFileInput, StagedAttachmentsMixin
 
 
-class CarDocForm(forms.ModelForm):
+class CarDocForm(StagedAttachmentsMixin, forms.ModelForm):
     attachments = AttachmentField(
         required=False,
         widget=MultipleFileInput(attrs={

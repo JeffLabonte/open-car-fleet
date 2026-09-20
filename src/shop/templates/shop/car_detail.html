@@ -37,6 +37,7 @@
       <div class="attr"><dt>{% translate 'Model' %}</dt><dd>{{ car.model }}</dd></div>
       <div class="attr"><dt>{% translate 'Colour' %}</dt><dd>{{ car.colour|default:'—' }}</dd></div>
       <div class="attr"><dt>{% translate 'Year' %}</dt><dd>{{ car.year|default:'—' }}</dd></div>
+      <div class="attr"><dt>{% translate 'Odometer' %}</dt><dd>{{ car.mileage|default:'—' }}</dd></div>
       <div class="attr"><dt>{% translate 'VIN' %}</dt><dd class="mono">{{ car.vin|default:'—' }}</dd></div>
       <div class="attr"><dt>{% translate 'License plate' %}</dt><dd class="mono">{{ car.license_plate|default:'—' }}</dd></div>
       <div class="attr"><dt>{% translate 'Last updated' %}</dt><dd>{{ car.updated_at|date:'F j, Y, g:i a' }}</dd></div>

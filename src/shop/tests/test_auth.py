@@ -9,7 +9,6 @@ from django.contrib.auth.middleware import AuthenticationMiddleware
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.core.mail import EmailMessage
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.contrib.sessions.middleware import SessionMiddleware
@@ -33,7 +32,6 @@ from shop.forms import ReportForm
 from shop.forms import WorkJobForm
 from shop.importers import CSVImporter
 from shop.importers import ImportValidationError
-from shop.mailgun_backend import MailgunEmailBackend
 from shop.middleware import HankoAuthenticationMiddleware
 from shop.middleware import hanko_login_required
 from shop.models.car import Car
@@ -850,26 +848,6 @@ class AuthAndInputCoverageTests(TestCase):
 
         self.assertEqual(importer._format_validation_error(ValidationError({'make': ['Bad value.']})), 'make: Bad value.')
         self.assertEqual(importer._format_validation_error(ValidationError('Plain error.')), 'Plain error.')
-
-    def test_mailgun_backend_success_and_error_paths(self):
-        settings_override = override_settings(MAILGUN_API_KEY='secret', MAILGUN_SANDBOX_DOMAIN='mg.example.com', MAILGUN_BASE_DOMAIN='https://api.mailgun.net')
-        with settings_override:
-            with patch('shop.mailgun_backend.requests.post') as mock_post:
-                mock_post.return_value.raise_for_status.return_value = None
-                backend = MailgunEmailBackend(fail_silently=False)
-                message = EmailMessage(subject='Test', body='Body', to=['one@example.com'], from_email='from@example.com')
-                self.assertEqual(backend.send_messages([message]), 1)
-
-            with patch('shop.mailgun_backend.requests.post', side_effect=requests.RequestException('boom')):
-                backend = MailgunEmailBackend(fail_silently=False)
-                message = EmailMessage(subject='Test', body='Body', to=['one@example.com'], from_email='from@example.com')
-                with self.assertRaises(requests.RequestException):
-                    backend.send_messages([message])
-
-        with override_settings(MAILGUN_API_KEY='', MAILGUN_SANDBOX_DOMAIN=''):
-            backend = MailgunEmailBackend(fail_silently=False)
-            with self.assertRaises(ValueError):
-                backend.send_messages([EmailMessage(subject='Test', body='Body', to=['one@example.com'])])
 
     def test_convert_user_to_mechanic_command_handles_grant_and_revoke_branches(self):
         user = ShopUser.objects.create_user(username='mechanic-cmd', email='mechanic-cmd@example.com', password='pass1234')

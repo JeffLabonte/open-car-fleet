@@ -23,8 +23,18 @@ def user_car_docs_queryset(user: Any):
     return CarDoc.objects.filter(car__garage__members=user).distinct()
 
 
-def save_attachments(parent: Any, uploaded_files: list[Any], external_links: list[str]) -> None:
-    """Persist unified attachments (uploads and external links) for any parent model."""
+def save_attachments(
+    parent: Any,
+    uploaded_files: list[Any],
+    external_links: list[str],
+    staged: list[Any] | None = None,
+) -> None:
+    """Persist unified attachments (uploads and external links) for any parent model.
+
+    ``staged`` holds Attachment rows created earlier by the AJAX upload
+    endpoint for this user (validated in the form); they are re-parented
+    onto ``parent`` here.
+    """
     content_type = ContentType.objects.get_for_model(parent)
     for index, uploaded_file in enumerate(uploaded_files):
         Attachment.objects.create(
@@ -35,6 +45,12 @@ def save_attachments(parent: Any, uploaded_files: list[Any], external_links: lis
             display_name=os.path.basename(getattr(uploaded_file, 'name', '') or f'attachment-{index + 1}'),
             mime_type=getattr(uploaded_file, 'content_type', ''),
         )
+
+    for index, attachment in enumerate(staged or []):
+        attachment.content_type = content_type
+        attachment.object_id = str(parent.pk)
+        attachment.order = len(uploaded_files) + index
+        attachment.save()
 
     for index, external_link in enumerate(external_links):
         Attachment.objects.create(

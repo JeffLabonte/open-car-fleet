@@ -115,6 +115,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'anymail',
     'shop',
     'car_docs',
 ]
@@ -158,6 +159,13 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'settings.wsgi.application'
+
+
+# File uploads. Large unified attachments (photos, mechanic videos up to
+# 500 MB per file) must spill to disk instead of consuming worker memory, and
+# non-file POST data stays bounded.
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 MB, then temp files on disk
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 MB (non-file fields)
 
 
 # Database
@@ -241,14 +249,15 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 
-# Email (Mailgun HTTP API)
-# https://documentation.mailgun.com/en/latest/api-sending.html#sending
+# Email (MailerSend API via django-anymail)
+# https://anymail.dev/en/stable/esps/mailersend/
 
-EMAIL_BACKEND = 'shop.mailgun_backend.MailgunEmailBackend'
-MAILGUN_API_KEY = os.environ.get('MAILGUN_API_KEY', '')
-MAILGUN_SANDBOX_DOMAIN = os.environ.get('MAILGUN_SANDBOX_DOMAIN', '')
-MAILGUN_BASE_DOMAIN = os.environ.get('MAILGUN_BASE_DOMAIN', 'https://api.mailgun.net')
+EMAIL_BACKEND = 'anymail.backends.mailersend.EmailBackend'
+ANYMAIL = {
+    'MAILERSEND_API_TOKEN': os.environ.get('MAILERSEND_API_TOKEN', ''),
+}
 DEFAULT_FROM_EMAIL = os.environ.get(
     'DEFAULT_FROM_EMAIL',
-    f'Open Car Fleet <postmaster@{MAILGUN_SANDBOX_DOMAIN or "localhost"}>',
+    'Open Car Fleet <noreply@localhost>',
 )
+SERVER_EMAIL = os.environ.get('SERVER_EMAIL', DEFAULT_FROM_EMAIL)

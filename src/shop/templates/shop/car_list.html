@@ -23,6 +23,7 @@
               <th scope="col">{% translate 'Name' %}</th>
               <th scope="col">{% translate 'Make' %}</th>
               <th scope="col">{% translate 'Year' %}</th>
+              <th scope="col">{% translate 'Odometer' %}</th>
               {% if can_edit_garage_data %}<th scope="col">{% translate 'Actions' %}</th>{% endif %}
             </tr>
           </thead>
@@ -44,6 +45,7 @@
                 </td>
                 <td data-label="{% translate 'Make' %}">{{ car.make }}</td>
                 <td data-label="{% translate 'Year' %}">{{ car.year|default:'—' }}</td>
+                <td data-label="{% translate 'Odometer' %}">{{ car.mileage|default:'—' }}</td>
                 {% if can_edit_garage_data %}
                   <td data-label="">
                     <button class="button is-small is-danger" type="button" data-dialog-open="dialog-car-delete" data-dialog-action="{% url 'shop-car-delete' car.pk %}" data-testid="delete-car-button">

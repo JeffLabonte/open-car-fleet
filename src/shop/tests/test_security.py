@@ -96,27 +96,32 @@ class SecurityHardeningTests(TestCase):
         self.assertIn('attachments', form.errors)
 
     def test_report_attachment_rejects_oversized_upload(self):
-        from shop.forms.base import ATTACHMENT_MAX_UPLOAD_BYTES
+        from unittest.mock import patch
 
-        form = ReportForm(
-            data={
-                'mileage': '',
-                'job_name': 'Oil change',
-                'date_done': '2026-01-15',
-                'note': '',
-                'additional_information': '',
-            },
-            files={
-                'attachments': SimpleUploadedFile(
-                    'large.png',
-                    PNG_SIGNATURE + b'0' * (ATTACHMENT_MAX_UPLOAD_BYTES + 1),
-                    content_type='image/png',
-                ),
-            },
-            user=self.owner,
-            garage=self.garage,
-        )
-        self.assertFalse(form.is_valid())
+        from shop.forms.base import AttachmentField
+
+        # Patching the shared limit keeps this test cheap regardless of the
+        # production ceiling (500 MB).
+        with patch.object(AttachmentField, 'max_upload_bytes', 10):
+            form = ReportForm(
+                data={
+                    'mileage': '',
+                    'job_name': 'Oil change',
+                    'date_done': '2026-01-15',
+                    'note': '',
+                    'additional_information': '',
+                },
+                files={
+                    'attachments': SimpleUploadedFile(
+                        'large.png',
+                        PNG_SIGNATURE + b'0' * 11,
+                        content_type='image/png',
+                    ),
+                },
+                user=self.owner,
+                garage=self.garage,
+            )
+            self.assertFalse(form.is_valid())
         self.assertIn('attachments', form.errors)
 
     def test_report_attachment_rejects_too_many_files(self):

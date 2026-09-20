@@ -43,13 +43,18 @@ def car_doc_create(request, car_pk):
         messages.error(request, _('You do not have permission to add documents to this car.'))
         return redirect(reverse('shop-car-doc-list', args=[car.pk]))
     if request.method == 'POST':
-        form = CarDocForm(request.POST, request.FILES)
+        form = CarDocForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
             with transaction.atomic():
                 doc = form.save(commit=False)
                 doc.car = car
                 doc.save()
-                save_attachments(doc, form.cleaned_data.get('attachments', []), [])
+                save_attachments(
+                    doc,
+                    form.cleaned_data.get('attachments', []),
+                    [],
+                    staged=form.cleaned_data.get('staged_attachments'),
+                )
             messages.success(request, _('Document added successfully.'))
             return redirect(reverse('shop-car-doc-list', args=[car.pk]))
     else:
@@ -71,11 +76,16 @@ def car_doc_update(request, car_pk, pk):
         return redirect(reverse('shop-car-doc-list', args=[car.pk]))
     doc = get_object_or_404(user_car_docs_queryset(request.user), pk=pk, car=car)
     if request.method == 'POST':
-        form = CarDocForm(request.POST, request.FILES, instance=doc)
+        form = CarDocForm(request.POST, request.FILES, instance=doc, user=request.user)
         if form.is_valid():
             with transaction.atomic():
                 form.save()
-                save_attachments(doc, form.cleaned_data.get('attachments', []), [])
+                save_attachments(
+                    doc,
+                    form.cleaned_data.get('attachments', []),
+                    [],
+                    staged=form.cleaned_data.get('staged_attachments'),
+                )
             messages.success(request, _('Document updated successfully.'))
             return redirect(reverse('shop-car-doc-detail', args=[car.pk, doc.pk]))
     else:

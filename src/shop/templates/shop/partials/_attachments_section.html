@@ -25,7 +25,10 @@ upload component. Include at the bottom of every create/update form.
     </ul>
   </div>
 {% endif %}
-<div class="field" data-testid="attachment-upload-section">
+<div class="field" data-testid="attachment-upload-section"
+     data-upload-url="{% url 'shop-attachment-upload' %}"
+     data-delete-url="{% url 'shop-attachment-delete' 0 %}">
+  {{ form.staged_attachments }}
   <label class="label" for="{{ field.id_for_label }}">{{ field.label }}</label>
   <div class="control">
     <div class="file is-boxed is-fullwidth" id="attachment-dropzone">
@@ -47,5 +50,8 @@ upload component. Include at the bottom of every create/update form.
   {% endif %}
   {% for error in field.errors %}
     <p class="help is-danger">{{ error }}</p>
+  {% endfor %}
+  {% for error in form.staged_attachments.errors %}
+    <p class="help is-danger" data-testid="staged-attachment-errors">{{ error }}</p>
   {% endfor %}
 </div>

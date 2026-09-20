@@ -4,11 +4,11 @@ from urllib.parse import urlparse
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
-from shop.forms.base import AssignedToShopFormMixin, AttachmentField, MultipleFileInput
+from shop.forms.base import AssignedToShopFormMixin, AttachmentField, MultipleFileInput, StagedAttachmentsMixin
 from shop.models.report import Report
 
 
-class ReportForm(AssignedToShopFormMixin, forms.ModelForm):
+class ReportForm(AssignedToShopFormMixin, StagedAttachmentsMixin, forms.ModelForm):
     attachments = AttachmentField(
         required=False,
         widget=MultipleFileInput(attrs={
@@ -62,10 +62,9 @@ class ReportForm(AssignedToShopFormMixin, forms.ModelForm):
         }
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        user = kwargs.pop('user', None)
         garage = kwargs.pop('garage', None)
         super().__init__(*args, **kwargs)
-        self.configure_assigned_fields(user=user, garage=garage)
+        self.configure_assigned_fields(user=self.user, garage=garage)
         # The unified attachment mechanism renders at the bottom of the form.
         self.order_fields([
             name for name in self.fields

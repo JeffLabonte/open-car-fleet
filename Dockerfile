@@ -1,5 +1,5 @@
 # Use the official Python image with a slim base for production.
-FROM python:3.14-slim as base
+FROM python:3.14-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -27,7 +27,7 @@ COPY . /app/
 RUN python src/manage.py collectstatic --noinput
 
 # Use a lean runtime image.
-FROM python:3.14-slim as final
+FROM python:3.14-slim AS final
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app/src \

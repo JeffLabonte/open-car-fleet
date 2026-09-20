@@ -41,7 +41,10 @@ db-up:
 db-wait:
 	@elapsed=0; \
 	while [ $$elapsed -lt $(DB_WAIT_SECONDS) ]; do \
-		container_id=$$(docker compose ps -q db); \
+		container_id=$$(docker compose ps -q | while read cid; do \
+			service=$$(docker inspect --format='{{index .Config.Labels "com.docker.compose.service"}}' $$cid 2>/dev/null || true); \
+			if [ "$$service" = "db" ]; then echo $$cid; break; fi; \
+		done); \
 		if [ -n "$$container_id" ]; then \
 			health=$$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' $$container_id); \
 			if [ "$$health" = "healthy" ] || [ "$$health" = "running" ]; then \
@@ -56,7 +59,7 @@ db-wait:
 		elapsed=$$((elapsed + 2)); \
 	done; \
 	echo "Database did not become ready within $(DB_WAIT_SECONDS)s."; \
-	docker compose ps db; \
+	docker compose ps; \
 	exit 1
 
 db-stop:
@@ -71,7 +74,7 @@ db-reset:
 migrate: db-up db-wait
 	$(PYTHON) src/manage.py migrate
 
-run: install db-up migrate
+run: install migrate
 	$(PYTHON) src/manage.py runserver $(HOST):$(PORT)
 
 test:

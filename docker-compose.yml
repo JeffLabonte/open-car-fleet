@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:18
+    image: docker.io/library/postgres:18
     env_file:
       - ./src/.env
     ports:
@@ -40,5 +40,6 @@ volumes:
   postgres_data:
 
 networks:
+  # No explicit driver so this works with Docker (defaults to bridge)
+  # and rootless Podman (uses its default network mode).
   open-car-fleet-network:
-    driver: bridge

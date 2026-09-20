@@ -12,6 +12,9 @@ Options:
   --hanko-api-url <url>           Hanko API URL
   --allowed-hosts "<hosts>"       Space-separated DJANGO_ALLOWED_HOSTS
   --csrf-trusted-origins "<list>" Space/comma-separated CSRF trusted origins
+  --mailersend-api-token <token>  MailerSend API token ("custom access": full Email access, no other features)
+  --from-email "<addr>"           DEFAULT_FROM_EMAIL (address on the verified MailerSend domain)
+  --server-email "<addr>"         SERVER_EMAIL for Django-internal mail (default: DEFAULT_FROM_EMAIL)
   --postgres-db <name>            Postgres DB name (default: open_garage)
   --postgres-user <user>          Postgres user (default: open_garage_user)
   --postgres-password <password>  Postgres password (default: generated)
@@ -30,6 +33,9 @@ TEMPLATE_FILE="${REPO_ROOT}/src/.env.template"
 HANKO_API_URL=""
 DJANGO_ALLOWED_HOSTS="localhost 127.0.0.1"
 CSRF_TRUSTED_ORIGINS=""
+MAILERSEND_API_TOKEN=""
+DEFAULT_FROM_EMAIL=""
+SERVER_EMAIL=""
 POSTGRES_DB="open_garage"
 POSTGRES_USER="open_garage_user"
 POSTGRES_PASSWORD=""
@@ -57,6 +63,18 @@ while [[ $# -gt 0 ]]; do
       ;;
     --csrf-trusted-origins)
       CSRF_TRUSTED_ORIGINS="${2:-}"
+      shift 2
+      ;;
+    --mailersend-api-token)
+      MAILERSEND_API_TOKEN="${2:-}"
+      shift 2
+      ;;
+    --from-email)
+      DEFAULT_FROM_EMAIL="${2:-}"
+      shift 2
+      ;;
+    --server-email)
+      SERVER_EMAIL="${2:-}"
       shift 2
       ;;
     --postgres-db)
@@ -127,6 +145,9 @@ updates = {
     "SECURE_HSTS_SECONDS": "31536000",
     "SESSION_COOKIE_SECURE": "True",
     "CSRF_COOKIE_SECURE": "True",
+    "MAILERSEND_API_TOKEN": r"${MAILERSEND_API_TOKEN}",
+    "DEFAULT_FROM_EMAIL": r"${DEFAULT_FROM_EMAIL}",
+    "SERVER_EMAIL": r"${SERVER_EMAIL}",
     "POSTGRES_DB": r"${POSTGRES_DB}",
     "POSTGRES_USER": r"${POSTGRES_USER}",
     "POSTGRES_PASSWORD": r"${POSTGRES_PASSWORD}",
@@ -154,9 +175,18 @@ if [[ -z "${HANKO_API_URL}" ]]; then
   echo "Warning: HANKO_API_URL is empty. Set it before deploying."
 fi
 
+if [[ -z "${MAILERSEND_API_TOKEN}" ]]; then
+  echo "Warning: MAILERSEND_API_TOKEN is empty. Invitation emails will fail until it is set."
+fi
+
+if [[ -z "${DEFAULT_FROM_EMAIL}" ]]; then
+  echo "Warning: DEFAULT_FROM_EMAIL is empty. It must be an address on your verified MailerSend domain."
+fi
+
 echo "Wrote ${OUTPUT_FILE}"
 echo "Next steps:"
 echo "  1) Review DJANGO_ALLOWED_HOSTS and CSRF_TRUSTED_ORIGINS"
 echo "  2) Set HANKO_API_URL if missing"
-echo "  3) Verify HTTPS is terminated in front of the app (SECURE_SSL_REDIRECT and HSTS are enabled)"
-echo "  4) Deploy with scripts/deploy-ssh.sh --host <user@server> --env-file ${OUTPUT_FILE}"
+echo "  3) Set MAILERSEND_API_TOKEN and DEFAULT_FROM_EMAIL (verified MailerSend domain) if missing"
+echo "  4) Verify HTTPS is terminated in front of the app (SECURE_SSL_REDIRECT and HSTS are enabled)"
+echo "  5) Deploy with scripts/deploy-ssh.sh --host <user@server> --env-file ${OUTPUT_FILE}"

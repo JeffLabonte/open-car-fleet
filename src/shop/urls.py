@@ -36,7 +36,9 @@ urlpatterns = [
     path('cars/<uuid:car_pk>/work-jobs/<int:pk>/edit/', views.workjob_update, name='shop-workjob-update'),
     path('cars/<uuid:car_pk>/reports/add/', views.report_create, name='shop-report-create'),
     path('cars/<uuid:car_pk>/reports/<int:pk>/edit/', views.report_update, name='shop-report-update'),
+    path('attachments/upload/', views.attachment_upload, name='shop-attachment-upload'),
     path('attachments/<int:pk>/file/', views.attachment_file, name='shop-attachment-file'),
+    path('attachments/<int:pk>/delete/', views.attachment_delete, name='shop-attachment-delete'),
     path('set-test-session/', views.set_test_session, name='shop-set-test-session'),
     path('cars/<uuid:car_pk>/docs/', include('car_docs.urls')),
 ]
