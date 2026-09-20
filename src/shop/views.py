@@ -41,7 +41,7 @@ from car_docs.models import CarDoc
 from shop.middleware import hanko_login_required
 from shop.models.attachment import Attachment
 from shop.models.car import CarPart
-from shop.models.garage import GarageInvitation, GarageMembership, KnownShop, KnownShopProof
+from shop.models.garage import Garage, GarageInvitation, GarageMembership, KnownShop, KnownShopProof
 from shop.models.job import WorkJob
 from shop.models.report import Report
 from shop.permissions import GarageSharingPermissions, get_membership_or_404
