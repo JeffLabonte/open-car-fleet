@@ -31,13 +31,28 @@ make test      # unit suite (SQLite, no Docker needed)
 
 The dev server listens on `127.0.0.1:8000`; override with `make run HOST=0.0.0.0 PORT=8080`.
 
+## Deploy
+
+To deploy to a remote server with Ansible + Docker Compose:
+
+```bash
+scripts/setup-ansible-inventory.sh   # create ansible/inventory.yml from the template
+scripts/prepare-env.sh --hanko-api-url https://your-hanko-api-url.hanko.io \
+  --allowed-hosts "fleet.example.com" \
+  --csrf-trusted-origins "https://fleet.example.com"
+make ansible-ping                    # verify SSH connectivity
+make ansible-deploy                  # install Docker, sync source, build, migrate
+```
+
+See [docs/deployment.md](docs/deployment.md) for the full deployment guide.
+
 ## Documentation
 
 | Document | Contents |
 | --- | --- |
 | [docs/management-commands.md](docs/management-commands.md) | `import_csv`, `export_garage`, `convert_user_to_mechanic`; CSV import schemas and import/export workflows. |
 | [docs/development.md](docs/development.md) | Makefile targets, environment and database layout, unit/BDD/e2e test suites, translations, migrations guard. |
-| [docs/deployment.md](docs/deployment.md) | SSH + Docker deployment scripts, production env preparation, and trade-offs. |
+| [docs/deployment.md](docs/deployment.md) | Ansible + Docker Compose deployment, production env preparation, and trade-offs. |
 | [docs/branding.md](docs/branding.md) | Logo-inspired accent colors and their CSS variables. |
 
 ## Architecture at a glance
