@@ -15,6 +15,14 @@ It helps individuals and shared garages organize vehicles, plan maintenance work
 
 ## Quick start
 
+On a fresh machine, install the prerequisites once (Python >= 3.12, Poetry, Docker):
+
+```bash
+make install-prereqs   # macOS (Homebrew), Linux (apt/dnf/pacman), or WSL
+```
+
+Then install project dependencies and run the app:
+
 ```bash
 make install   # poetry install --no-root --with test
 make run       # starts Postgres (docker compose), migrates, runs the dev server

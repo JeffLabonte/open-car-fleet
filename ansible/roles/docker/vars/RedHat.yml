@@ -1,0 +1,17 @@
+---
+# Docker repository configuration for Fedora/RHEL/CentOS/Rocky/AlmaLinux.
+docker_distro_map:
+  Fedora: fedora
+  RedHat: rhel
+  CentOS: centos
+  Rocky: rocky
+  AlmaLinux: almalinux
+
+docker_distro_id: "{{ docker_distro_map[ansible_facts.distribution] | default(ansible_facts.distribution | lower) }}"
+docker_repo_url: "https://download.docker.com/linux/{{ docker_distro_id }}"
+docker_repo_file: "/etc/yum.repos.d/docker-ce.repo"
+docker_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-compose-plugin

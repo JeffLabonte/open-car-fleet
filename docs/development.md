@@ -2,6 +2,25 @@
 
 Local development workflow, database lifecycle, and test suites.
 
+## Prerequisites
+
+You need Python >= 3.12, Poetry, and a container runtime (Docker with the Compose plugin) to run the full stack.
+
+Install them automatically with:
+
+```bash
+make install-prereqs
+```
+
+This runs `scripts/install-prereqs.sh`, which supports:
+
+- **macOS** via Homebrew (`brew install python@3.12`, `poetry`, Docker Desktop cask).
+- **Linux** via `apt` (Ubuntu/Debian), `dnf` (Fedora/RHEL), or `pacman` (Arch).
+- **Windows Subsystem for Linux (WSL2)** using the same `apt` path.
+- **Native Windows** prints manual `winget` instructions.
+
+If you already have Python, Poetry, and Docker installed, you can skip this step.
+
 ## Makefile targets
 
 Use the Makefile to install dependencies, run migrations, start the app, and run tests:

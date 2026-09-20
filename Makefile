@@ -1,4 +1,4 @@
-.PHONY: install db-up db-wait db-stop db-reset db-snapshot migrate run test test-serial test-profile test-fast test-bdd test-coverage test-e2e check-migrations translations
+.PHONY: install install-prereqs db-up db-wait db-stop db-reset db-snapshot migrate run test test-serial test-profile test-fast test-bdd test-coverage test-e2e check-migrations translations ansible-ping ansible-deploy
 
 POETRY ?= poetry
 PYTHON ?= $(POETRY) run python
@@ -25,6 +25,15 @@ E2E_DJANGO_ENV = \
 
 install:
 	$(POETRY) install --no-root --with test
+
+install-prereqs:
+	bash scripts/install-prereqs.sh
+
+ansible-ping:
+	ansible production -i ansible/inventory.yml -m ping
+
+ansible-deploy:
+	ansible-playbook -i ansible/inventory.yml ansible/playbook.yml
 
 db-up:
 	docker compose up -d db

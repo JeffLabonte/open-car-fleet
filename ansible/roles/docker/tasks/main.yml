@@ -1,0 +1,69 @@
+---
+- name: Load OS-specific Docker variables
+  ansible.builtin.include_vars: "{{ ansible_facts.os_family }}.yml"
+
+- name: Update apt cache (Debian family)
+  ansible.builtin.apt:
+    update_cache: yes
+  when: ansible_facts.os_family == "Debian"
+
+- name: Install prerequisite packages (Debian family)
+  ansible.builtin.apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+    state: present
+  when: ansible_facts.os_family == "Debian"
+
+- name: Install prerequisite packages (RedHat family)
+  ansible.builtin.dnf:
+    name:
+      - dnf-plugins-core
+    state: present
+  when: ansible_facts.os_family == "RedHat"
+
+- name: Ensure apt keyrings directory exists (Debian family)
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+  when: ansible_facts.os_family == "Debian"
+
+- name: Add Docker GPG key to keyring (Debian family)
+  ansible.builtin.shell: |
+    curl -fsSL {{ docker_gpg_key_url }} | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+  args:
+    creates: /etc/apt/keyrings/docker.gpg
+  when: ansible_facts.os_family == "Debian"
+
+- name: Add Docker apt repository (Debian family)
+  ansible.builtin.apt_repository:
+    repo: "deb [arch={{ ansible_facts.architecture }} signed-by=/etc/apt/keyrings/docker.gpg] {{ docker_repo_url }} {{ ansible_facts.distribution_release }} stable"
+    state: present
+    filename: docker
+  when: ansible_facts.os_family == "Debian"
+
+- name: Add Docker dnf repository (RedHat family)
+  ansible.builtin.command: |
+    dnf config-manager --add-repo {{ docker_repo_url }}/docker-ce.repo
+  args:
+    creates: "{{ docker_repo_file }}"
+  when: ansible_facts.os_family == "RedHat"
+
+- name: Install Docker packages
+  ansible.builtin.package:
+    name: "{{ docker_packages }}"
+    state: present
+
+- name: Start and enable Docker service
+  ansible.builtin.systemd:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Verify docker compose is available
+  ansible.builtin.command: docker compose version
+  changed_when: false

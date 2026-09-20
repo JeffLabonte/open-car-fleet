@@ -1,0 +1,44 @@
+services:
+  db:
+    image: docker.io/library/postgres:18
+    env_file:
+      - ./src/.env
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    networks:
+      - open-car-fleet-network
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-open_garage_user} -d ${POSTGRES_DB:-open_garage}']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /app/src
+    command: gunicorn --chdir /app/src settings.wsgi:application --bind 0.0.0.0:8000 --workers 3
+    environment:
+      - PYTHONPATH=/app/src
+      - DJANGO_STATIC_ROOT=/staticfiles
+    env_file:
+      - ./src/.env
+    depends_on:
+      - db
+    ports:
+      - '8000:8000'
+    volumes:
+      - media_volume:/app/media
+    networks:
+      - open-car-fleet-network
+
+volumes:
+  postgres_data:
+  media_volume:
+
+networks:
+  # No explicit driver so this works with Docker (defaults to bridge)
+  # and rootless Podman (uses its default network mode).
+  open-car-fleet-network:

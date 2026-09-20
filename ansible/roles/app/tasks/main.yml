@@ -1,0 +1,32 @@
+---
+- name: Ensure application directory exists
+  ansible.builtin.file:
+    path: "{{ app_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Synchronize application source to remote host
+  ansible.posix.synchronize:
+    src: "{{ playbook_dir }}/../"
+    dest: "{{ app_dir }}/"
+    delete: yes
+    recursive: yes
+    rsync_opts:
+      - '--exclude=.git'
+      - '--exclude=.venv'
+      - '--exclude=venv'
+      - '--exclude=__pycache__'
+      - '--exclude=.pytest_cache'
+      - '--exclude=*.pyc'
+      - '--exclude=.env'
+      - '--exclude=.env.production'
+      - '--exclude=db.sqlite3'
+      - '--exclude=db.sqlite3-journal'
+      - '--exclude=media/'
+      - '--exclude=staticfiles/'
+      - '--exclude=static/'
+      - '--exclude=db_backups/'
+      - '--exclude=.vscode/'
+      - '--exclude=.idea/'
+      - '--exclude=.DS_Store'
+  delegate_to: localhost

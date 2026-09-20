@@ -1,0 +1,9 @@
+---
+- name: Deploy Open Car Fleet
+  hosts: production
+  become: yes
+  roles:
+    - docker
+    - app
+    - env
+    - deploy

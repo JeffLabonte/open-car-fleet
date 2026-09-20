@@ -1,0 +1,10 @@
+---
+# Docker repository configuration for Debian/Ubuntu.
+docker_repo_url: "https://download.docker.com/linux/{{ ansible_facts.distribution | lower }}"
+docker_gpg_key_url: "{{ docker_repo_url }}/gpg"
+docker_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-buildx-plugin
+  - docker-compose-plugin

@@ -1,0 +1,30 @@
+---
+- name: Build and start services with Docker Compose
+  community.general.docker_compose_v2:
+    project_src: "{{ app_dir }}"
+    files:
+      - docker-compose.prod.yml
+    state: present
+    build: always
+
+- name: Run Django migrations
+  ansible.builtin.command: |
+    docker compose -f docker-compose.prod.yml run --rm web python /app/src/manage.py migrate
+  args:
+    chdir: "{{ app_dir }}"
+  changed_when: true
+
+- name: Ensure web service is running after migrations
+  community.general.docker_compose_v2:
+    project_src: "{{ app_dir }}"
+    files:
+      - docker-compose.prod.yml
+    services:
+      - web
+    state: present
+
+- name: Print container status
+  ansible.builtin.command: docker compose -f docker-compose.prod.yml ps
+  args:
+    chdir: "{{ app_dir }}"
+  changed_when: false

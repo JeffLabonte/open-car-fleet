@@ -7,9 +7,15 @@ Django 6 vehicle maintenance app (Poetry, Python ≥3.12) with two apps: `shop` 
 Run everything from the project root. `manage.py` lives at `src/manage.py`; Python imports are `shop.*` / `settings.*` (root `conftest.py` puts `src/` on `sys.path`).
 
 ```bash
+make install-prereqs            # install Python >=3.12, Poetry, Docker (macOS/Linux/WSL)
 poetry install --no-root        # plain `poetry install` FAILS: no package root is defined
 make run                        # start Postgres (docker compose), wait, migrate, runserver
 make test                       # pytest -q
+
+# Deployment (Ansible)
+scripts/setup-ansible-inventory.sh  # create ansible/inventory.yml from template
+make ansible-ping                   # test SSH connectivity via Ansible
+make ansible-deploy                 # deploy to production with Ansible + Docker Compose
 poetry run pytest src/shop/tests/test_auth.py -k NameFragment     # focused run
 poetry run pytest src/shop/tests/test_auth.py::TestClass::test_name    # single test
 
