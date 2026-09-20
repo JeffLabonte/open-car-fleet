@@ -1,4 +1,5 @@
 import os
+from collections.abc import Iterator
 from urllib.parse import urljoin
 
 import pytest
