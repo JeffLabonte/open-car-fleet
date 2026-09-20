@@ -188,6 +188,9 @@ def external_links_before_attachments(firefox_driver: webdriver.Firefox):
 
 @then('the car detail page lists the attachment')
 def car_detail_lists_attachment(firefox_driver: webdriver.Firefox):
+    _wait(firefox_driver).until(ec.presence_of_element_located(
+        (By.CSS_SELECTOR, '[data-testid="report-attachments"]')
+    ))
     source = firefox_driver.page_source
     assert 'brake-photo.png' in source
     assert firefox_driver.find_elements(By.CSS_SELECTOR, '[data-testid="report-attachments"]')
@@ -228,9 +231,10 @@ def attach_pdf_to_doc(firefox_driver: webdriver.Firefox, sample_files: dict[str,
 
 
 @when('they submit the car document form')
-def submit_doc(firefox_driver: webdriver.Firefox):
+def submit_doc(firefox_driver: webdriver.Firefox, state: dict[str, str]):
+    doc_list_url = state['car_url'].rstrip('/') + '/docs/'
     firefox_driver.find_element(By.CSS_SELECTOR, '#main-content form button[type="submit"]').click()
-    _wait(firefox_driver).until(ec.url_contains('/docs/'))
+    _wait(firefox_driver).until(ec.url_to_be(doc_list_url))
 
 
 @then('the car document list shows the attachment')
@@ -270,9 +274,10 @@ def attach_pdf_to_proof(firefox_driver: webdriver.Firefox, sample_files: dict[st
 
 
 @when('they submit the proof form')
-def submit_proof(firefox_driver: webdriver.Firefox):
+def submit_proof(firefox_driver: webdriver.Firefox, state: dict[str, str]):
+    shop_detail_url = state['shop_url']
     firefox_driver.find_element(By.CSS_SELECTOR, '#main-content form button[type="submit"]').click()
-    _wait(firefox_driver).until(ec.url_contains('/shops/'))
+    _wait(firefox_driver).until(ec.url_to_be(shop_detail_url))
 
 
 @then('the shop detail page lists the proof attachment')
