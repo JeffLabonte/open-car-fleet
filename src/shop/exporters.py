@@ -255,8 +255,10 @@ FORMULA_PREFIXES = ('=', '+', '-', '@', '\t', '\r')
 
 def _sanitize_cell(value: Any) -> Any:
     """Prefix user-controlled strings with a single quote to block formula injection."""
-    if isinstance(value, str) and value.startswith(FORMULA_PREFIXES):
-        return "'" + value
+    if isinstance(value, str):
+        stripped = value.lstrip(' \t\r\n')
+        if stripped.startswith(('=', '+', '-', '@')):
+            return "'" + value
     return value
 
 

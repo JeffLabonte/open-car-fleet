@@ -2,6 +2,7 @@ from functools import wraps
 import time
 from typing import Any, Callable, Optional, cast
 
+from django.conf import settings
 from django.contrib.auth import logout
 from django.http import HttpRequest
 from django.http import HttpResponse
@@ -17,8 +18,10 @@ PUBLIC_PATHS = {
     '/theme',
     '/theme/',
     '/auth/hanko/callback/',
-    '/set-test-session/',
 }
+
+if getattr(settings, 'ALLOW_TEST_SESSION_ENDPOINT', False):
+    PUBLIC_PATHS = PUBLIC_PATHS | {'/set-test-session/'}
 
 PUBLIC_PREFIXES = (
     '/static/',

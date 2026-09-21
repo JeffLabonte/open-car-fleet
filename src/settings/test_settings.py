@@ -22,6 +22,9 @@ from pathlib import Path
 
 from settings.settings import *  # noqa: F401,F403
 
+ROOT_URLCONF = 'settings.urls_test'
+ALLOW_TEST_SESSION_ENDPOINT = True
+
 _e2e_db_path = os.environ.get('E2E_DB_PATH', '').strip()
 if _e2e_db_path:
     DATABASES['default']['NAME'] = _e2e_db_path

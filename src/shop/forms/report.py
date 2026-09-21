@@ -4,7 +4,14 @@ from urllib.parse import urlparse
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
-from shop.forms.base import AssignedToShopFormMixin, AttachmentField, MultipleFileInput, StagedAttachmentsMixin
+from shop.forms.base import (
+    AssignedToShopFormMixin,
+    AttachmentField,
+    MAX_EXTERNAL_LINK_LENGTH,
+    MAX_EXTERNAL_LINKS,
+    MultipleFileInput,
+    StagedAttachmentsMixin,
+)
 from shop.models.report import Report
 
 
@@ -74,7 +81,15 @@ class ReportForm(AssignedToShopFormMixin, StagedAttachmentsMixin, forms.ModelFor
     def clean_external_links(self) -> list[str]:
         raw = self.cleaned_data.get('external_links', '')
         links = [item.strip() for item in raw.splitlines() if item.strip()]
+        if len(links) > MAX_EXTERNAL_LINKS:
+            raise forms.ValidationError(
+                _('No more than %(limit)s external links may be provided.') % {'limit': MAX_EXTERNAL_LINKS}
+            )
         for link in links:
+            if len(link) > MAX_EXTERNAL_LINK_LENGTH:
+                raise forms.ValidationError(
+                    _('External links must be %(limit)s characters or fewer.') % {'limit': MAX_EXTERNAL_LINK_LENGTH}
+                )
             parsed = urlparse(link)
             if parsed.scheme not in {'http', 'https'} or not parsed.netloc:
                 raise forms.ValidationError(_('External links must use http:// or https://.'))

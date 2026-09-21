@@ -13,6 +13,7 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, models, transaction
 from django.utils.translation import gettext as _
 
+from shop.forms.base import MAX_EXTERNAL_LINK_LENGTH, MAX_EXTERNAL_LINKS
 from shop.models.car import Car
 from shop.models.garage import Garage, KnownShop
 from shop.models.job import WorkJob
@@ -51,6 +52,7 @@ class ImportResult:
 class ImportContext:
     garage: Garage | None = None
     car: Car | None = None
+    user: Any = None
 
 
 class CSVImporter:
@@ -257,7 +259,7 @@ class CSVImporter:
             "title": self._require_text(record, "title"),
             "maintenance_type": self._clean_optional_text(record.get("maintenance_type")) or "",
             "assigned_to": self._resolve_mechanic(record.get("assigned_to"), context=context),
-            "assigned_shop": self._resolve_shop(record.get("assigned_shop")),
+            "assigned_shop": self._resolve_shop(record.get("assigned_shop"), context=context),
             "planned_date": self._parse_date_value(record.get("planned_date")),
             "is_done": self._coerce_bool(record.get("is_done", False), field_name="is_done"),
             "done_date": self._parse_date_value(record.get("done_date")),
@@ -289,7 +291,7 @@ class CSVImporter:
             "mileage": self._coerce_optional_int(record.get("mileage"), field_name="mileage"),
             "job_name": job_name,
             "assigned_to": self._resolve_mechanic(record.get("assigned_to"), context=context),
-            "assigned_shop": self._resolve_shop(record.get("assigned_shop")),
+            "assigned_shop": self._resolve_shop(record.get("assigned_shop"), context=context),
             "date_done": date_done,
             "note": self._clean_optional_text(record.get("note")) or "",
             "additional_information": (
@@ -308,13 +310,16 @@ class CSVImporter:
         """Normalize legacy documents/photos/attachments columns into attachment rows."""
         plan: list[dict[str, Any]] = []
         document_items = self._validate_link_list(
-            self._coerce_string_list(record.get("documents"), field_name="documents")
+            self._coerce_string_list(record.get("documents"), field_name="documents"),
+            field_name="documents",
         )
         photo_items = self._validate_link_list(
-            self._coerce_string_list(record.get("photos"), field_name="photos")
+            self._coerce_string_list(record.get("photos"), field_name="photos"),
+            field_name="photos",
         )
         link_items = self._validate_link_list(
-            self._coerce_string_list(record.get("attachments"), field_name="attachments")
+            self._coerce_string_list(record.get("attachments"), field_name="attachments"),
+            field_name="attachments",
         )
         for item in document_items:
             plan.append({"kind": "document", "value": item})
@@ -322,6 +327,10 @@ class CSVImporter:
             plan.append({"kind": "image", "value": item})
         for item in link_items:
             plan.append({"kind": "document", "value": item})
+        if len(plan) > MAX_EXTERNAL_LINKS:
+            raise ImportValidationError(
+                _("No more than %(limit)s external links may be provided per report.") % {'limit': MAX_EXTERNAL_LINKS}
+            )
         return plan
 
     def _resolve_car(self, raw_value: Any, context: ImportContext) -> Car:
@@ -394,11 +403,16 @@ class CSVImporter:
         except (user_model.DoesNotExist, user_model.MultipleObjectsReturned, ValidationError, ValueError) as exc:
             raise ImportValidationError(_("Mechanic not found for id '%(value)s'.") % {'value': raw_value}) from exc
 
-    def _resolve_shop(self, raw_value: Any):
+    def _resolve_shop(self, raw_value: Any, context: ImportContext | None = None):
         if raw_value in (None, ""):
             return None
 
         queryset = KnownShop.objects.all()
+        user = getattr(context, 'user', None)
+        if user is not None:
+            queryset = queryset.filter(
+                models.Q(created_by__isnull=True) | models.Q(created_by=user)
+            )
         if isinstance(raw_value, str):
             value = raw_value.strip()
             if not value:
@@ -494,9 +508,13 @@ class CSVImporter:
             return [item.strip() for item in value.splitlines() if item.strip()]
         raise ImportValidationError(_("Field '%(field)s' must be a list or newline-delimited string.") % {'field': field_name})
 
-    def _validate_link_list(self, items: list[str]) -> list[str]:
+    def _validate_link_list(self, items: list[str], *, field_name: str) -> list[str]:
         """Reject URL schemes that could execute script if rendered as links."""
         for item in items:
+            if len(item) > MAX_EXTERNAL_LINK_LENGTH:
+                raise ImportValidationError(
+                    _("%(field)s contains a link longer than %(limit)s characters.") % {'field': field_name, 'limit': MAX_EXTERNAL_LINK_LENGTH}
+                )
             if urlparse(item).scheme.lower() in UNSAFE_URL_SCHEMES:
                 raise ImportValidationError(_("Entries must be URLs (http/https) or plain paths: %(value)s") % {'value': item})
         return items

@@ -24,13 +24,17 @@
     </div>
   </section>
 
+  {{ hanko_api_url|json_script:'hanko-api-url' }}
+  {{ next_url|default:'/'|json_script:'next-url' }}
+  {{ logged_out|yesno:'true,false'|json_script:'logged-out' }}
+
   <script type="module">
     import { Hanko } from 'https://esm.run/@teamhanko/hanko-frontend-sdk';
     import { register } from 'https://esm.run/@teamhanko/hanko-elements';
 
-    const apiUrl = '{{ hanko_api_url }}';
-    const nextUrl = '{{ next_url|default:'/' }}';
-    const loggedOut = {{ logged_out|yesno:'true,false' }};
+    const apiUrl = JSON.parse(document.getElementById('hanko-api-url').textContent);
+    const nextUrl = JSON.parse(document.getElementById('next-url').textContent);
+    const loggedOut = JSON.parse(document.getElementById('logged-out').textContent);
     const authContainer = document.getElementById('hanko-auth-container');
 
     if (!apiUrl) {
