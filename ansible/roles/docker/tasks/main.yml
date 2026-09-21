@@ -2,6 +2,43 @@
 - name: Load OS-specific Docker variables
   ansible.builtin.include_vars: "{{ ansible_facts.os_family }}.yml"
 
+# Clean up any conflicting Docker apt configuration first. On Debian testing or
+# hosts that already had Docker installed via the official script, stale sources
+# may reference a different keyring path and break apt before we can use it.
+- name: Ensure apt keyrings directory exists (Debian family)
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+  when: ansible_facts.os_family == "Debian"
+
+- name: Find existing Docker apt source files (Debian family)
+  ansible.builtin.find:
+    paths: /etc/apt/sources.list.d
+    patterns:
+      - docker*.list
+      - docker*.sources
+  register: docker_existing_sources
+  when: ansible_facts.os_family == "Debian"
+
+- name: Remove conflicting Docker apt sources (Debian family)
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ docker_existing_sources.files }}"
+  when:
+    - ansible_facts.os_family == "Debian"
+    - docker_existing_sources.files | length > 0
+
+- name: Remove old Docker keyrings (Debian family)
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/apt/keyrings/docker.gpg
+    - /etc/apt/keyrings/docker.asc
+  when: ansible_facts.os_family == "Debian"
+
 - name: Update apt cache (Debian family)
   ansible.builtin.apt:
     update_cache: yes
@@ -25,23 +62,16 @@
     state: present
   when: ansible_facts.os_family == "RedHat"
 
-- name: Ensure apt keyrings directory exists (Debian family)
-  ansible.builtin.file:
-    path: /etc/apt/keyrings
-    state: directory
-    mode: '0755'
-  when: ansible_facts.os_family == "Debian"
-
 - name: Add Docker GPG key to keyring (Debian family)
   ansible.builtin.shell: |
-    curl -fsSL {{ docker_gpg_key_url }} | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    curl -fsSL {{ docker_gpg_key_url }} -o {{ docker_gpg_key_path }}
   args:
-    creates: /etc/apt/keyrings/docker.gpg
+    creates: "{{ docker_gpg_key_path }}"
   when: ansible_facts.os_family == "Debian"
 
 - name: Add Docker apt repository (Debian family)
   ansible.builtin.apt_repository:
-    repo: "deb [arch={{ ansible_facts.architecture }} signed-by=/etc/apt/keyrings/docker.gpg] {{ docker_repo_url }} {{ ansible_facts.distribution_release }} stable"
+    repo: "deb [arch={{ ansible_facts.architecture }} signed-by={{ docker_gpg_key_path }}] {{ docker_repo_url }} {{ docker_debian_release }} stable"
     state: present
     filename: docker
   when: ansible_facts.os_family == "Debian"

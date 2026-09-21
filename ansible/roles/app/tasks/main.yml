@@ -30,3 +30,4 @@
       - '--exclude=.idea/'
       - '--exclude=.DS_Store'
   delegate_to: localhost
+  become: false

@@ -1,6 +1,6 @@
 ---
 - name: Build and start services with Docker Compose
-  community.general.docker_compose_v2:
+  community.docker.docker_compose_v2:
     project_src: "{{ app_dir }}"
     files:
       - docker-compose.prod.yml
@@ -15,7 +15,7 @@
   changed_when: true
 
 - name: Ensure web service is running after migrations
-  community.general.docker_compose_v2:
+  community.docker.docker_compose_v2:
     project_src: "{{ app_dir }}"
     files:
       - docker-compose.prod.yml

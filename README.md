@@ -33,14 +33,16 @@ The dev server listens on `127.0.0.1:8000`; override with `make run HOST=0.0.0.0
 
 ## Deploy
 
-To deploy to a remote server with Ansible + Docker Compose:
+To deploy to a remote server with Ansible + Docker Compose over Tailscale:
 
 ```bash
-scripts/setup-ansible-inventory.sh   # create ansible/inventory.yml from the template
+# Make sure you are logged into Tailscale first:
+#   tailscale up  (open the browser link and authenticate)
+scripts/setup-ansible-inventory.sh   # create ansible/inventory.yml (Tailscale host xps-server.kanyu-bluegill.ts.net by default)
 scripts/prepare-env.sh --hanko-api-url https://your-hanko-api-url.hanko.io \
   --allowed-hosts "fleet.example.com" \
   --csrf-trusted-origins "https://fleet.example.com"
-make ansible-ping                    # verify SSH connectivity
+make ansible-ping                    # verify Tailscale + SSH connectivity
 make ansible-deploy                  # install Docker, sync source, build, migrate
 ```
 

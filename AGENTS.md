@@ -14,8 +14,9 @@ make test                       # pytest -q
 
 # Deployment (Ansible)
 scripts/setup-ansible-inventory.sh  # create ansible/inventory.yml from template
-make ansible-ping                   # test SSH connectivity via Ansible
-make ansible-deploy                 # deploy to production with Ansible + Docker Compose
+make check-tailscale                # verify Tailscale is connected and hosts are reachable
+make ansible-ping                   # test SSH connectivity via Ansible (runs check-tailscale first)
+make ansible-deploy                 # deploy to production with Ansible + Docker Compose (runs check-tailscale first)
 poetry run pytest src/shop/tests/test_auth.py -k NameFragment     # focused run
 poetry run pytest src/shop/tests/test_auth.py::TestClass::test_name    # single test
 

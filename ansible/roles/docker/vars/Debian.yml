@@ -2,6 +2,11 @@
 # Docker repository configuration for Debian/Ubuntu.
 docker_repo_url: "https://download.docker.com/linux/{{ ansible_facts.distribution | lower }}"
 docker_gpg_key_url: "{{ docker_repo_url }}/gpg"
+# Docker only publishes packages for stable Debian releases. Pin to trixie
+# so testing/unstable hosts can still install the latest stable Docker.
+docker_debian_release: trixie
+# Docker's current installer uses an ASCII-armored keyring.
+docker_gpg_key_path: /etc/apt/keyrings/docker.asc
 docker_packages:
   - docker-ce
   - docker-ce-cli

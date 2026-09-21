@@ -8,14 +8,26 @@ On your local machine:
 
 - Python >= 3.12, Poetry, and Docker for local development (`make install-prereqs` installs these).
 - Ansible (`pip install ansible` or your system package manager).
-- SSH access to the remote server.
+- [Tailscale](https://tailscale.com/download) and an account with access to the server's tailnet.
+- SSH access to the remote server (or Tailscale SSH enabled on the server).
 
 On the remote server:
 
 - Ubuntu, Debian, Fedora, RHEL, or a RHEL derivative (Rocky/AlmaLinux/CentOS).
 - The Ansible user must have passwordless `sudo` or be root.
+- Debian testing/unstable hosts use the `trixie` Docker repository because Docker only publishes packages for stable Debian releases.
 
-## 1) Configure your Ansible inventory
+## 1) Log into Tailscale
+
+Before touching the remote server, make sure your local machine is on the tailnet:
+
+```bash
+tailscale up
+```
+
+If you are not already authenticated, this prints a browser link. Open it and log in with your credentials. The deployment targets use Tailscale hostnames/IPs, so Ansible cannot reach the server unless Tailscale is connected.
+
+## 2) Configure your Ansible inventory
 
 A tracked template is provided. Run the helper to create your local, gitignored inventory:
 
@@ -23,9 +35,40 @@ A tracked template is provided. Run the helper to create your local, gitignored 
 scripts/setup-ansible-inventory.sh
 ```
 
+The helper will ask whether you are using Tailscale. If you are, it defaults to the hostname `xps-server.kanyu-bluegill.ts.net` and can optionally use Tailscale SSH (no private key required). It still supports plain IP/hostnames if you answer no.
+
 This creates `ansible/inventory.yml`. Edit it directly if you prefer; it supports one production host by default.
 
-Example:
+Tailscale example with SSH key over Tailnet:
+
+```yaml
+all:
+  children:
+    production:
+      hosts:
+        xps-server.kanyu-bluegill.ts.net:
+          ansible_user: deploy
+          ansible_ssh_private_key_file: ~/.ssh/id_rsa
+          ansible_ssh_extra_args: -o StrictHostKeyChecking=no
+          app_dir: /opt/open-car-fleet
+          env_file: ./src/.env.production
+```
+
+Tailscale example with Tailscale SSH (no key):
+
+```yaml
+all:
+  children:
+    production:
+      hosts:
+        xps-server.kanyu-bluegill.ts.net:
+          ansible_user: deploy
+          ansible_ssh_extra_args: -o StrictHostKeyChecking=no
+          app_dir: /opt/open-car-fleet
+          env_file: ./src/.env.production
+```
+
+Plain example without Tailscale:
 
 ```yaml
 all:
@@ -39,13 +82,21 @@ all:
           env_file: ./src/.env.production
 ```
 
-## 2) Test connectivity
+## 3) Test connectivity
+
+`make ansible-ping` runs a Tailscale pre-flight check first, then pings the host via Ansible:
 
 ```bash
 make ansible-ping
 ```
 
-## 3) Prepare production environment values
+To check Tailscale connectivity on its own:
+
+```bash
+make check-tailscale
+```
+
+## 4) Prepare production environment values
 
 Generate a deploy-ready env file:
 
@@ -58,11 +109,13 @@ scripts/prepare-env.sh \
 
 By default this writes `src/.env.production`, generates a strong `DJANGO_SECRET_KEY`, and generates a random `POSTGRES_PASSWORD`.
 
-## 4) Deploy
+## 5) Deploy
 
 ```bash
 make ansible-deploy
 ```
+
+Like `ansible-ping`, this runs the Tailscale pre-flight check before the playbook.
 
 The playbook performs the following on the remote host:
 
@@ -74,7 +127,7 @@ The playbook performs the following on the remote host:
 6. Runs Django migrations.
 7. Prints the running container status.
 
-## 5) Media persistence
+## 6) Media persistence
 
 `docker-compose.prod.yml` mounts a named volume `media_volume` at `/app/media`. Uploaded reports, attachments, and other user media persist across deployments. To seed an existing `media/` directory, copy it into the volume manually:
 
@@ -84,7 +137,7 @@ rsync -avz ./media/ user@server:/opt/open-car-fleet/media-import/
 ssh user@server "cd /opt/open-car-fleet && docker compose -f docker-compose.prod.yml run --rm -v \$(pwd)/media-import:/media-import web cp -r /media-import/. /app/media/"
 ```
 
-## Production compose file
+## 7) Production compose file
 
 `docker-compose.prod.yml` differs from the development `docker-compose.yml`:
 
@@ -92,10 +145,10 @@ ssh user@server "cd /opt/open-car-fleet && docker compose -f docker-compose.prod
 - Postgres is not exposed on the host.
 - A named volume persists uploaded media at `/app/media`.
 
-## Legacy SSH deployment
+## 8) Legacy SSH deployment
 
 The previous SSH/tar deployment script has been moved to `scripts/deprecated/deploy-ssh.sh` and is no longer the recommended path.
 
-## Future improvement
+## 9) Future improvement
 
 When you move to a registry-based workflow, the `deploy` role can be updated to pull a prebuilt image instead of building on the server. The current setup intentionally keeps the on-server build so the same source code produces the image locally or in production.

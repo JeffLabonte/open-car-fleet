@@ -1,10 +1,24 @@
 # Copy this file to inventory.yml and fill in your server details.
 # inventory.yml is gitignored so your real host/credentials stay local.
+#
+# Tailscale deployment (recommended):
+#   - Make sure you are logged into Tailscale first (run `tailscale up` or
+#     `tailscale login` and open the browser link with your credentials).
+#   - Use the server's Tailscale MagicDNS hostname or Tailscale IP below.
+#   - If the server runs Tailscale SSH, omit ansible_ssh_private_key_file and
+#     rely on your Tailnet identity. Otherwise keep the key and SSH over Tailnet.
+#
+# Example Tailscale SSH:
+#   xps-server.kanyu-bluegill.ts.net:
+#     ansible_user: root
+#     ansible_ssh_extra_args: -o StrictHostKeyChecking=no
+#     app_dir: /opt/open-car-fleet
+#     env_file: ./src/.env.production
 all:
   children:
     production:
       hosts:
-        your_server_ip:
+        xps-server.kanyu-bluegill.ts.net:
           ansible_user: root
           ansible_ssh_private_key_file: ~/.ssh/id_rsa
           app_dir: /opt/open-car-fleet
