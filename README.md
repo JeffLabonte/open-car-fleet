@@ -33,18 +33,20 @@ The dev server listens on `127.0.0.1:8000`; override with `make run HOST=0.0.0.0
 
 ## Deploy
 
-To deploy to a remote server with Ansible + Docker Compose over Tailscale:
+Deploy to a remote server with Ansible + Docker Compose over Tailscale:
 
 ```bash
 # Make sure you are logged into Tailscale first:
 #   tailscale up  (open the browser link and authenticate)
-scripts/setup-ansible-inventory.sh   # create ansible/inventory.yml (supports Tailscale or plain IP/hostname)
+scripts/setup-ansible-inventory.sh   # create ansible/inventory.yml
 scripts/prepare-env.sh --hanko-api-url https://your-hanko-api-url.hanko.io \
   --allowed-hosts "fleet.example.com" \
   --csrf-trusted-origins "https://fleet.example.com"
 make ansible-ping                    # verify Tailscale + SSH connectivity
-make ansible-deploy                  # install Docker, sync source, build, migrate
+make ansible-deploy                  # install Docker, sync source, build, migrate, configure backups
 ```
+
+Backups run hourly on the server. Trigger them manually with `make backup`, `make backup-media`, or `make backup-database`.
 
 See [docs/deployment.md](docs/deployment.md) for the full deployment guide.
 
@@ -52,10 +54,10 @@ See [docs/deployment.md](docs/deployment.md) for the full deployment guide.
 
 | Document | Contents |
 | --- | --- |
-| [docs/management-commands.md](docs/management-commands.md) | `import_csv`, `export_garage`, `convert_user_to_mechanic`; CSV import schemas and import/export workflows. |
-| [docs/development.md](docs/development.md) | Makefile targets, environment and database layout, unit/BDD/e2e test suites, translations, migrations guard. |
-| [docs/deployment.md](docs/deployment.md) | Ansible + Docker Compose deployment, production env preparation, and trade-offs. |
-| [docs/branding.md](docs/branding.md) | Logo-inspired accent colors and their CSS variables. |
+| [docs/management-commands.md](docs/management-commands.md) | `import_csv`, `export_garage`, `convert_user_to_mechanic`; CSV import schemas. |
+| [docs/development.md](docs/development.md) | Makefile targets, environment, test suites, translations, migrations guard. |
+| [docs/deployment.md](docs/deployment.md) | Ansible + Docker Compose deployment, media persistence, and hourly backups. |
+| [docs/branding.md](docs/branding.md) | Logo-inspired accent colors and CSS variables. |
 
 ## Architecture at a glance
 

@@ -35,6 +35,14 @@ make test
 make test-fast
 ```
 
+Production backup targets (run on the remote server via Ansible):
+
+```bash
+make backup          # media + database
+make backup-media
+make backup-database
+```
+
 `make run` starts Django on `127.0.0.1:8000` after applying migrations. Override the host or port if needed:
 
 ```bash

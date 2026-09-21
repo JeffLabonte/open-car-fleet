@@ -33,7 +33,11 @@ poetry run python src/manage.py makemessages -l en_CA -l fr_CA
 poetry run python src/manage.py compilemessages
 ```
 
-Other useful targets: `make db-snapshot` (pg_dump to `db_backups/`), `make db-reset` (destructive: drops the Postgres volume), and `make test-e2e` (headless Firefox).
+Other useful targets:
+- `make db-snapshot` — local `pg_dump` to `db_backups/`
+- `make db-reset` — destructive Postgres volume reset
+- `make test-e2e` — headless Firefox end-to-end suite
+- `make backup` / `make backup-media` / `make backup-database` — run production backups on the remote server via Ansible
 
 ## Testing
 
@@ -92,4 +96,4 @@ src/
 
 - Templates use `{% translate %}` (en-ca/fr-ca). After adding user-facing strings, run `makemessages` + `compilemessages`, and update `src/locale/*/LC_MESSAGES/django.po`.
 - CSV import is all-or-nothing: any invalid row aborts the whole import; unknown fields are warned and ignored; `car` references resolve by UUID, VIN, license plate, or usual name.
-- Deploy: `scripts/prepare-env.sh` (writes `src/.env.production`) then `scripts/deploy-ssh.sh` (uploads full source over SSH, `docker compose up -d --build`, migrates).
+- Deploy: `scripts/prepare-env.sh` (writes `src/.env.production`) then `make ansible-deploy` (Ansible + Docker Compose over Tailscale).
