@@ -35,7 +35,7 @@ A tracked template is provided. Run the helper to create your local, gitignored 
 scripts/setup-ansible-inventory.sh
 ```
 
-The helper will ask whether you are using Tailscale. If you are, it defaults to the hostname `xps-server.kanyu-bluegill.ts.net` and can optionally use Tailscale SSH (no private key required). It still supports plain IP/hostnames if you answer no.
+The helper will ask whether you are using Tailscale. If you are, it defaults the hostname prompt to `xps-server.kanyu-bluegill.ts.net` and can optionally use Tailscale SSH (no private key required). It still supports plain IP/hostnames if you answer no.
 
 This creates `ansible/inventory.yml`. Edit it directly if you prefer; it supports one production host by default.
 

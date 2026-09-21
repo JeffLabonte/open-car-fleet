@@ -78,7 +78,7 @@ from pathlib import Path
 path = Path(r"$OUTPUT")
 text = path.read_text()
 
-text = text.replace('xps-server.kanyu-bluegill.ts.net:', r"$server_ip:")
+text = text.replace('your_server_ip:', r"$server_ip:")
 text = text.replace('ansible_user: root', 'ansible_user: ' + r"$ssh_user")
 if r"$use_tailscale"[0].lower() == 'y':
     # Add StrictHostKeyChecking=no for Tailscale connections; Tailscale

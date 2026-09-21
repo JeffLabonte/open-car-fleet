@@ -38,7 +38,7 @@ To deploy to a remote server with Ansible + Docker Compose over Tailscale:
 ```bash
 # Make sure you are logged into Tailscale first:
 #   tailscale up  (open the browser link and authenticate)
-scripts/setup-ansible-inventory.sh   # create ansible/inventory.yml (Tailscale host xps-server.kanyu-bluegill.ts.net by default)
+scripts/setup-ansible-inventory.sh   # create ansible/inventory.yml (supports Tailscale or plain IP/hostname)
 scripts/prepare-env.sh --hanko-api-url https://your-hanko-api-url.hanko.io \
   --allowed-hosts "fleet.example.com" \
   --csrf-trusted-origins "https://fleet.example.com"
