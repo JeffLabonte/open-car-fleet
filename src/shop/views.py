@@ -44,6 +44,7 @@ from shop.models.car import CarPart
 from shop.models.garage import Garage, GarageInvitation, GarageMembership, KnownShop, KnownShopProof
 from shop.models.job import WorkJob
 from shop.models.report import Report
+from shop.models.user import ShopUser
 from shop.permissions import GarageSharingPermissions, get_membership_or_404
 from shop.view_helpers import (
     save_attachments,
