@@ -33,6 +33,8 @@ poetry run python src/manage.py makemessages -l en_CA -l fr_CA
 poetry run python src/manage.py compilemessages
 ```
 
+> Tip: `make -n <target>` runs a dry-run — it prints the commands a target would execute without actually running them. Useful for verifying Makefile changes or inspecting what a target like `make backup-media` would invoke.
+
 Other useful targets:
 - `make db-snapshot` — local `pg_dump` to `db_backups/`
 - `make db-reset` — destructive Postgres volume reset

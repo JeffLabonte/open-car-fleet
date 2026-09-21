@@ -2,6 +2,11 @@
 
 POETRY ?= poetry
 PYTHON ?= $(POETRY) run python
+PYTEST ?= $(POETRY) run pytest
+PYTEST_ARGS ?= -q
+ANSIBLE ?= ansible
+ANSIBLE_PLAYBOOK ?= ansible-playbook
+ANSIBLE_INVENTORY ?= ansible/inventory.yml
 HOST ?= 0.0.0.0
 PORT ?= 8000
 DB_WAIT_SECONDS ?= 60
@@ -33,24 +38,23 @@ check-tailscale:
 	bash scripts/check-tailscale.sh
 
 ansible-ping: check-tailscale
-	ansible production -i ansible/inventory.yml -m ping
+	$(ANSIBLE) production -i $(ANSIBLE_INVENTORY) -m ping
 
 # Extra flags passed to ansible-playbook. Use `--ask-become-pass` if you did not
 # store ansible_become_password in ansible/inventory.yml.
 ANSIBLE_BECOME_FLAGS ?=
 
 ansible-deploy: check-tailscale
-	ansible-playbook -i ansible/inventory.yml $(ANSIBLE_BECOME_FLAGS) ansible/playbook.yml
+	$(ANSIBLE_PLAYBOOK) -i $(ANSIBLE_INVENTORY) $(ANSIBLE_BECOME_FLAGS) ansible/playbook.yml
 
 deploy: ansible-deploy
 
-backup-media: check-tailscale
-	ansible production -i ansible/inventory.yml -b -a "/opt/open-car-fleet/scripts/backup-media.sh"
+BACKUP_TARGETS := backup-media backup-database
 
-backup-database: check-tailscale
-	ansible production -i ansible/inventory.yml -b -a "/opt/open-car-fleet/scripts/backup-database.sh"
+$(BACKUP_TARGETS): backup-%: check-tailscale
+	$(ANSIBLE) production -i $(ANSIBLE_INVENTORY) -b -a "/opt/open-car-fleet/scripts/backup-$*.sh"
 
-backup: backup-media backup-database
+backup: $(BACKUP_TARGETS)
 
 db-up:
 	docker compose up -d db
@@ -95,25 +99,25 @@ run: install migrate
 	$(PYTHON) src/manage.py runserver $(HOST):$(PORT)
 
 test:
-	$(POETRY) run pytest -q
+	$(PYTEST) $(PYTEST_ARGS)
 
 test-serial:
-	$(POETRY) run pytest -q -n0
+	$(PYTEST) $(PYTEST_ARGS) -n0
 
 test-profile:
-	$(POETRY) run pytest -q -n0 --durations=25
+	$(PYTEST) $(PYTEST_ARGS) -n0 --durations=25
 
 check-migrations:
 	DEBUG=True DJANGO_SECRET_KEY=check-only-secret $(PYTHON) src/manage.py makemigrations --check --no-input
 
 test-fast:
-	$(POETRY) run pytest -q src/shop/tests/test_forms.py -k FormEditableFieldsCoverageTests
+	$(PYTEST) $(PYTEST_ARGS) src/shop/tests/test_forms.py -k FormEditableFieldsCoverageTests
 
 test-bdd:
-	$(POETRY) run pytest -q tests/bdd
+	$(PYTEST) $(PYTEST_ARGS) tests/bdd
 
 test-coverage:
-	$(POETRY) run pytest -q --cov=src/shop --cov=src/car_docs --cov=src/settings --cov-branch --cov-report=term-missing
+	$(PYTEST) $(PYTEST_ARGS) --cov=src/shop --cov=src/car_docs --cov=src/settings --cov-branch --cov-report=term-missing
 
 test-e2e:
 	$(POETRY) install --no-root --with test,e2e
@@ -129,7 +133,7 @@ test-e2e:
 		if [ "$$attempt" -eq "$(E2E_WAIT_SECONDS)" ]; then cat /tmp/open-car-fleet-e2e.log; exit 1; fi; \
 		sleep 1; \
 	done; \
-	$(E2E_DJANGO_ENV) E2E_BASE_URL=$(E2E_BASE_URL) $(POETRY) run pytest -q -n0 tests/e2e
+	$(E2E_DJANGO_ENV) E2E_BASE_URL=$(E2E_BASE_URL) $(PYTEST) $(PYTEST_ARGS) -n0 tests/e2e
 
 db-snapshot: db-up db-wait
 	@mkdir -p db_backups
