@@ -1,4 +1,4 @@
-.PHONY: install install-prereqs db-up db-wait db-stop db-reset db-snapshot migrate run test test-serial test-profile test-fast test-bdd test-coverage test-e2e check-migrations translations check-tailscale ansible-ping ansible-deploy deploy
+.PHONY: install install-prereqs db-up db-wait db-stop db-reset db-snapshot migrate run test test-serial test-profile test-fast test-bdd test-coverage test-e2e check-migrations translations check-tailscale ansible-ping ansible-deploy deploy backup backup-media backup-database
 
 POETRY ?= poetry
 PYTHON ?= $(POETRY) run python
@@ -43,6 +43,14 @@ ansible-deploy: check-tailscale
 	ansible-playbook -i ansible/inventory.yml $(ANSIBLE_BECOME_FLAGS) ansible/playbook.yml
 
 deploy: ansible-deploy
+
+backup-media: check-tailscale
+	ansible production -i ansible/inventory.yml -b -a "/opt/open-car-fleet/scripts/backup-media.sh"
+
+backup-database: check-tailscale
+	ansible production -i ansible/inventory.yml -b -a "/opt/open-car-fleet/scripts/backup-database.sh"
+
+backup: backup-media backup-database
 
 db-up:
 	docker compose up -d db

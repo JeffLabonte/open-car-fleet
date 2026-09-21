@@ -1,0 +1,68 @@
+---
+- name: Ensure backup directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  loop:
+    - /opt/backups/media
+    - /opt/backups/database
+
+- name: Archive existing host media into initial backup
+  ansible.builtin.shell: |
+    set -euo pipefail
+    TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+    tar czf /opt/backups/media/snapshot-${TIMESTAMP}.tar.gz -C /opt/open-car-fleet/src/media .
+    rm -rf /opt/open-car-fleet/src/media
+  args:
+    removes: /opt/open-car-fleet/src/media
+
+- name: Ensure scripts directory exists
+  ansible.builtin.file:
+    path: "{{ app_dir }}/scripts"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: root
+    mode: '0755'
+
+- name: Install media backup script
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../scripts/backup-media.sh"
+    dest: "{{ app_dir }}/scripts/backup-media.sh"
+    owner: "{{ ansible_user }}"
+    group: root
+    mode: '0750'
+
+- name: Install database backup script
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../scripts/backup-database.sh"
+    dest: "{{ app_dir }}/scripts/backup-database.sh"
+    owner: "{{ ansible_user }}"
+    group: root
+    mode: '0750'
+
+- name: Install backup cron jobs
+  ansible.builtin.cron:
+    name: "{{ item.name }}"
+    minute: "0"
+    hour: "*"
+    day: "*"
+    month: "*"
+    weekday: "*"
+    user: root
+    job: "{{ item.job }}"
+  loop:
+    - name: "Open Car Fleet - media backup"
+      job: "/opt/open-car-fleet/scripts/backup-media.sh >> /var/log/open-car-fleet-backup.log 2>&1"
+    - name: "Open Car Fleet - database backup"
+      job: "/opt/open-car-fleet/scripts/backup-database.sh >> /var/log/open-car-fleet-backup.log 2>&1"
+
+- name: Ensure backup log file exists
+  ansible.builtin.file:
+    path: /var/log/open-car-fleet-backup.log
+    state: touch
+    owner: root
+    group: root
+    mode: '0644'

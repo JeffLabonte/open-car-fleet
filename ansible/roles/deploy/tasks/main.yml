@@ -23,6 +23,28 @@
       - web
     state: present
 
+- name: Check for existing host media files
+  ansible.builtin.find:
+    paths: "{{ app_dir }}/src/media"
+    recurse: true
+    file_type: file
+  register: host_media_files
+
+- name: Copy existing host media files into container volume
+  ansible.builtin.command: |
+    docker compose -f docker-compose.prod.yml cp ./src/media/. web:/app/src/media/
+  args:
+    chdir: "{{ app_dir }}"
+  when: host_media_files.matched >= 1
+  changed_when: true
+
+- name: Ensure media directory is writable by the app user
+  ansible.builtin.command: |
+    docker compose -f docker-compose.prod.yml exec --user root web chown -R django:django /app/src/media
+  args:
+    chdir: "{{ app_dir }}"
+  changed_when: true
+
 - name: Print container status
   ansible.builtin.command: docker compose -f docker-compose.prod.yml ps
   args:

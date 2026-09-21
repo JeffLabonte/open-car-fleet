@@ -40,7 +40,9 @@ COPY --from=base /usr/local/lib/python3.14/site-packages /usr/local/lib/python3.
 COPY --from=base /app /app
 COPY --from=base /staticfiles /staticfiles
 
-RUN addgroup --system django && adduser --system --ingroup django django
+RUN addgroup --system django && adduser --system --ingroup django django \
+    && mkdir -p /app/src/media \
+    && chown -R django:django /app/src/media
 USER django
 
 EXPOSE 8000

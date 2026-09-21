@@ -30,7 +30,7 @@ services:
     ports:
       - '8000:8000'
     volumes:
-      - media_volume:/app/media
+      - media_volume:/app/src/media
     networks:
       - open-car-fleet-network
 
