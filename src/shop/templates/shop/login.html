@@ -98,7 +98,13 @@
           throw new Error(`Login callback failed with status ${response.status}`);
         }
 
-        window.location.href = nextUrl;
+        // Enforce same-origin redirect to prevent open redirects and
+        // javascript: URLs from being assigned to location.
+        const redirectUrl = new URL(nextUrl, window.location.origin);
+        if (redirectUrl.origin !== window.location.origin) {
+          throw new Error('Refusing to redirect to an external origin.');
+        }
+        window.location.href = redirectUrl.href;
         return true;
       } catch (error) {
         console.error('Hanko login callback failed.', error);
