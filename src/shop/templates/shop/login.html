@@ -25,6 +25,7 @@
   </section>
 
   {{ hanko_api_url|json_script:'hanko-api-url' }}
+  {{ next_url|json_script:'next-url' }}
   {{ logged_out|yesno:'true,false'|json_script:'logged-out' }}
 
   <script type="module">
@@ -32,7 +33,7 @@
     import { register } from 'https://esm.run/@teamhanko/hanko-elements';
 
     const apiUrl = JSON.parse(document.getElementById('hanko-api-url').textContent);
-    const nextUrl = "{{ next_url|default:'/'|escapejs }}";
+    const nextUrl = JSON.parse(document.getElementById('next-url').textContent);
     const loggedOut = JSON.parse(document.getElementById('logged-out').textContent);
     const authContainer = document.getElementById('hanko-auth-container');
 
