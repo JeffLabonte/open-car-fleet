@@ -104,7 +104,10 @@
         if (redirectUrl.origin !== window.location.origin) {
           throw new Error('Refusing to redirect to an external origin.');
         }
-        window.location.href = redirectUrl.href;
+        // Rebuild the target from parsed URL components so the value assigned
+        // to location.href is not treated as unsanitized DOM text.
+        const safeRedirectTarget = redirectUrl.pathname + redirectUrl.search + redirectUrl.hash;
+        window.location.href = safeRedirectTarget;
         return true;
       } catch (error) {
         console.error('Hanko login callback failed.', error);
