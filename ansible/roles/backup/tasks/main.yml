@@ -5,7 +5,7 @@
     state: directory
     owner: root
     group: root
-    mode: '0755'
+    mode: '0700'
   loop:
     - /opt/backups/media
     - /opt/backups/database
@@ -15,6 +15,7 @@
     set -euo pipefail
     TIMESTAMP=$(date +%Y%m%d-%H%M%S)
     tar czf /opt/backups/media/snapshot-${TIMESTAMP}.tar.gz -C /opt/open-car-fleet/src/media .
+    chmod 600 /opt/backups/media/snapshot-${TIMESTAMP}.tar.gz
     rm -rf /opt/open-car-fleet/src/media
   args:
     removes: /opt/open-car-fleet/src/media
@@ -23,7 +24,7 @@
   ansible.builtin.file:
     path: "{{ app_dir }}/scripts"
     state: directory
-    owner: "{{ ansible_user }}"
+    owner: root
     group: root
     mode: '0755'
 
@@ -31,17 +32,17 @@
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/../scripts/backup-media.sh"
     dest: "{{ app_dir }}/scripts/backup-media.sh"
-    owner: "{{ ansible_user }}"
+    owner: root
     group: root
-    mode: '0750'
+    mode: '0700'
 
 - name: Install database backup script
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/../scripts/backup-database.sh"
     dest: "{{ app_dir }}/scripts/backup-database.sh"
-    owner: "{{ ansible_user }}"
+    owner: root
     group: root
-    mode: '0750'
+    mode: '0700'
 
 - name: Install backup cron jobs
   ansible.builtin.cron:
@@ -65,4 +66,4 @@
     state: touch
     owner: root
     group: root
-    mode: '0644'
+    mode: '0640'

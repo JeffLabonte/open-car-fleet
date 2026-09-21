@@ -16,7 +16,7 @@ from shop.models.garage import Garage, GarageMembership
 from shop.models.report import Report
 from shop.models.user import ShopUser
 from shop.tests.helpers import PNG_SIGNATURE
-from shop.views import purge_stale_staged_attachments
+from shop.views import purge_stale_staged_attachments, STAGED_ATTACHMENT_USER_QUOTA_BYTES
 
 
 class AttachmentStagingEndpointTests(TestCase):
@@ -153,6 +153,36 @@ class AttachmentStagingEndpointTests(TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertTrue(Attachment.objects.filter(pk=attachment.pk).exists())
         attachment.file.delete(save=False)
+
+    def test_upload_populates_size_bytes(self):
+        self.client.force_login(self.user)
+        response = self._upload(self.client, content=PNG_SIGNATURE + b'x' * 10)
+
+        self.assertEqual(response.status_code, 201)
+        attachment = Attachment.objects.get(pk=response.json()['id'])
+        self.assertEqual(attachment.size_bytes, len(PNG_SIGNATURE) + 10)
+        attachment.file.delete(save=False)
+
+    @patch('shop.views.STAGED_ATTACHMENT_USER_QUOTA_BYTES', 50)
+    def test_upload_enforces_per_user_quota(self):
+        self.client.force_login(self.user)
+
+        first = self._upload(self.client, content=PNG_SIGNATURE + b'x' * 10)
+        self.assertEqual(first.status_code, 201)
+
+        second = self._upload(self.client, content=PNG_SIGNATURE + b'x' * 30)
+        self.assertEqual(second.status_code, 413)
+        self.assertIn('quota', second.json()['error'].lower())
+
+    @patch('shop.views.STAGED_ATTACHMENT_USER_QUOTA_BYTES', 50)
+    def test_upload_quota_is_per_user(self):
+        self.client.force_login(self.user)
+        user_upload = self._upload(self.client, content=PNG_SIGNATURE + b'x' * 15)
+        self.assertEqual(user_upload.status_code, 201)
+
+        self.client.force_login(self.stranger)
+        stranger_upload = self._upload(self.client, content=PNG_SIGNATURE + b'x' * 15)
+        self.assertEqual(stranger_upload.status_code, 201)
 
 
 class StagedAttachmentClaimTests(TestCase):
@@ -327,3 +357,5 @@ class StagedAttachmentClaimTests(TestCase):
 
         self.assertIn('Purged 1', buffer.getvalue())
         self.assertFalse(Attachment.objects.filter(pk=stale.pk).exists())
+
+

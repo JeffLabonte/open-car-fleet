@@ -7,7 +7,7 @@ from typing import Any, cast
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import models, transaction
 from django.http import FileResponse, Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
@@ -44,6 +44,7 @@ from shop.models.car import CarPart
 from shop.models.garage import Garage, GarageInvitation, GarageMembership, KnownShop, KnownShopProof
 from shop.models.job import WorkJob
 from shop.models.report import Report
+from shop.models.user import ShopUser
 from shop.permissions import GarageSharingPermissions, get_membership_or_404
 from shop.view_helpers import (
     save_attachments,
@@ -66,6 +67,12 @@ INLINE_SAFE_ATTACHMENT_TYPES = {
     'video/quicktime',
     'application/pdf',
 }
+
+
+def _add_private_cache_headers(response: HttpResponse) -> None:
+    """Prevent shared caches from storing authorization-gated responses."""
+    response['Cache-Control'] = 'private, no-store'
+    response['Pragma'] = 'no-cache'
 
 
 def get_theme_from_request(request: HttpRequest) -> str:
@@ -166,10 +173,10 @@ def hanko_callback(request: HttpRequest) -> JsonResponse:
 
     try:
         user_data = fetch_hanko_userinfo(session_token)
+        user = complete_hanko_login(request, user_data)
     except HankoAuthenticationError:
         return JsonResponse({'ok': False, 'error': 'Invalid Hanko session'}, status=401)
 
-    user = complete_hanko_login(request, user_data)
     request.session['hanko_session_token'] = session_token
     request.session.save()
 
@@ -392,20 +399,41 @@ def garage_member_role(request: HttpRequest, pk: str, membership_pk: int) -> Htt
         return redirect(reverse('shop-garage-members', args=[garage.pk]))
 
     membership = get_object_or_404(garage.memberships, pk=membership_pk)
-    form = GarageMembershipRoleForm(request.POST, allowed_roles=perms.can_change_role_to)
-    if form.is_valid():
-        new_role = form.cleaned_data['role']
-        if membership.role == GarageMembership.ROLE_OWNER and new_role != GarageMembership.ROLE_OWNER:
-            owner_count = garage.memberships.filter(role=GarageMembership.ROLE_OWNER).count()
-            if owner_count <= 1:
-                messages.error(request, _('Cannot remove the last owner of the fleet.'))
-                return redirect(reverse('shop-garage-members', args=[garage.pk]))
-        membership.role = new_role
-        membership.save(update_fields=['role', 'updated_at'])
-        messages.success(request, _('Role updated successfully.'))
-    else:
-        messages.error(request, _('Invalid role selected.'))
 
+    # Only owners may modify another owner's membership.
+    if membership.role == GarageMembership.ROLE_OWNER and not perms.is_owner:
+        messages.error(request, _('Only fleet owners can change the role of an owner.'))
+        return redirect(reverse('shop-garage-members', args=[garage.pk]))
+
+    form = GarageMembershipRoleForm(request.POST, allowed_roles=perms.can_change_role_to)
+    if not form.is_valid():
+        messages.error(request, _('Invalid role selected.'))
+        return redirect(reverse('shop-garage-members', args=[garage.pk]))
+
+    new_role = form.cleaned_data['role']
+
+    last_owner_error = False
+    with transaction.atomic():
+        locked_garage = Garage.objects.select_for_update().get(pk=garage.pk)
+        locked_membership = GarageMembership.objects.select_for_update().get(
+            pk=membership.pk, garage=locked_garage
+        )
+        if locked_membership.role == GarageMembership.ROLE_OWNER and new_role != GarageMembership.ROLE_OWNER:
+            owner_count = locked_garage.memberships.filter(role=GarageMembership.ROLE_OWNER).count()
+            if owner_count <= 1:
+                last_owner_error = True
+            else:
+                locked_membership.role = new_role
+                locked_membership.save(update_fields=['role', 'updated_at'])
+        else:
+            locked_membership.role = new_role
+            locked_membership.save(update_fields=['role', 'updated_at'])
+
+    if last_owner_error:
+        messages.error(request, _('Cannot remove the last owner of the fleet.'))
+        return redirect(reverse('shop-garage-members', args=[garage.pk]))
+
+    messages.success(request, _('Role updated successfully.'))
     return redirect(reverse('shop-garage-members', args=[garage.pk]))
 
 
@@ -419,13 +447,31 @@ def garage_member_remove(request: HttpRequest, pk: str, membership_pk: int) -> H
         return redirect(reverse('shop-garage-members', args=[garage.pk]))
 
     membership = get_object_or_404(garage.memberships, pk=membership_pk)
-    if membership.role == GarageMembership.ROLE_OWNER:
-        owner_count = garage.memberships.filter(role=GarageMembership.ROLE_OWNER).count()
-        if owner_count <= 1:
-            messages.error(request, _('Cannot remove the last owner of the fleet.'))
-            return redirect(reverse('shop-garage-members', args=[garage.pk]))
 
-    membership.delete()
+    # Only owners may remove another owner.
+    if membership.role == GarageMembership.ROLE_OWNER and not perms.is_owner:
+        messages.error(request, _('Only fleet owners can remove an owner.'))
+        return redirect(reverse('shop-garage-members', args=[garage.pk]))
+
+    last_owner_error = False
+    with transaction.atomic():
+        locked_garage = Garage.objects.select_for_update().get(pk=garage.pk)
+        locked_membership = GarageMembership.objects.select_for_update().get(
+            pk=membership.pk, garage=locked_garage
+        )
+        if locked_membership.role == GarageMembership.ROLE_OWNER:
+            owner_count = locked_garage.memberships.filter(role=GarageMembership.ROLE_OWNER).count()
+            if owner_count <= 1:
+                last_owner_error = True
+            else:
+                locked_membership.delete()
+        else:
+            locked_membership.delete()
+
+    if last_owner_error:
+        messages.error(request, _('Cannot remove the last owner of the fleet.'))
+        return redirect(reverse('shop-garage-members', args=[garage.pk]))
+
     messages.success(request, _('Member removed successfully.'))
     return redirect(reverse('shop-garage-members', args=[garage.pk]))
 
@@ -468,7 +514,7 @@ def garage_import(request: HttpRequest, pk: str) -> HttpResponse:
                 result = importer.import_records(
                     importer.resolve_model('car'),
                     records,
-                    context=ImportContext(garage=garage),
+                    context=ImportContext(garage=garage, user=request.user),
                     dry_run=dry_run,
                 )
             except ImportValidationError as exc:
@@ -521,6 +567,7 @@ def garage_export(request: HttpRequest, pk: str) -> HttpResponse:
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     )
     response['Content-Disposition'] = f'attachment; filename="{workbook.filename}"'
+    _add_private_cache_headers(response)
     return response
 
 
@@ -614,7 +661,7 @@ def car_import(request: HttpRequest, pk: str) -> HttpResponse:
                 result = importer.import_records(
                     model,
                     records,
-                    context=ImportContext(garage=car.garage, car=car),
+                    context=ImportContext(garage=car.garage, car=car, user=request.user),
                     dry_run=dry_run,
                 )
             except ImportValidationError as exc:
@@ -929,6 +976,12 @@ def workjob_update(request: HttpRequest, car_pk: str, pk: str) -> HttpResponse:
 # same window on a schedule.
 STAGED_ATTACHMENT_MAX_AGE = timedelta(hours=12)
 
+# Per-user cap for staged uploads. This prevents a single account from filling
+# the media volume with unclaimed files.
+STAGED_ATTACHMENT_USER_QUOTA_BYTES = int(
+    os.environ.get('STAGED_ATTACHMENT_USER_QUOTA_BYTES', str(50 * 1024 * 1024))
+)
+
 
 def purge_stale_staged_attachments() -> int:
     """Delete staged uploads no parent form claimed within the retention window."""
@@ -937,6 +990,17 @@ def purge_stale_staged_attachments() -> int:
     count = stale.count()
     stale.delete()
     return count
+
+
+def _staged_upload_quota_remaining(user: ShopUser) -> int:
+    used = (
+        Attachment.objects.filter(
+            uploaded_by=user,
+            content_type__isnull=True,
+        ).aggregate(total=models.Sum('size_bytes'))['total']
+        or 0
+    )
+    return max(0, STAGED_ATTACHMENT_USER_QUOTA_BYTES - used)
 
 
 @hanko_login_required
@@ -956,12 +1020,21 @@ def attachment_upload(request: HttpRequest) -> JsonResponse:
         validate_uploaded_file(upload)
     except ValidationError as exc:
         return JsonResponse({'error': exc.messages[0]}, status=400)
+
+    quota_remaining = _staged_upload_quota_remaining(request.user)
+    if upload.size > quota_remaining:
+        return JsonResponse(
+            {'error': _('Upload quota exceeded. Remove pending uploads or wait for them to expire.')},
+            status=413,
+        )
+
     attachment = Attachment(
         source_type=Attachment.SOURCE_UPLOAD,
         uploaded_by=request.user,
         file=upload,
         display_name=os.path.basename(upload.name),
         mime_type=getattr(upload, 'content_type', '') or '',
+        size_bytes=upload.size,
     )
     attachment.save()
     return JsonResponse({
@@ -1009,6 +1082,7 @@ def attachment_file(request: HttpRequest, pk: int) -> FileResponse:
     content_type = mimetypes.guess_type(attachment.file.name)[0] or 'application/octet-stream'
     response = FileResponse(attachment.file.open('rb'), content_type=content_type)
     response['X-Content-Type-Options'] = 'nosniff'
+    _add_private_cache_headers(response)
     if content_type not in INLINE_SAFE_ATTACHMENT_TYPES:
         download_name = os.path.basename(attachment.file.name).replace('"', '')
         response['Content-Disposition'] = f'attachment; filename="{download_name}"'

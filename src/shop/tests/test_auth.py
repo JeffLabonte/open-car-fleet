@@ -333,6 +333,37 @@ class HankoCallbackSecurityTests(TestCase):
 
         self.assertEqual(response.status_code, 403)
 
+    @override_settings(HANKO_API_URL='https://hanko.example.com')
+    def test_callback_returns_401_for_inactive_user(self):
+        inactive = ShopUser.objects.create_user(
+            username='inactive-callback',
+            email='inactive-callback@example.com',
+            password='pass1234',
+            is_active=False,
+        )
+        inactive.hanko_id = 'inactive-callback-id'
+        inactive.save(update_fields=['hanko_id', 'is_active'])
+
+        with patch('shop.auth.requests.post', return_value=FakeHankoResponse({
+            'is_valid': True,
+            'claims': {
+                'sub': 'inactive-callback-id',
+                'email': 'inactive-callback@example.com',
+                'username': 'Inactive User',
+            },
+        })):
+            response = self.client.post(
+                reverse('shop-hanko-callback'),
+                data=json.dumps({
+                    'user': {'id': 'inactive-callback-id', 'email': 'inactive-callback@example.com'},
+                    'session_token': 'token',
+                }),
+                content_type='application/json',
+            )
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json()['error'], 'Invalid Hanko session')
+
 
 class ShopUserIdentityTests(TestCase):
     def test_non_empty_emails_are_unique_case_insensitively(self):
@@ -358,6 +389,30 @@ class ShopUserIdentityTests(TestCase):
         )
 
         self.assertEqual(user.email, 'user@example.com')
+
+    def test_sync_hanko_user_rejects_inactive_user_by_hanko_id(self):
+        inactive = ShopUser.objects.create_user(
+            username='inactive-hanko',
+            email='inactive-hanko@example.com',
+            password='pass1234',
+        )
+        inactive.hanko_id = 'inactive-hanko-id'
+        inactive.is_active = False
+        inactive.save(update_fields=['hanko_id', 'is_active'])
+
+        with self.assertRaises(HankoAuthenticationError):
+            sync_hanko_user(hanko_id='inactive-hanko-id', email='inactive-hanko@example.com')
+
+    def test_sync_hanko_user_rejects_inactive_user_by_email(self):
+        inactive = ShopUser.objects.create_user(
+            username='inactive-email',
+            email='inactive-email@example.com',
+            password='pass1234',
+            is_active=False,
+        )
+
+        with self.assertRaises(HankoAuthenticationError):
+            sync_hanko_user(hanko_id='new-hanko-id', email='inactive-email@example.com')
 
 
 class AuthAndInputCoverageTests(TestCase):

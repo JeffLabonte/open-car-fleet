@@ -393,6 +393,57 @@ class GarageSharingMemberManagementTests(TestCase):
         response = self.client.get(reverse('shop-garage-members', args=[self.garage.pk]))
         self.assertEqual(response.status_code, 404)
 
+    def test_admin_cannot_demote_owner(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(
+            reverse('shop-garage-member-role', args=[self.garage.pk, self._owner_membership().pk]),
+            data={'role': GarageMembership.ROLE_ADMIN},
+        )
+        self.assertEqual(response.status_code, 302)
+        self._owner_membership().refresh_from_db()
+        self.assertEqual(self._owner_membership().role, GarageMembership.ROLE_OWNER)
+
+    def test_admin_cannot_remove_owner(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(
+            reverse('shop-garage-member-remove', args=[self.garage.pk, self._owner_membership().pk]),
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            GarageMembership.objects.filter(pk=self._owner_membership().pk).exists()
+        )
+
+    def test_owner_can_demote_co_owner_when_multiple_owners_exist(self):
+        co_owner = ShopUser.objects.create_user(
+            username='mgmt-co-owner',
+            email='mgmt-co-owner@example.com',
+            password='pass1234',
+        )
+        co_owner_membership = GarageMembership.objects.create(
+            garage=self.garage,
+            user=co_owner,
+            role=GarageMembership.ROLE_OWNER,
+        )
+
+        self.client.force_login(self.owner)
+        response = self.client.post(
+            reverse('shop-garage-member-role', args=[self.garage.pk, co_owner_membership.pk]),
+            data={'role': GarageMembership.ROLE_ADMIN},
+        )
+        self.assertEqual(response.status_code, 302)
+        co_owner_membership.refresh_from_db()
+        self.assertEqual(co_owner_membership.role, GarageMembership.ROLE_ADMIN)
+
+    def test_owner_cannot_demote_themselves_if_last_owner(self):
+        self.client.force_login(self.owner)
+        response = self.client.post(
+            reverse('shop-garage-member-role', args=[self.garage.pk, self._owner_membership().pk]),
+            data={'role': GarageMembership.ROLE_ADMIN},
+        )
+        self.assertEqual(response.status_code, 302)
+        self._owner_membership().refresh_from_db()
+        self.assertEqual(self._owner_membership().role, GarageMembership.ROLE_OWNER)
+
     def _owner_membership(self):
         return GarageMembership.objects.get(garage=self.garage, user=self.owner)
 

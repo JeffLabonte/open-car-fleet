@@ -127,6 +127,8 @@ def sync_hanko_user(
     if hanko_id:
         user = ShopUser.objects.filter(hanko_id=hanko_id).first()
         if user:
+            if not user.is_active:
+                raise HankoAuthenticationError('User account is inactive.')
             if email and not user.email:
                 user.email = email
             if username and not user.display_name:
@@ -148,6 +150,8 @@ def sync_hanko_user(
     if email:
         user = ShopUser.objects.filter(email__iexact=email).first()
         if user:
+            if not user.is_active:
+                raise HankoAuthenticationError('User account is inactive.')
             if hanko_id:
                 user.hanko_id = hanko_id
             if username:

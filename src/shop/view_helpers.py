@@ -53,7 +53,7 @@ def save_attachments(
         attachment.save()
 
     for index, external_link in enumerate(external_links):
-        Attachment.objects.create(
+        attachment = Attachment(
             content_type=content_type,
             object_id=str(parent.pk),
             source_type=Attachment.SOURCE_EXTERNAL,
@@ -61,6 +61,8 @@ def save_attachments(
             display_name=external_link.rstrip('/').rsplit('/', 1)[-1] or f'link-{index + 1}',
             kind=Attachment.KIND_LINK,
         )
+        attachment.full_clean()
+        attachment.save()
 
 
 def user_can_manage_garage(user: Any, garage: Garage) -> bool:

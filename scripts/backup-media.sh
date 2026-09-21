@@ -4,6 +4,8 @@
 # has changed compared with the previous snapshot.
 set -euo pipefail
 
+umask 077
+
 BACKUP_DIR="/opt/backups/media"
 COMPOSE_FILE="/opt/open-car-fleet/docker-compose.prod.yml"
 TEMP_DIR="$(mktemp -d)"
@@ -36,7 +38,9 @@ fi
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 SNAPSHOT="$BACKUP_DIR/snapshot-$TIMESTAMP.tar.gz"
 tar czf "$SNAPSHOT" -C "$MEDIA_DIR" .
+chmod 600 "$SNAPSHOT"
 cp "$MANIFEST" "$BACKUP_DIR/manifest-$TIMESTAMP.sha512"
+chmod 600 "$BACKUP_DIR/manifest-$TIMESTAMP.sha512"
 echo "$(date -Iseconds) media: created $SNAPSHOT"
 
 # Retain only the 10 most recent snapshots + manifests.
