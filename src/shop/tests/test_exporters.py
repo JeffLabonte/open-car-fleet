@@ -212,3 +212,12 @@ class GarageExportViewTests(TestCase):
         vins = [row[7] for row in cars_rows]
         self.assertIn('1FAHP3F28CL512345', vins)
         self.assertNotIn('5YJ3E1EA7LF512345', vins)
+
+    def test_garage_export_sets_private_cache_headers(self):
+        self.client.force_login(self.manager)
+
+        response = self.client.get(reverse('shop-garage-export', args=[self.garage.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Cache-Control'], 'private, no-store')
+        self.assertEqual(response['Pragma'], 'no-cache')

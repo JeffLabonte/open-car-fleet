@@ -52,6 +52,10 @@ for env_path in env_paths:
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False').strip().lower() in ('1', 'true', 'yes')
 
+# The /set-test-session/ helper is only registered when this is True. It must
+# never be enabled in production.
+ALLOW_TEST_SESSION_ENDPOINT = False
+
 
 # SECURITY WARNING: keep the secret key out of source control.
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '').strip()
@@ -99,8 +103,14 @@ CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', str(not DEBUG)).strip().lower() in ('1', 'true', 'yes')
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = 'same-origin'
-SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'False').strip().lower() in ('1', 'true', 'yes')
-SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', '0'))
+
+# Default to HTTPS-only in production. Override only when running behind a
+# TLS-terminating reverse proxy that handles the redirect itself.
+SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', str(not DEBUG)).strip().lower() in ('1', 'true', 'yes')
+
+# HSTS is enabled by default in production (one year). Set
+# SECURE_HSTS_SECONDS=0 to disable, e.g. during initial HTTPS rollout.
+SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', '31536000' if not DEBUG else '0'))
 SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_HSTS_SECONDS > 0
 SECURE_HSTS_PRELOAD = SECURE_HSTS_SECONDS > 0
 X_FRAME_OPTIONS = 'DENY'

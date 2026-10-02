@@ -164,3 +164,24 @@ class ReportAttachmentTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Service checklist')
         self.assertContains(response, 'https://drive.google.com/file/d/456/view')
+
+    def test_attachment_file_sets_private_cache_headers(self):
+        report = Report.objects.create(
+            car=self.car,
+            job_name='Cached report',
+            date_done='2026-08-10',
+        )
+        attachment = Attachment.objects.create(
+            content_type=ContentType.objects.get_for_model(report),
+            object_id=str(report.pk),
+            file=SimpleUploadedFile('cached.pdf', b'%PDF-1.4 cached', content_type='application/pdf'),
+        )
+
+        try:
+            self.client.force_login(self.user)
+            response = self.client.get(reverse('shop-attachment-file', args=[attachment.pk]))
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response['Cache-Control'], 'private, no-store')
+            self.assertEqual(response['Pragma'], 'no-cache')
+        finally:
+            attachment.file.delete(save=False)

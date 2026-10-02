@@ -116,12 +116,8 @@ become_password = os.environ["BECOME_PASSWORD"]
 text = text.replace('your_server_ip:', server_ip + ':')
 text = text.replace('ansible_user: root', 'ansible_user: ' + ssh_user)
 if use_tailscale[0].lower() == 'y':
-    # Add StrictHostKeyChecking=no for Tailscale connections; Tailscale
-    # already authenticates the tunnel, so SSH host-key prompting is not needed.
-    text = text.replace(
-        '          ansible_user: ' + ssh_user,
-        '          ansible_user: ' + ssh_user + '\n          ansible_ssh_extra_args: -o StrictHostKeyChecking=no'
-    )
+    # Tailscale authenticates the tunnel, but we still verify SSH host keys
+    # through ansible.cfg. No StrictHostKeyChecking override is added.
 if ssh_key:
     text = text.replace('ansible_ssh_private_key_file: ~/.ssh/id_rsa', 'ansible_ssh_private_key_file: ' + ssh_key)
 else:

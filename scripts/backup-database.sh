@@ -4,6 +4,8 @@
 # content has changed compared with the previous dump.
 set -euo pipefail
 
+umask 077
+
 BACKUP_DIR="/opt/backups/database"
 COMPOSE_FILE="/opt/open-car-fleet/docker-compose.prod.yml"
 TEMP_DIR="$(mktemp -d)"
@@ -59,6 +61,7 @@ fi
 
 # Keep the new dump (compressed deterministically).
 gzip -n -c "$RAW_SQL" > "$DUMP"
+chmod 600 "$DUMP"
 echo "$(date -Iseconds) database: created $DUMP"
 
 # Retain only the 10 most recent dumps.

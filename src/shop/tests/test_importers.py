@@ -577,6 +577,56 @@ class ImporterCoverageTests(TestCase):
         with self.assertRaises(ImportValidationError):
             importer._resolve_shop(uuid.uuid4())
 
+    def test_resolve_shop_scopes_to_user_context(self):
+        importer = CSVImporter()
+        other_user = ShopUser.objects.create_user(
+            username='other-shop-owner',
+            email='other-shop-owner@example.com',
+            password='pass1234',
+        )
+        public_shop = KnownShop.objects.create(name='Public Shop', email='public@example.com')
+        private_shop = KnownShop.objects.create(
+            name='Private Shop',
+            email='private@example.com',
+            created_by=other_user,
+        )
+
+        self.assertEqual(
+            importer._resolve_shop('Public Shop', context=ImportContext(user=self.user)).pk,
+            public_shop.pk,
+        )
+
+        with self.assertRaises(ImportValidationError):
+            importer._resolve_shop('Private Shop', context=ImportContext(user=self.user))
+
+        with self.assertRaises(ImportValidationError):
+            importer._resolve_shop(private_shop.pk, context=ImportContext(user=self.user))
+
+        # The shop owner can still resolve their own shop.
+        self.assertEqual(
+            importer._resolve_shop('Private Shop', context=ImportContext(user=other_user)).pk,
+            private_shop.pk,
+        )
+
+        # Without a user context (e.g. management command), resolution is unrestricted.
+        self.assertEqual(importer._resolve_shop('Private Shop').pk, private_shop.pk)
+
+    def test_report_attachment_plan_rejects_too_many_links(self):
+        from shop.forms.base import MAX_EXTERNAL_LINKS
+
+        importer = CSVImporter()
+        links = '\n'.join(f'https://example.com/{index}' for index in range(MAX_EXTERNAL_LINKS + 1))
+        with self.assertRaises(ImportValidationError):
+            importer._report_attachment_plan({'attachments': links})
+
+    def test_report_attachment_plan_rejects_link_too_long(self):
+        from shop.forms.base import MAX_EXTERNAL_LINK_LENGTH
+
+        importer = CSVImporter()
+        long_link = 'https://example.com/' + 'a' * MAX_EXTERNAL_LINK_LENGTH
+        with self.assertRaises(ImportValidationError):
+            importer._report_attachment_plan({'attachments': long_link})
+
     def test_prepare_workjob_record_with_car_context(self):
         importer = CSVImporter()
         data, warnings = importer._prepare_workjob_record(

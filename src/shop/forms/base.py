@@ -1,4 +1,5 @@
 import os
+import re
 from typing import Any
 
 from django import forms
@@ -14,6 +15,14 @@ from shop.models.garage import KnownShop
 ATTACHMENT_MAX_UPLOAD_BYTES = 500 * 1024 * 1024
 # Upper bound of files accepted in a single form submission.
 ATTACHMENT_MAX_FILES = 10
+
+# Limits for the hidden staged-attachment identifier field.
+STAGED_ATTACHMENT_MAX_IDS = 10
+STAGED_ATTACHMENT_ID_PATTERN = r'[1-9]\d{0,18}'
+
+# Limits for external-link attachments (matches Attachment.url max_length).
+MAX_EXTERNAL_LINKS = 10
+MAX_EXTERNAL_LINK_LENGTH = 200
 
 # File signatures (magic bytes) mapped to the attachment extensions that may
 # carry them. Uploads are sniffed so a renamed executable cannot masquerade as
@@ -196,7 +205,19 @@ class StagedAttachmentsMixin(forms.Form):
         from shop.models.attachment import Attachment
 
         raw = self.cleaned_data.get('staged_attachments') or ''
-        unique_ids = list(dict.fromkeys(int(part) for part in str(raw).split(',') if part.strip().isdigit()))
+        parts = [part.strip() for part in str(raw).split(',') if part.strip()]
+
+        if len(parts) > STAGED_ATTACHMENT_MAX_IDS:
+            raise forms.ValidationError(
+                _('No more than %(limit)s staged attachments may be selected at once.') % {'limit': STAGED_ATTACHMENT_MAX_IDS}
+            )
+
+        id_pattern = re.compile(f'^{STAGED_ATTACHMENT_ID_PATTERN}$')
+        for part in parts:
+            if not id_pattern.match(part):
+                raise forms.ValidationError(_('Invalid staged attachment identifier.'))
+
+        unique_ids = list(dict.fromkeys(int(part) for part in parts))
         if not unique_ids:
             return []
         user = self.user

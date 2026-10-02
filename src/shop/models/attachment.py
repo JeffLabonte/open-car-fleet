@@ -47,6 +47,7 @@ class Attachment(models.Model):
     url = models.URLField(blank=True, default='')
     display_name = models.CharField(max_length=255, blank=True)
     mime_type = models.CharField(max_length=100, blank=True)
+    size_bytes = models.PositiveBigIntegerField(default=0)
     order = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     uploaded_by = models.ForeignKey(
@@ -75,6 +76,10 @@ class Attachment(models.Model):
                 self.kind = self.KIND_VIDEO
             else:
                 self.kind = self.KIND_DOCUMENT
+            try:
+                self.size_bytes = self.file.size
+            except (OSError, ValueError):
+                pass
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
