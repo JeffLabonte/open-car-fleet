@@ -1,5 +1,3 @@
-**Built with ❤️ from Canada 🇨🇦**
-
 ![Open Car Fleet logo](src/public/logo.png)
 
 # Open Car Fleet
