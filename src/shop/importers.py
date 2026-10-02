@@ -17,6 +17,7 @@ from shop.models.car import Car
 from shop.models.garage import Garage, KnownShop
 from shop.models.job import WorkJob
 from shop.models.report import Report
+from shop.services import update_car_odometer_from_report
 
 
 VIN_BAD_CHARS = set("IOQ")
@@ -174,6 +175,9 @@ class CSVImporter:
                 model.objects.bulk_create(objects, batch_size=batch_size)
                 for instance, attachment_plan in zip(objects, attachment_plans):
                     self._create_external_attachments(instance, attachment_plan)
+                if model is Report:
+                    for report in objects:
+                        update_car_odometer_from_report(report)
         except IntegrityError as exc:
             raise ImportValidationError(_("Database error while importing data: %(error)s") % {'error': exc}) from exc
 
@@ -240,7 +244,6 @@ class CSVImporter:
             "model": self._require_text(record, "model"),
             "colour": self._clean_optional_text(record.get("colour")) or "",
             "year": self._coerce_optional_int(record.get("year"), field_name="year"),
-            "mileage": self._coerce_optional_int(record.get("mileage"), field_name="mileage"),
             "vin": self._normalize_vin(record.get("vin")),
             "license_plate": self._normalize_license_plate(record.get("license_plate")),
         }

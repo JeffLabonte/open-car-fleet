@@ -21,6 +21,7 @@ from django.utils.translation import gettext as _
 
 from shop.auth import HankoAuthenticationError, complete_hanko_login, fetch_hanko_userinfo
 from shop.exporters import export_garage_to_excel
+from shop.services import update_car_odometer_from_report
 from shop.forms.base import AttachmentField, validate_uploaded_file
 from shop.forms import (
     CarImportForm,
@@ -1022,22 +1023,28 @@ def report_create(request: HttpRequest, car_pk: str) -> HttpResponse:
         messages.error(request, _('You do not have permission to add reports to this car.'))
         return redirect(reverse('shop-car-detail', args=[car.pk]))
     if request.method == 'POST':
-        form = ReportForm(request.POST, request.FILES, user=request.user, garage=car.garage)
+        form = ReportForm(request.POST, request.FILES, user=request.user, garage=car.garage, car=car)
         if form.is_valid():
             with transaction.atomic():
                 report = form.save(commit=False)
                 report.car = car
                 report.save()
+                odometer_updated = update_car_odometer_from_report(report)
                 save_attachments(
                     report,
                     form.cleaned_data.get('attachments', []),
                     form.cleaned_data.get('external_links', []),
                     staged=form.cleaned_data.get('staged_attachments'),
                 )
+            if odometer_updated:
+                messages.info(
+                    request,
+                    _('Vehicle odometer updated to %(mileage)s km.') % {'mileage': report.mileage},
+                )
             messages.success(request, _('Maintenance report added successfully.'))
             return redirect(reverse('shop-car-detail', args=[car.pk]))
     else:
-        form = ReportForm(user=request.user, garage=car.garage)
+        form = ReportForm(user=request.user, garage=car.garage, car=car)
     return render(request, 'shop/report_form.html', {'form': form, 'is_create': True, 'car': car})
 
 
@@ -1049,20 +1056,26 @@ def report_update(request: HttpRequest, car_pk: str, pk: str) -> HttpResponse:
         return redirect(reverse('shop-car-detail', args=[car.pk]))
     report = get_object_or_404(Report, pk=pk, car=car)
     if request.method == 'POST':
-        form = ReportForm(request.POST, request.FILES, instance=report, user=request.user, garage=car.garage)
+        form = ReportForm(request.POST, request.FILES, instance=report, user=request.user, garage=car.garage, car=car)
         if form.is_valid():
             with transaction.atomic():
                 form.save()
+                odometer_updated = update_car_odometer_from_report(report)
                 save_attachments(
                     report,
                     form.cleaned_data.get('attachments', []),
                     form.cleaned_data.get('external_links', []),
                     staged=form.cleaned_data.get('staged_attachments'),
                 )
+            if odometer_updated:
+                messages.info(
+                    request,
+                    _('Vehicle odometer updated to %(mileage)s km.') % {'mileage': report.mileage},
+                )
             messages.success(request, _('Maintenance report updated successfully.'))
             return redirect(reverse('shop-car-detail', args=[car.pk]))
     else:
-        form = ReportForm(instance=report, user=request.user, garage=car.garage)
+        form = ReportForm(instance=report, user=request.user, garage=car.garage, car=car)
     return render(request, 'shop/report_form.html', {'form': form, 'is_create': False, 'car': car, 'report': report})
 
 
