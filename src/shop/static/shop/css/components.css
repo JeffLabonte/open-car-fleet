@@ -641,12 +641,16 @@
 
 .dialog {
   width: min(26rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  margin: auto;
   padding: var(--space-5);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--bg-surface);
   color: var(--text-main);
   box-shadow: var(--shadow);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .dialog::backdrop {
@@ -664,9 +668,26 @@
 
 .dialog-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.6rem;
   margin-top: var(--space-5);
+}
+
+@media (max-width: 39.99rem) {
+  .dialog {
+    width: calc(100vw - 1rem);
+    max-height: calc(100dvh - 1rem);
+    padding: var(--space-4);
+  }
+
+  .dialog-actions {
+    flex-direction: column;
+  }
+
+  .dialog-actions .button {
+    width: 100%;
+  }
 }
 
 .theme-toggle {

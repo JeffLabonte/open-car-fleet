@@ -228,6 +228,7 @@ def garage_detail(request: HttpRequest, pk: str) -> HttpResponse:
         'shop/fleet_detail.html',
         {
             'garage': garage,
+            'form': FleetUpdateForm(instance=garage) if perms.can_manage_members else None,
             'can_manage_garage': perms.can_manage_members,
             'can_edit_garage_data': perms.can_edit_garage_data,
             'cars': cars,

@@ -138,6 +138,17 @@ class GarageUpdateTests(TestCase):
         self.assertContains(response, 'Edit fleet')
         self.assertContains(response, self.garage.name)
 
+    def test_detail_page_renders_edit_form_in_modal(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse('shop-garage-detail', args=[self.garage.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-testid="fleet-edit-dialog"')
+        self.assertContains(response, 'name="name"')
+        self.assertContains(response, 'value="Alpha Garage"')
+        self.assertContains(response, 'name="description"')
+
     def test_unauthenticated_user_is_redirected_to_login(self):
         response = self.client.get(reverse('shop-garage-update', args=[self.garage.pk]))
 
