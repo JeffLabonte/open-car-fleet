@@ -1,3 +1,5 @@
+**Built with ❤️ from Canada 🇨🇦**
+
 ![Open Car Fleet logo](src/public/logo.png)
 
 # Open Car Fleet
@@ -67,3 +69,5 @@ Django 6 vehicle maintenance app (Poetry, Python ≥3.12) with two apps:
 - `car_docs`: per-car document notes and files.
 
 Custom user model `shop.ShopUser`; authentication is Hanko-based (passkeys) with a Django session bridge. See [docs/development.md](docs/development.md) for environment variables and database selection.
+
+**Built with ❤️ from Canada 🇨🇦**

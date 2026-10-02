@@ -1,0 +1,35 @@
+{% extends 'shop/base.html' %}
+{% load i18n %}
+
+{% block content %}
+  <section class="content-card auth-card" data-testid="profile-card">
+    {% include 'shop/partials/_page_header.html' with heading=title subheading=subtitle %}
+
+    <div id="hanko-profile-container">
+      <hanko-profile></hanko-profile>
+    </div>
+  </section>
+
+  <script type="module">
+    import { register } from 'https://esm.run/@teamhanko/hanko-elements';
+
+    const apiUrl = '{{ hanko_api_url }}';
+    const profileContainer = document.getElementById('hanko-profile-container');
+
+    if (!apiUrl) {
+      const message = 'Missing HANKO_API_URL. Set it in .env and restart the server.';
+      console.error(message);
+      profileContainer.textContent = message;
+      throw new Error(message);
+    }
+
+    try {
+      await register(apiUrl);
+    } catch (error) {
+      const message = 'Unable to load the Hanko profile. Please check your internet connection, disable ad blockers for this site, and verify HANKO_API_URL is correct.';
+      console.error(message, error);
+      profileContainer.textContent = message;
+      throw error;
+    }
+  </script>
+{% endblock %}

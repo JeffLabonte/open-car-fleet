@@ -28,6 +28,7 @@ from shop.forms import (
     CarCreateForm,
     CarPartForm,
     CarUpdateForm,
+    FleetUpdateForm,
     GarageCreateForm,
     GarageImportForm,
     GarageInviteForm,
@@ -108,6 +109,15 @@ def login_view(request: HttpRequest) -> HttpResponse:
         'next_url': safe_next_url(request),
         'logged_out': logged_out,
         'theme': get_theme_from_request(request),
+    })
+
+
+@hanko_login_required
+def profile_view(request: HttpRequest) -> HttpResponse:
+    return render(request, 'shop/profile.html', {
+        'title': _('Profile'),
+        'subtitle': _('Manage your Hanko account, emails, and passkeys'),
+        'hanko_api_url': getattr(settings, 'HANKO_API_URL', ''),
     })
 
 
@@ -253,6 +263,39 @@ def garage_create(request: HttpRequest) -> HttpResponse:
             'is_create': True,
             'title': _('Create Fleet'),
             'subtitle': _('Set up a new shared workspace for your vehicles'),
+        },
+    )
+
+
+@hanko_login_required
+def garage_update(request: HttpRequest, pk: str) -> HttpResponse:
+    """Update an existing garage's name and description."""
+    garage = get_object_or_404(user_garages_queryset(request.user), pk=pk)
+    perms = GarageSharingPermissions(request.user, garage)
+    if not perms.can_manage_members:
+        messages.error(request, _('You do not have permission to edit this fleet.'))
+        return redirect(reverse('shop-garage-detail', args=[garage.pk]))
+
+    if request.method == 'POST':
+        form = FleetUpdateForm(request.POST, instance=garage)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _('Fleet updated successfully.'))
+            return redirect(reverse('shop-garage-detail', args=[garage.pk]))
+    else:
+        form = FleetUpdateForm(instance=garage)
+
+    return render(
+        request,
+        'shop/fleet_detail.html',
+        {
+            'garage': garage,
+            'form': form,
+            'can_manage_garage': perms.can_manage_members,
+            'can_edit_garage_data': perms.can_edit_garage_data,
+            'cars': garage.cars.order_by('-created_at'),
+            'title': garage.name,
+            'subtitle': _('Fleet details'),
         },
     )
 

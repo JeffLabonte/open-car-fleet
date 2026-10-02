@@ -20,6 +20,8 @@
       - '--exclude=*.pyc'
       - '--exclude=.env'
       - '--exclude=.env.production'
+      - '--exclude=src/.env'
+      - '--exclude=src/.env.production'
       - '--exclude=db.sqlite3'
       - '--exclude=db.sqlite3-journal'
       - '--exclude=media/'

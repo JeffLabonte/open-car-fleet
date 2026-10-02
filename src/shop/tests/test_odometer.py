@@ -1,7 +1,9 @@
 from unittest.mock import patch
 
+from django.contrib.messages import get_messages
 from django.test import TestCase
 from django.urls import reverse
+from django.utils.translation import override
 
 from shop.forms import CarCreateForm, CarUpdateForm, ReportForm
 from shop.importers import CSVImporter, ImportContext
@@ -137,10 +139,57 @@ class OdometerUpdateTests(TestCase):
         form = ReportForm(car=self.car)
         self.assertIn('12345', str(form.fields['mileage'].help_text))
 
+    def test_report_form_odometer_help_text_is_localized(self):
+        self.car.mileage = 12345
+
+        with override('en-ca'):
+            english_form = ReportForm(car=self.car)
+        self.assertEqual(
+            str(english_form.fields['mileage'].help_text),
+            'Current odometer: 12345',
+        )
+
+        with override('fr-ca'):
+            french_form = ReportForm(car=self.car)
+        self.assertEqual(
+            str(french_form.fields['mileage'].help_text),
+            'Odomètre actuel : 12345',
+        )
+
     def test_report_form_shows_unknown_when_car_has_no_odometer(self):
         self.car.mileage = None
         form = ReportForm(car=self.car)
         self.assertIn('unknown', str(form.fields['mileage'].help_text))
+
+    def test_report_creation_messages_are_localized(self):
+        self.car.mileage = 10000
+        self.car.save(update_fields=['mileage'])
+        self.client.force_login(self.owner)
+
+        localized_messages = {
+            'en-ca': (
+                'Vehicle odometer updated to 20000 km.',
+                'Maintenance report added successfully.',
+            ),
+            'fr-ca': (
+                'Odomètre du véhicule mis à jour à 30000 km.',
+                "Rapport d'entretien ajouté avec succès.",
+            ),
+        }
+        for language, expected_messages in localized_messages.items():
+            with self.subTest(language=language):
+                response = self.client.post(
+                    reverse('shop-report-create', args=[self.car.pk]),
+                    data=self._report_data('20000' if language == 'en-ca' else '30000'),
+                    HTTP_ACCEPT_LANGUAGE=language,
+                )
+
+                self.assertEqual(response.status_code, 302)
+                rendered_messages = [
+                    str(message) for message in get_messages(response.wsgi_request)
+                ]
+                for expected_message in expected_messages:
+                    self.assertIn(expected_message, rendered_messages)
 
     def test_car_create_form_excludes_mileage_field(self):
         self.assertNotIn('mileage', CarCreateForm.base_fields)

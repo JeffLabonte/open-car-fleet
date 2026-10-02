@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1
+
 # Use the official Python image with a slim base for production.
 FROM python:3.14-slim AS base
 
@@ -24,7 +26,9 @@ RUN pip install --no-cache-dir poetry \
 COPY . /app/
 
 # Collect static files for production.
-RUN python src/manage.py collectstatic --noinput
+# The env file is mounted as a BuildKit secret so it is not baked into the image.
+RUN --mount=type=secret,id=env_file,target=/app/src/.env \
+    python src/manage.py collectstatic --noinput
 
 # Use a lean runtime image.
 FROM python:3.14-slim AS final

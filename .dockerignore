@@ -13,6 +13,8 @@ __pycache__
 .env.template
 *.env
 *.env.*
+src/.env
+src/.env.production
 db.sqlite3
 db.sqlite3-journal
 media/

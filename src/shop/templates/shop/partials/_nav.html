@@ -22,13 +22,19 @@
   <div class="app-sidebar__footer">
     <div class="app-user">
       <span class="app-user__name" data-testid="user-name">{{ request.user.display_name|default:request.user.username }}</span>
-      <form method="post" action="{% url 'shop-logout' %}">
-        {% csrf_token %}
-        <button class="button is-light is-small" type="submit">
-          {% include 'shop/partials/_icon.html' with name='logout' %}
-          <span>{% translate 'Logout' %}</span>
-        </button>
-      </form>
+      <div class="app-user__actions">
+        <a class="button is-light is-small" href="{% url 'shop-profile' %}" data-testid="nav-profile">
+          {% include 'shop/partials/_icon.html' with name='user' %}
+          <span>{% translate 'Profile' %}</span>
+        </a>
+        <form method="post" action="{% url 'shop-logout' %}">
+          {% csrf_token %}
+          <button class="button is-light is-small" type="submit" data-testid="nav-logout">
+            {% include 'shop/partials/_icon.html' with name='logout' %}
+            <span>{% translate 'Logout' %}</span>
+          </button>
+        </form>
+      </div>
     </div>
     {% include 'shop/partials/_theme_toggle.html' %}
     {% include 'shop/partials/_lang_toggle.html' %}
@@ -64,10 +70,14 @@
     </summary>
     <div class="app-tab__panel">
       <p class="app-tab__username">{{ request.user.email|default:request.user.username }}</p>
+      <a class="button is-light is-fullwidth" href="{% url 'shop-profile' %}" data-testid="nav-profile-mobile">
+        {% include 'shop/partials/_icon.html' with name='user' %}
+        <span>{% translate 'Profile' %}</span>
+      </a>
       {% include 'shop/partials/_lang_toggle.html' %}
       <form method="post" action="{% url 'shop-logout' %}">
         {% csrf_token %}
-        <button class="button is-light is-fullwidth" type="submit">
+        <button class="button is-light is-fullwidth" type="submit" data-testid="nav-logout-mobile">
           {% include 'shop/partials/_icon.html' with name='logout' %}
           <span>{% translate 'Logout' %}</span>
         </button>

@@ -228,6 +228,13 @@
   font-size: 0.9375rem;
 }
 
+.app-user__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
 .app-main {
   min-width: 0;
   padding: clamp(1rem, 2.5vw, 2rem) clamp(1rem, 3vw, 2rem) var(--space-8);
@@ -302,6 +309,8 @@
   display: grid;
   gap: var(--space-4);
   grid-template-columns: 1fr;
+  align-items: start;
+  grid-auto-rows: minmax(min-content, auto);
 }
 
 .form-grid .field {

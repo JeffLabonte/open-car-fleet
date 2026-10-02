@@ -102,14 +102,21 @@
       }
     }
 
-    const { hanko: elementsHanko } = await register(apiUrl);
-    elementsHanko.onSessionCreated(async () => {
-      await finishLogin();
-    });
+    try {
+      const { hanko: elementsHanko } = await register(apiUrl);
+      elementsHanko.onSessionCreated(async () => {
+        await finishLogin();
+      });
 
-    const existingSession = await hanko.validateSession();
-    if (existingSession?.is_valid && !loggedOut) {
-      await finishLogin();
+      const existingSession = await hanko.validateSession();
+      if (existingSession?.is_valid && !loggedOut) {
+        await finishLogin();
+      }
+    } catch (error) {
+      const message = 'Unable to load the Hanko login form. Please check your internet connection, disable ad blockers for this site, and verify HANKO_API_URL is correct.';
+      console.error(message, error);
+      authContainer.textContent = message;
+      throw error;
     }
   </script>
 {% endblock %}

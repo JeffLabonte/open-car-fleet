@@ -7,6 +7,10 @@
     <div class="page-actions">
       <a class="button is-light" href="{% url 'shop-index' %}">{% translate 'Back to fleets' %}</a>
       {% if can_manage_garage %}
+        <button class="button is-light" type="button" data-dialog-open="dialog-fleet-edit" data-testid="edit-fleet-button">
+          {% include 'shop/partials/_icon.html' with name='edit' %}
+          <span>{% translate 'Edit fleet' %}</span>
+        </button>
         <a class="button is-link" href="{% url 'shop-garage-share' garage.pk %}">
           {% include 'shop/partials/_icon.html' with name='share' %}
           <span>{% translate 'Share fleet' %}</span>
@@ -86,4 +90,41 @@
       </div>
     </aside>
   </div>
+
+  {% if can_manage_garage %}
+    <dialog class="dialog" id="dialog-fleet-edit" data-testid="fleet-edit-dialog">
+      <form method="post" action="{% url 'shop-garage-update' garage.pk %}">
+        {% csrf_token %}
+        <h2 class="dialog__title">{% translate 'Edit fleet' %}</h2>
+
+        {% if form.non_field_errors %}
+          <div class="notification is-danger mb-4">
+            {{ form.non_field_errors }}
+          </div>
+        {% endif %}
+
+        <div class="form-grid">
+          {% for field in form.visible_fields %}
+            {% include 'shop/partials/_form_field.html' %}
+          {% endfor %}
+        </div>
+
+        <div class="dialog-actions">
+          <button class="button is-light" type="button" data-dialog-close>{% translate 'Cancel' %}</button>
+          <button class="button is-primary" type="submit">{% translate 'Update' %}</button>
+        </div>
+      </form>
+    </dialog>
+
+    {% if form.errors %}
+      <script>
+        (function () {
+          const dialog = document.getElementById('dialog-fleet-edit');
+          if (dialog && typeof dialog.showModal === 'function') {
+            dialog.showModal();
+          }
+        })();
+      </script>
+    {% endif %}
+  {% endif %}
 {% endblock %}

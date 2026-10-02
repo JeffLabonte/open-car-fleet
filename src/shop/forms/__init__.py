@@ -2,9 +2,11 @@ from shop.forms.car import CarCreateForm, CarPartForm, CarUpdateForm
 from shop.forms.garage import (
     FleetCreateForm,
     FleetInviteForm,
+    FleetUpdateForm,
     GarageCreateForm,
     GarageInviteForm,
     GarageMembershipRoleForm,
+    GarageUpdateForm,
 )
 from shop.forms.import_data import CarImportForm, GarageImportForm
 from shop.forms.job import WorkJobForm
@@ -18,8 +20,10 @@ __all__ = [
     'GarageCreateForm',
     'GarageInviteForm',
     'GarageMembershipRoleForm',
+    'GarageUpdateForm',
     'FleetCreateForm',
     'FleetInviteForm',
+    'FleetUpdateForm',
     'CarImportForm',
     'GarageImportForm',
     'WorkJobForm',

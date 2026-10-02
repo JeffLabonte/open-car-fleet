@@ -162,6 +162,33 @@ class HankoAuthenticationIntegrationTests(TestCase):
         self.assertEqual(first_login_page.context['logged_out'], True)
         self.assertEqual(second_login_page.context['logged_out'], False)
 
+    def test_profile_view_requires_login(self):
+        response = self.client.get(reverse('shop-profile'))
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response['Location'].startswith(f"{reverse('shop-login')}?next="))
+
+    @override_settings(HANKO_API_URL='https://hanko.example.com')
+    def test_profile_view_renders_for_authenticated_user(self):
+        user = ShopUser.objects.create_user(username='profile-user', email='profile@example.com', password='pass1234')
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('shop-profile'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '<hanko-profile')
+        self.assertContains(response, 'https://hanko.example.com')
+        self.assertContains(response, 'hanko-profile-container')
+
+    @override_settings(HANKO_API_URL='')
+    def test_profile_view_shows_missing_api_url_message(self):
+        user = ShopUser.objects.create_user(username='profile-user-no-api', email='profile-no-api@example.com', password='pass1234')
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('shop-profile'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Missing HANKO_API_URL')
+
     @override_settings(
         ALLOWED_HOSTS=['xps-server.kanyu-bluegill.ts.net'],
         CSRF_TRUSTED_ORIGINS=['https://xps-server.kanyu-bluegill.ts.net'],
