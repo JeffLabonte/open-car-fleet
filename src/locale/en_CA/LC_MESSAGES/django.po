@@ -568,6 +568,15 @@ msgstr ""
 msgid "External links"
 msgstr ""
 
+#: src/shop/forms/report.py:70
+msgid "unknown"
+msgstr ""
+
+#: src/shop/forms/report.py:72
+#, python-format
+msgid "Current odometer: %(mileage)s"
+msgstr ""
+
 #: src/shop/forms/report.py:80
 msgid "External links must use http:// or https://."
 msgstr ""
@@ -1704,6 +1713,11 @@ msgstr ""
 
 #: src/shop/views.py:1022
 msgid "You do not have permission to add reports to this car."
+msgstr ""
+
+#: src/shop/views.py:1085 src/shop/views.py:1116
+#, python-format
+msgid "Vehicle odometer updated to %(mileage)s km."
 msgstr ""
 
 #: src/shop/views.py:1037

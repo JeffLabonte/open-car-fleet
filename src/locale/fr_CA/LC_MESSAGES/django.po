@@ -586,6 +586,15 @@ msgstr "Informations supplémentaires"
 msgid "External links"
 msgstr "Liens externes"
 
+#: src/shop/forms/report.py:70
+msgid "unknown"
+msgstr "Inconnu"
+
+#: src/shop/forms/report.py:72
+#, python-format
+msgid "Current odometer: %(mileage)s"
+msgstr "Odomètre actuel : %(mileage)s"
+
 #: src/shop/forms/report.py:80
 msgid "External links must use http:// or https://."
 msgstr "Les liens externes doivent utiliser http:// ou https://."
@@ -1771,6 +1780,11 @@ msgstr "La pièce jointe n'a aucun fichier."
 #: src/shop/views.py:1022
 msgid "You do not have permission to add reports to this car."
 msgstr "Vous n'avez pas la permission d'ajouter des rapports à cette voiture."
+
+#: src/shop/views.py:1085 src/shop/views.py:1116
+#, python-format
+msgid "Vehicle odometer updated to %(mileage)s km."
+msgstr "Odomètre du véhicule mis à jour à %(mileage)s km."
 
 #: src/shop/views.py:1037
 msgid "Maintenance report added successfully."
