@@ -640,6 +640,8 @@
 }
 
 .dialog {
+  position: fixed;
+  inset: 0;
   width: min(26rem, calc(100vw - 2rem));
   max-height: calc(100dvh - 2rem);
   margin: auto;
@@ -651,6 +653,10 @@
   box-shadow: var(--shadow);
   overflow-y: auto;
   overscroll-behavior: contain;
+}
+
+.dialog--fleet-edit {
+  width: min(40rem, calc(100vw - 2rem));
 }
 
 .dialog::backdrop {

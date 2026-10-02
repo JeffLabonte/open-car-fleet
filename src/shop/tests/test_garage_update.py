@@ -145,6 +145,7 @@ class GarageUpdateTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'data-testid="fleet-edit-dialog"')
+        self.assertContains(response, 'dialog--fleet-edit')
         self.assertContains(response, 'name="name"')
         self.assertContains(response, 'value="Alpha Garage"')
         self.assertContains(response, 'name="description"')
