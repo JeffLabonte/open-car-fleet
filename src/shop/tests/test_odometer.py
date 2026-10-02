@@ -158,7 +158,8 @@ class OdometerUpdateTests(TestCase):
 
     def test_report_form_shows_unknown_when_car_has_no_odometer(self):
         self.car.mileage = None
-        form = ReportForm(car=self.car)
+        with override('en-ca'):
+            form = ReportForm(car=self.car)
         self.assertIn('unknown', str(form.fields['mileage'].help_text))
 
     def test_report_creation_messages_are_localized(self):
