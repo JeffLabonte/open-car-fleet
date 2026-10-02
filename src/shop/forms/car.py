@@ -37,7 +37,7 @@ class CarPartForm(forms.ModelForm):
 class CarBaseForm(forms.ModelForm):
     class Meta:
         model = Car
-        fields = ['garage', 'usual_name', 'make', 'model', 'colour', 'year', 'mileage', 'vin', 'license_plate']
+        fields = ['garage', 'usual_name', 'make', 'model', 'colour', 'year', 'vin', 'license_plate']
         labels = {
             'garage': _('Fleet'),
             'usual_name': _('Usual name'),
@@ -45,7 +45,6 @@ class CarBaseForm(forms.ModelForm):
             'model': _('Model'),
             'colour': _('Colour'),
             'year': _('Year'),
-            'mileage': _('Odometer'),
             'vin': _('VIN'),
             'license_plate': _('License plate'),
         }
@@ -56,7 +55,6 @@ class CarBaseForm(forms.ModelForm):
             'model': forms.TextInput(attrs={'class': 'input', 'placeholder': _('Model')}),
             'colour': forms.TextInput(attrs={'class': 'input', 'placeholder': _('Colour')}),
             'year': forms.NumberInput(attrs={'class': 'input', 'placeholder': _('Year')}),
-            'mileage': forms.NumberInput(attrs={'class': 'input', 'placeholder': _('Odometer')}),
             'vin': forms.TextInput(attrs={'class': 'input', 'placeholder': _('VIN')}),
             'license_plate': forms.TextInput(attrs={'class': 'input', 'placeholder': _('License plate')}),
         }
