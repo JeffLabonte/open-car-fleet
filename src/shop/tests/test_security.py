@@ -248,3 +248,17 @@ class SecurityHardeningTests(TestCase):
         response = self.client.post(reverse('shop-known-shop-create'), data={'name': ''})
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Add shop')
+
+    def test_fleet_edit_dialog_opens_via_data_attribute_not_inline_script(self):
+        self.client.force_login(self.owner)
+        response = self.client.post(
+            reverse('shop-garage-update', args=[self.garage.pk]),
+            data={'name': '', 'description': ''},
+        )
+        self.assertEqual(response.status_code, 200)
+        # The dialog should be marked to reopen on validation errors, without
+        # relying on an inline <script> that the CSP would block.
+        self.assertContains(response, 'data-open-on-error="true"')
+        self.assertNotContains(response, '<script>')
+        self.assertIn('Content-Security-Policy', response)
+        self.assertIn("script-src 'self'", response['Content-Security-Policy'])

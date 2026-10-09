@@ -66,7 +66,16 @@
     });
   };
 
+  const openErrorDialogs = () => {
+    document.querySelectorAll('dialog[data-open-on-error="true"]').forEach((dialog) => {
+      if (dialog instanceof HTMLDialogElement && typeof dialog.showModal === 'function') {
+        dialog.showModal();
+      }
+    });
+  };
+
   initDialogs();
   markCurrentNav();
   initAccountMenu();
+  openErrorDialogs();
 })();

@@ -92,8 +92,7 @@
   </div>
 
   {% if can_manage_garage %}
-    <dialog class="dialog dialog--fleet-edit" id="dialog-fleet-edit" data-testid="fleet-edit-dialog">
-      <form method="post" action="{% url 'shop-garage-update' garage.pk %}">
+    <dialog class="dialog dialog--fleet-edit" id="dialog-fleet-edit" data-testid="fleet-edit-dialog" data-open-on-error="{{ form.errors|yesno:'true,false' }}">
         {% csrf_token %}
         <h2 class="dialog__title">{% translate 'Edit fleet' %}</h2>
 
@@ -115,16 +114,5 @@
         </div>
       </form>
     </dialog>
-
-    {% if form.errors %}
-      <script>
-        (function () {
-          const dialog = document.getElementById('dialog-fleet-edit');
-          if (dialog && typeof dialog.showModal === 'function') {
-            dialog.showModal();
-          }
-        })();
-      </script>
-    {% endif %}
   {% endif %}
 {% endblock %}
