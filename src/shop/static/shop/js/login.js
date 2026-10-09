@@ -67,7 +67,19 @@ async function finishLogin() {
       throw new Error(`Login callback failed with status ${response.status}`);
     }
 
-    window.location.href = nextUrl;
+    let redirectTarget = '/';
+    if (typeof nextUrl === 'string' && nextUrl.trim() !== '') {
+      try {
+        const safeUrl = new URL(nextUrl, window.location.origin);
+        if (safeUrl.origin === window.location.origin) {
+          redirectTarget = safeUrl.href;
+        }
+      } catch (error) {
+        redirectTarget = '/';
+      }
+    }
+
+    window.location.href = redirectTarget;
     return true;
   } catch (error) {
     console.error('Hanko login callback failed.', error);
