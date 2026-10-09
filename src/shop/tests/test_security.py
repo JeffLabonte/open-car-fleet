@@ -39,7 +39,20 @@ class SecurityHardeningTests(TestCase):
         response = self.client.get(reverse('shop-login'), {'next': 'javascript:alert(document.cookie)'})
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'javascript:alert')
-        self.assertContains(response, "const nextUrl = '/';")
+        # next_url is now delivered via json_script, not inline JS.
+        self.assertContains(response, 'id="hanko-next-url"')
+        self.assertContains(response, '"/"')
+
+    @override_settings(SECURE_SSL_REDIRECT=True)
+    def test_ssl_redirect_middleware_redirects_http_to_https(self):
+        response = self.client.get(reverse('shop-login'))
+        self.assertEqual(response.status_code, 301)
+        self.assertTrue(response['Location'].startswith('https://'))
+
+    @override_settings(SECURE_HSTS_SECONDS=31536000, SECURE_HSTS_INCLUDE_SUBDOMAINS=True)
+    def test_hsts_header_present_on_https_when_configured(self):
+        response = self.client.get(reverse('shop-login'), secure=True)
+        self.assertEqual(response['Strict-Transport-Security'], 'max-age=31536000; includeSubDomains')
 
     def test_theme_view_rejects_absolute_next_url(self):
         response = self.client.get(reverse('shop-theme', args=['light']), {'next': 'https://evil.example.com'})

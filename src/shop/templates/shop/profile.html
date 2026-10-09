@@ -10,10 +10,12 @@
     </div>
   </section>
 
+  {{ hanko_api_url|json_script:'hanko-api-url' }}
+
   <script type="module">
     import { register } from 'https://esm.run/@teamhanko/hanko-elements';
 
-    const apiUrl = '{{ hanko_api_url }}';
+    const apiUrl = JSON.parse(document.getElementById('hanko-api-url').textContent);
     const profileContainer = document.getElementById('hanko-profile-container');
 
     if (!apiUrl) {
