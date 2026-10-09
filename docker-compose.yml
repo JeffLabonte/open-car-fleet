@@ -1,6 +1,6 @@
 services:
   db:
-    image: docker.io/library/postgres:18
+    image: docker.io/library/postgres:16
     env_file:
       - ./src/.env
     ports:

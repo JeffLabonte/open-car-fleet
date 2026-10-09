@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Use the official Python image with a slim base for production.
-FROM python:3.14-slim AS base
+FROM python:3.13-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -33,7 +33,7 @@ RUN --mount=type=secret,id=env_file,target=/app/src/.env \
     DJANGO_TRUSTED_PROXY=True python src/manage.py collectstatic --noinput
 
 # Use a lean runtime image.
-FROM python:3.14-slim AS final
+FROM python:3.13-slim AS final
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app/src \
@@ -42,7 +42,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app/src
 
 COPY --from=base /usr/local/bin /usr/local/bin
-COPY --from=base /usr/local/lib/python3.14/site-packages /usr/local/lib/python3.14/site-packages
+COPY --from=base /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
 COPY --from=base /app /app
 COPY --from=base /staticfiles /staticfiles
 
