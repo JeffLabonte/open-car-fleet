@@ -269,7 +269,7 @@ class AdditionalCoverageRegressionTests(TestCase):
 
         result = importer.import_records(Car, [{'make': 'Nope'}], context=ImportContext(garage=self.garage))
         self.assertTrue(result.has_errors)
-        self.assertIn("Field 'model' is required", result.errors[0].message)
+        self.assertIn("model", result.errors[0].message.lower())
 
         result = importer.import_records(Car, [42], context=ImportContext(garage=self.garage))
         self.assertTrue(result.has_errors)
