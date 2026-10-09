@@ -95,6 +95,19 @@ class AttachmentStagingEndpointTests(TestCase):
         self.assertIn('no larger than', response.json()['error'])
         self.assertFalse(Attachment.objects.exists())
 
+    @patch('shop.views.ATTACHMENT_USER_STAGED_QUOTA_BYTES', 20)
+    def test_upload_enforces_per_user_staged_quota(self):
+        self.client.force_login(self.user)
+        # Use the bare 8-byte PNG magic so the first upload (8 bytes) fits.
+        minimal_png = b'\x89PNG\r\n\x1a\n'
+        response = self._upload(self.client, content=minimal_png)
+        self.assertEqual(response.status_code, 201)
+
+        # A second upload would exceed the 20-byte quota (8 + 13 > 20).
+        response = self._upload(self.client, name='second.png', content=minimal_png + b'0' * 13)
+        self.assertEqual(response.status_code, 413)
+        self.assertIn('quota', response.json()['error'].lower())
+
     def test_upload_opportunistically_purges_stale_staged(self):
         stale = Attachment.objects.create(
             source_type=Attachment.SOURCE_UPLOAD,

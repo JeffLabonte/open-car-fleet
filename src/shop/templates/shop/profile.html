@@ -1,37 +1,22 @@
 {% extends 'shop/base.html' %}
-{% load i18n %}
+{% load i18n static %}
 
 {% block content %}
   <section class="content-card auth-card" data-testid="profile-card">
     {% include 'shop/partials/_page_header.html' with heading=title subheading=subtitle %}
 
     <div id="hanko-profile-container">
-      <hanko-profile></hanko-profile>
+      {% if hanko_api_url %}
+        <hanko-profile></hanko-profile>
+      {% else %}
+        <p class="notification is-warning">Missing HANKO_API_URL. Set it in .env and restart the server.</p>
+      {% endif %}
     </div>
   </section>
 
   {{ hanko_api_url|json_script:'hanko-api-url' }}
 
-  <script type="module">
-    import { register } from 'https://esm.run/@teamhanko/hanko-elements';
-
-    const apiUrl = JSON.parse(document.getElementById('hanko-api-url').textContent);
-    const profileContainer = document.getElementById('hanko-profile-container');
-
-    if (!apiUrl) {
-      const message = 'Missing HANKO_API_URL. Set it in .env and restart the server.';
-      console.error(message);
-      profileContainer.textContent = message;
-      throw new Error(message);
-    }
-
-    try {
-      await register(apiUrl);
-    } catch (error) {
-      const message = 'Unable to load the Hanko profile. Please check your internet connection, disable ad blockers for this site, and verify HANKO_API_URL is correct.';
-      console.error(message, error);
-      profileContainer.textContent = message;
-      throw error;
-    }
-  </script>
+  {% if hanko_api_url %}
+    <script type="module" src="{% static 'shop/js/profile.js' %}"></script>
+  {% endif %}
 {% endblock %}

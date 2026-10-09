@@ -52,6 +52,7 @@ class ImportResult:
 class ImportContext:
     garage: Garage | None = None
     car: Car | None = None
+    user: Any = None
 
 
 class CSVImporter:
@@ -260,7 +261,7 @@ class CSVImporter:
             "title": self._require_text(record, "title"),
             "maintenance_type": self._clean_optional_text(record.get("maintenance_type")) or "",
             "assigned_to": self._resolve_mechanic(record.get("assigned_to"), context=context),
-            "assigned_shop": self._resolve_shop(record.get("assigned_shop")),
+            "assigned_shop": self._resolve_shop(record.get("assigned_shop"), context),
             "planned_date": self._parse_date_value(record.get("planned_date")),
             "is_done": self._coerce_bool(record.get("is_done", False), field_name="is_done"),
             "done_date": self._parse_date_value(record.get("done_date")),
@@ -292,7 +293,7 @@ class CSVImporter:
             "mileage": self._coerce_optional_int(record.get("mileage"), field_name="mileage"),
             "job_name": job_name,
             "assigned_to": self._resolve_mechanic(record.get("assigned_to"), context=context),
-            "assigned_shop": self._resolve_shop(record.get("assigned_shop")),
+            "assigned_shop": self._resolve_shop(record.get("assigned_shop"), context),
             "date_done": date_done,
             "note": self._clean_optional_text(record.get("note")) or "",
             "additional_information": (
@@ -397,11 +398,15 @@ class CSVImporter:
         except (user_model.DoesNotExist, user_model.MultipleObjectsReturned, ValidationError, ValueError) as exc:
             raise ImportValidationError(_("Mechanic not found for id '%(value)s'.") % {'value': raw_value}) from exc
 
-    def _resolve_shop(self, raw_value: Any):
+    def _resolve_shop(self, raw_value: Any, context: ImportContext | None = None):
         if raw_value in (None, ""):
             return None
 
         queryset = KnownShop.objects.all()
+        if context and context.user is not None:
+            queryset = queryset.filter(
+                models.Q(created_by__isnull=True) | models.Q(created_by=context.user)
+            )
         if isinstance(raw_value, str):
             value = raw_value.strip()
             if not value:

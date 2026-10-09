@@ -16,13 +16,18 @@ from django.contrib.auth import logout
 from django.middleware.csrf import get_token
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_GET, require_POST
+from django_ratelimit.decorators import ratelimit
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
 from shop.auth import HankoAuthenticationError, complete_hanko_login, fetch_hanko_userinfo
 from shop.exporters import export_garage_to_excel
 from shop.services import update_car_odometer_from_report
-from shop.forms.base import AttachmentField, validate_uploaded_file
+from shop.forms.base import (
+    ATTACHMENT_USER_STAGED_QUOTA_BYTES,
+    AttachmentField,
+    validate_uploaded_file,
+)
 from shop.forms import (
     CarImportForm,
     CarCreateForm,
@@ -156,6 +161,7 @@ def set_test_session(request: HttpRequest) -> HttpResponse:
     return redirect(safe_next_url(request, default=reverse('shop-index')))
 
 
+@ratelimit(key='ip', rate='10/m', method='POST')
 def hanko_callback(request: HttpRequest) -> JsonResponse:
     if request.method != 'POST':
         return JsonResponse({'ok': False, 'error': 'Method not allowed'}, status=405)
@@ -513,7 +519,7 @@ def garage_import(request: HttpRequest, pk: str) -> HttpResponse:
                 result = importer.import_records(
                     importer.resolve_model('car'),
                     records,
-                    context=ImportContext(garage=garage),
+                    context=ImportContext(garage=garage, user=request.user),
                     dry_run=dry_run,
                 )
             except ImportValidationError as exc:
@@ -659,7 +665,7 @@ def car_import(request: HttpRequest, pk: str) -> HttpResponse:
                 result = importer.import_records(
                     model,
                     records,
-                    context=ImportContext(garage=car.garage, car=car),
+                    context=ImportContext(garage=car.garage, car=car, user=request.user),
                     dry_run=dry_run,
                 )
             except ImportValidationError as exc:
@@ -986,6 +992,7 @@ def purge_stale_staged_attachments() -> int:
 
 @hanko_login_required
 @require_POST
+@ratelimit(key='user', rate='30/m', method='POST')
 def attachment_upload(request: HttpRequest) -> JsonResponse:
     """Stage one uploaded file for the submitting user; returns its attachment ID.
 
@@ -1001,6 +1008,21 @@ def attachment_upload(request: HttpRequest) -> JsonResponse:
         validate_uploaded_file(upload)
     except ValidationError as exc:
         return JsonResponse({'error': exc.messages[0]}, status=400)
+
+    staged_bytes = sum(
+        attachment.file.size
+        for attachment in Attachment.objects.filter(
+            uploaded_by=request.user,
+            content_type__isnull=True,
+        ).iterator()
+        if attachment.file
+    )
+    if staged_bytes + upload.size > ATTACHMENT_USER_STAGED_QUOTA_BYTES:
+        return JsonResponse(
+            {'error': _('Upload quota exceeded. Delete unused staged files or wait for them to expire.')},
+            status=413,
+        )
+
     attachment = Attachment(
         source_type=Attachment.SOURCE_UPLOAD,
         uploaded_by=request.user,

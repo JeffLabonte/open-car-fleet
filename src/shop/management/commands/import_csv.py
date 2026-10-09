@@ -48,7 +48,7 @@ class Command(BaseCommand):
             garage = self._resolve_garage(options.get("garage"))
             if garage is None:
                 raise ImportValidationError('A target garage is required for command-line imports.')
-            context = ImportContext(garage=garage)
+            context = ImportContext(garage=garage, user=garage.created_by)
             result = importer.import_records(
                 model,
                 records,

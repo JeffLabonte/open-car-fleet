@@ -107,6 +107,15 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_HSTS_SECONDS > 0
 SECURE_HSTS_PRELOAD = SECURE_HSTS_SECONDS > 0
 X_FRAME_OPTIONS = 'DENY'
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+    }
+}
+
+# Return 429 Too Many Requests instead of the default 403 when a limit is hit.
+RATELIMIT_VIEW = 'django_ratelimit.views.ratelimited_error'
+
 
 # Application definition
 
@@ -133,6 +142,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.middleware.locale.LocaleMiddleware',
     'shop.middleware.HankoAuthenticationMiddleware',
+    'shop.middleware.RatelimitMiddleware',
+    'shop.middleware.ContentSecurityPolicyMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]

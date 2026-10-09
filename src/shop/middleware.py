@@ -2,11 +2,13 @@ from functools import wraps
 import time
 from typing import Any, Callable, Optional, cast
 
+from django.conf import settings
 from django.contrib.auth import logout
 from django.http import HttpRequest
 from django.http import HttpResponse
 from django.contrib.auth.views import redirect_to_login
 from django.utils.deprecation import MiddlewareMixin
+from django_ratelimit.exceptions import Ratelimited
 
 from shop.auth import HankoAuthenticationError, complete_hanko_login, fetch_hanko_userinfo
 
@@ -22,13 +24,46 @@ PUBLIC_PATHS = {
 
 PUBLIC_PREFIXES = (
     '/static/',
-    '/admin/',
 )
 
 # How often (seconds) an already-authenticated Django session is revalidated
 # against the Hanko API, so revoking a Hanko session eventually logs the user
 # out of Django too.
 SESSION_RECHECK_INTERVAL = 15 * 60
+
+
+class RatelimitMiddleware(MiddlewareMixin):
+    """Return 429 Too Many Requests for django-ratelimit violations."""
+
+    def process_exception(self, request: HttpRequest, exception: BaseException) -> Optional[HttpResponse]:
+        if isinstance(exception, Ratelimited):
+            return HttpResponse('Too Many Requests', status=429)
+        return None
+
+
+class ContentSecurityPolicyMiddleware(MiddlewareMixin):
+    """Add a baseline Content-Security-Policy to all responses."""
+
+    def process_response(self, request: HttpRequest, response: HttpResponse) -> HttpResponse:
+        hanko_api = getattr(settings, 'HANKO_API_URL', '') or ''
+        connect_src = "'self'"
+        if hanko_api:
+            from urllib.parse import urlparse
+            parsed = urlparse(hanko_api)
+            if parsed.scheme and parsed.netloc:
+                connect_src += f" {parsed.scheme}://{parsed.netloc}"
+        response['Content-Security-Policy'] = (
+            "default-src 'self'; "
+            "script-src 'self'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: blob:; "
+            "font-src 'self'; "
+            f"connect-src {connect_src}; "
+            "frame-ancestors 'none'; "
+            "base-uri 'self'; "
+            "form-action 'self'"
+        )
+        return response
 
 
 class HankoAuthenticationMiddleware(MiddlewareMixin):

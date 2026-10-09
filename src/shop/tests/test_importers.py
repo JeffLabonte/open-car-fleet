@@ -577,6 +577,24 @@ class ImporterCoverageTests(TestCase):
         with self.assertRaises(ImportValidationError):
             importer._resolve_shop(uuid.uuid4())
 
+    def test_resolve_shop_scoped_to_user(self):
+        importer = CSVImporter()
+        owner = ShopUser.objects.create_user(username='shop-owner', email='shop-owner@example.com', password='pass1234')
+        global_shop = KnownShop.objects.create(name='Global Shop', email='global@example.com')
+        private_shop = KnownShop.objects.create(name='Private Shop', email='private@example.com', created_by=owner)
+        other_user = ShopUser.objects.create_user(username='other-user', email='other@example.com', password='pass1234')
+
+        # Without user context all shops are visible (command-line / legacy behaviour).
+        self.assertEqual(importer._resolve_shop('Global Shop').pk, global_shop.pk)
+        self.assertEqual(importer._resolve_shop('Private Shop').pk, private_shop.pk)
+
+        # With user context, only global shops and shops created by that user resolve.
+        context = ImportContext(user=owner)
+        self.assertEqual(importer._resolve_shop('Global Shop', context).pk, global_shop.pk)
+        self.assertEqual(importer._resolve_shop('Private Shop', context).pk, private_shop.pk)
+        with self.assertRaises(ImportValidationError):
+            importer._resolve_shop('private@example.com', ImportContext(user=other_user))
+
     def test_prepare_workjob_record_with_car_context(self):
         importer = CSVImporter()
         data, warnings = importer._prepare_workjob_record(

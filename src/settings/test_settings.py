@@ -30,6 +30,10 @@ if _e2e_db_path:
 # MailerSend API; locmem delivers into django.core.mail.outbox.
 EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 
+# Disable django-ratelimit by default in tests so existing suites are not
+# throttled. Targeted tests can re-enable it with override_settings.
+RATELIMIT_ENABLE = False
+
 PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.MD5PasswordHasher',
     'django.contrib.auth.hashers.PBKDF2PasswordHasher',

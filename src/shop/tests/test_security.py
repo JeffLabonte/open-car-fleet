@@ -6,6 +6,7 @@ from django.urls import reverse
 from openpyxl import load_workbook
 from shop.exporters import export_garage_to_excel
 from shop.forms import ReportForm
+from shop.models.attachment import Attachment
 from shop.models.car import Car
 from shop.models.garage import Garage
 from shop.models.garage import GarageMembership
@@ -53,6 +54,61 @@ class SecurityHardeningTests(TestCase):
     def test_hsts_header_present_on_https_when_configured(self):
         response = self.client.get(reverse('shop-login'), secure=True)
         self.assertEqual(response['Strict-Transport-Security'], 'max-age=31536000; includeSubDomains')
+
+    def test_admin_requires_authentication(self):
+        response = self.client.get('/admin/')
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response['Location'].startswith(reverse('shop-login')))
+
+    def test_admin_accessible_to_authenticated_staff(self):
+        staff_user = ShopUser.objects.create_user(
+            username='staff-user',
+            email='staff@example.com',
+            password='pass1234',
+            is_staff=True,
+        )
+        self.client.force_login(staff_user)
+        response = self.client.get('/admin/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_responses_include_csp_header(self):
+        response = self.client.get(reverse('shop-login'))
+        self.assertIn('Content-Security-Policy', response)
+        csp = response['Content-Security-Policy']
+        self.assertIn("default-src 'self'", csp)
+        self.assertIn("script-src 'self'", csp)
+        self.assertIn("frame-ancestors 'none'", csp)
+
+    @override_settings(HANKO_API_URL='https://hanko.example.com')
+    def test_csp_connect_src_includes_hanko_api(self):
+        response = self.client.get(reverse('shop-login'))
+        self.assertIn('Content-Security-Policy', response)
+        self.assertIn('https://hanko.example.com', response['Content-Security-Policy'])
+
+    @override_settings(RATELIMIT_ENABLE=True)
+    def test_hanko_callback_rate_limited_after_many_requests(self):
+        for index in range(11):
+            response = self.client.post(
+                reverse('shop-hanko-callback'),
+                data='{}',
+                content_type='application/json',
+            )
+            if response.status_code == 429:
+                break
+        self.assertEqual(response.status_code, 429)
+
+    @override_settings(RATELIMIT_ENABLE=True)
+    def test_attachment_upload_rate_limited_after_many_requests(self):
+        self.client.force_login(self.owner)
+        for index in range(31):
+            response = self.client.post(
+                reverse('shop-attachment-upload'),
+                data={'file': SimpleUploadedFile('photo.png', PNG_SIGNATURE, content_type='image/png')},
+            )
+            if response.status_code == 429:
+                break
+        self.assertEqual(response.status_code, 429)
+        Attachment.objects.filter(uploaded_by=self.owner).delete()
 
     def test_theme_view_rejects_absolute_next_url(self):
         response = self.client.get(reverse('shop-theme', args=['light']), {'next': 'https://evil.example.com'})
