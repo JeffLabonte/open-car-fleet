@@ -52,3 +52,23 @@ class TestDeploymentHardening(TestCase):
         self.assertIn("'--exclude=ansible/'", text)
         self.assertIn("'--exclude=.env.*'", text)
         self.assertIn("'--exclude=src/.env.*'", text)
+
+    def test_env_role_derives_database_env_from_deployed_env(self):
+        env_role = REPO_ROOT / 'ansible' / 'roles' / 'env' / 'tasks' / 'main.yml'
+        self.assertTrue(env_role.exists())
+        text = env_role.read_text()
+        self.assertIn('src/.env', text)
+        self.assertIn('src/.env.database', text)
+        self.assertIn("grep -E '^POSTGRES_'", text)
+
+    def test_database_env_file_contains_only_postgres_variables(self):
+        db_env = REPO_ROOT / 'src' / '.env.database'
+        self.assertTrue(db_env.exists())
+        for line in db_env.read_text().splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith('#'):
+                continue
+            self.assertTrue(
+                stripped.startswith('POSTGRES_'),
+                f"src/.env.database must only contain POSTGRES_* variables, found: {stripped!r}",
+            )

@@ -148,7 +148,7 @@ retry_files_enabled = True
 
 **Risk:** `docker-compose.prod.yml` mounted the full `src/.env` into the Postgres container, exposing Hanko and MailerSend secrets.
 
-**Fix:** Created dedicated `src/.env.database` and pointed the `db` service to it.
+**Fix:** Created dedicated `src/.env.database` for the `db` service. During deploy, Ansible derives it on the server from the uploaded `src/.env` so the DB password stays in sync with the web container.
 
 ```yaml
 # docker-compose.prod.yml
@@ -159,6 +159,16 @@ services:
   web:
     env_file:
       - ./src/.env
+```
+
+```yaml
+# ansible/roles/env/tasks/main.yml
+- name: Derive database-only env file from deployed env
+  ansible.builtin.shell: |
+    set -euo pipefail
+    grep -E '^POSTGRES_' "{{ app_dir }}/src/.env" > "{{ app_dir }}/src/.env.database"
+    chmod 600 "{{ app_dir }}/src/.env.database"
+  changed_when: true
 ```
 
 ---
