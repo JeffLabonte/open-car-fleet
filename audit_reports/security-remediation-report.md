@@ -257,7 +257,7 @@ if SECURE_SSL_REDIRECT and not trusted_proxy:
     )
 ```
 
-`prepare-env.sh` now defaults `DJANGO_TRUSTED_PROXY=True`.
+`prepare-env.sh` now defaults `DJANGO_TRUSTED_PROXY=True`. The Dockerfile also sets `DJANGO_TRUSTED_PROXY=True` during `collectstatic` so the build can load settings even if the deployed env file predates the change.
 
 ### SEC-003: Reflected XSS in login page
 
