@@ -6,6 +6,22 @@ const nextUrl = JSON.parse(document.getElementById('hanko-next-url').textContent
 const loggedOut = JSON.parse(document.getElementById('hanko-logged-out').textContent);
 const authContainer = document.getElementById('hanko-auth-container');
 
+function getSafeNextUrl(candidate) {
+  if (typeof candidate !== 'string' || candidate.trim() === '') {
+    return '/';
+  }
+
+  try {
+    const url = new URL(candidate, window.location.origin);
+    if (url.origin !== window.location.origin) {
+      return '/';
+    }
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch (error) {
+    return '/';
+  }
+}
+
 if (!apiUrl) {
   const message = 'Missing HANKO_API_URL. Set it in .env and restart the server.';
   console.error(message);
@@ -67,7 +83,7 @@ async function finishLogin() {
       throw new Error(`Login callback failed with status ${response.status}`);
     }
 
-    window.location.href = nextUrl;
+    window.location.href = getSafeNextUrl(nextUrl);
     return true;
   } catch (error) {
     console.error('Hanko login callback failed.', error);
