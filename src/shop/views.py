@@ -177,10 +177,10 @@ def hanko_callback(request: HttpRequest) -> JsonResponse:
 
     try:
         user_data = fetch_hanko_userinfo(session_token)
+        user = complete_hanko_login(request, user_data)
     except HankoAuthenticationError:
         return JsonResponse({'ok': False, 'error': 'Invalid Hanko session'}, status=401)
 
-    user = complete_hanko_login(request, user_data)
     request.session['hanko_session_token'] = session_token
     request.session.save()
 

@@ -285,6 +285,63 @@ class HankoAuthenticationIntegrationTests(TestCase):
         self.assertIn(b'Cars', response.content)
 
 
+class HankoSessionBindingTests(TestCase):
+    """SEC-006: the remote Hanko identity must match the local user."""
+
+    def test_middleware_recheck_logs_out_when_remote_identity_changes(self):
+        user = ShopUser.objects.create_user(
+            username='binding-user',
+            email='binding@example.com',
+            password='pass1234',
+        )
+        user.hanko_id = 'original-hanko-id'
+        user.save(update_fields=['hanko_id'])
+
+        self.client.force_login(user)
+        session = self.client.session
+        session['hanko_session_token'] = 'session-token-123'
+        session['hanko_last_check'] = 0  # force recheck
+        session.save()
+
+        with patch('shop.auth.requests.post', return_value=FakeHankoResponse({
+            'is_valid': True,
+            'claims': {
+                'sub': 'attacker-hanko-id',
+                'email': 'binding@example.com',
+            },
+        })):
+            response = self.client.get(reverse('shop-index'))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response['Location'].startswith(reverse('shop-login')))
+
+    def test_middleware_recheck_allows_matching_identity(self):
+        user = ShopUser.objects.create_user(
+            username='matching-user',
+            email='matching@example.com',
+            password='pass1234',
+        )
+        user.hanko_id = 'matching-hanko-id'
+        user.save(update_fields=['hanko_id'])
+
+        self.client.force_login(user)
+        session = self.client.session
+        session['hanko_session_token'] = 'session-token-123'
+        session['hanko_last_check'] = 0
+        session.save()
+
+        with patch('shop.auth.requests.post', return_value=FakeHankoResponse({
+            'is_valid': True,
+            'claims': {
+                'sub': 'matching-hanko-id',
+                'email': 'matching@example.com',
+            },
+        })):
+            response = self.client.get(reverse('shop-index'))
+
+        self.assertEqual(response.status_code, 200)
+
+
 class HankoCallbackSecurityTests(TestCase):
     def test_callback_requires_a_session_token(self):
         response = self.client.post(
@@ -359,6 +416,92 @@ class HankoCallbackSecurityTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 403)
+
+    def test_callback_rejects_disabled_users(self):
+        disabled_user = ShopUser.objects.create_user(
+            username='disabled-user',
+            email='disabled@example.com',
+            password='pass1234',
+        )
+        disabled_user.hanko_id = 'disabled-hanko-id'
+        disabled_user.is_active = False
+        disabled_user.save(update_fields=['hanko_id', 'is_active'])
+
+        with patch('shop.auth.requests.post', return_value=FakeHankoResponse({
+            'is_valid': True,
+            'claims': {
+                'sub': 'disabled-hanko-id',
+                'email': 'disabled@example.com',
+            },
+        })):
+            response = self.client.post(
+                reverse('shop-hanko-callback'),
+                data=json.dumps({
+                    'user': {'id': 'disabled-hanko-id', 'email': 'disabled@example.com'},
+                    'session_token': 'token',
+                }),
+                content_type='application/json',
+            )
+
+        self.assertEqual(response.status_code, 401)
+        self.assertFalse(self.client.session.get('hanko_session_token'))
+
+    def test_callback_prevents_silent_hanko_id_takeover_via_email(self):
+        existing = ShopUser.objects.create_user(
+            username='local-only',
+            email='local@example.com',
+            password='pass1234',
+        )
+        # Intentionally no hanko_id: this simulates a local account that an
+        # attacker tries to take over by signing in via Hanko with the same email.
+        self.assertIsNone(existing.hanko_id)
+
+        with patch('shop.auth.requests.post', return_value=FakeHankoResponse({
+            'is_valid': True,
+            'claims': {
+                'sub': 'attacker-hanko-id',
+                'email': 'local@example.com',
+            },
+        })):
+            response = self.client.post(
+                reverse('shop-hanko-callback'),
+                data=json.dumps({
+                    'user': {'id': 'attacker-hanko-id', 'email': 'local@example.com'},
+                    'session_token': 'token',
+                }),
+                content_type='application/json',
+            )
+
+        self.assertEqual(response.status_code, 401)
+        existing.refresh_from_db()
+        self.assertIsNone(existing.hanko_id)
+
+    def test_callback_prevents_hanko_id_swap_for_linked_account(self):
+        user = ShopUser.objects.create_user(
+            username='linked-user',
+            email='linked@example.com',
+            password='pass1234',
+        )
+        user.hanko_id = 'original-hanko-id'
+        user.save(update_fields=['hanko_id'])
+
+        with patch('shop.auth.requests.post', return_value=FakeHankoResponse({
+            'is_valid': True,
+            'claims': {
+                'sub': 'different-hanko-id',
+                'email': 'linked@example.com',
+            },
+        })):
+            response = self.client.post(
+                reverse('shop-hanko-callback'),
+                data=json.dumps({
+                    'user': {'id': 'different-hanko-id', 'email': 'linked@example.com'},
+                    'session_token': 'token',
+                }),
+                content_type='application/json',
+            )
+
+        self.assertEqual(response.status_code, 401)
 
 
 class ShopUserIdentityTests(TestCase):
@@ -527,20 +670,36 @@ class AuthAndInputCoverageTests(TestCase):
         self.assertEqual(len(result), 150)
         self.assertTrue(result.startswith('a' * 140))
 
-    def test_sync_hanko_user_falls_back_to_email_lookup_and_creates_user(self):
-        email_user = ShopUser.objects.create_user(
-            username='email-user',
+    def test_sync_hanko_user_finds_existing_user_by_matching_hanko_id(self):
+        hanko_user = ShopUser.objects.create_user(
+            username='hanko-user',
             email='lookup@example.com',
             password='pass1234',
         )
-        linked = sync_hanko_user(hanko_id='new-hanko-id', email='LOOKUP@EXAMPLE.COM', username='Linked User')
-        self.assertEqual(linked.pk, email_user.pk)
-        self.assertEqual(linked.hanko_id, 'new-hanko-id')
+        hanko_user.hanko_id = 'existing-hanko-id'
+        hanko_user.save(update_fields=['hanko_id'])
+
+        linked = sync_hanko_user(
+            hanko_id='existing-hanko-id',
+            email='LOOKUP@EXAMPLE.COM',
+            username='Linked User',
+        )
+        self.assertEqual(linked.pk, hanko_user.pk)
+        self.assertEqual(linked.hanko_id, 'existing-hanko-id')
         self.assertEqual(linked.display_name, 'Linked User')
 
+    def test_sync_hanko_user_creates_new_user_when_no_identity_match(self):
         created_no_email = sync_hanko_user()
         self.assertTrue(created_no_email.username.startswith('hanko-user'))
         self.assertEqual(created_no_email.email, '')
+
+        created_with_email = sync_hanko_user(
+            hanko_id='new-hanko-id',
+            email='new-user@example.com',
+            username='New User',
+        )
+        self.assertEqual(created_with_email.hanko_id, 'new-hanko-id')
+        self.assertEqual(created_with_email.email, 'new-user@example.com')
 
     def test_sync_hanko_user_only_backfills_empty_fields_for_existing_hanko_user(self):
         user = ShopUser.objects.create_user(
@@ -567,7 +726,7 @@ class AuthAndInputCoverageTests(TestCase):
         self.assertEqual(updated.avatar_url, 'https://example.com/new.png')
         self.assertEqual(updated.auth_provider, 'hanko')
 
-    def test_sync_hanko_user_preserves_populated_fields_for_existing_users(self):
+    def test_sync_hanko_user_preserves_populated_fields_for_existing_hanko_user(self):
         user = ShopUser.objects.create_user(
             username='preserve',
             email='preserve@example.com',
@@ -599,44 +758,38 @@ class AuthAndInputCoverageTests(TestCase):
         self.assertEqual(updated_by_hanko_id_no_provider.display_name, 'Existing Name')
         self.assertEqual(updated_by_hanko_id_no_provider.avatar_url, 'https://example.com/existing.png')
 
-        email_user_no_avatar = ShopUser.objects.create_user(
-            username='preserve-email-empty-avatar',
-            email='preserve-email-empty-avatar@example.com',
+    def test_sync_hanko_user_refuses_email_takeover(self):
+        local_user = ShopUser.objects.create_user(
+            username='local-only',
+            email='local@example.com',
             password='pass1234',
         )
-        email_user_no_avatar.display_name = 'Email Existing Name'
-        email_user_no_avatar.save(update_fields=['display_name'])
+        self.assertIsNone(local_user.hanko_id)
 
-        updated_email_no_avatar = sync_hanko_user(
-            hanko_id='new-hanko-empty-avatar',
-            email='preserve-email-empty-avatar@example.com',
-            username='Ignored Email Name',
-            avatar_url='https://example.com/new-avatar.png',
-        )
-        self.assertEqual(updated_email_no_avatar.display_name, 'Ignored Email Name')
-        self.assertEqual(updated_email_no_avatar.avatar_url, 'https://example.com/new-avatar.png')
+        with self.assertRaises(HankoAuthenticationError):
+            sync_hanko_user(
+                hanko_id='attacker-hanko-id',
+                email='local@example.com',
+                username='Attacker',
+            )
 
-        other_email = ShopUser.objects.create_user(
-            username='preserve-email',
-            email='emailpreserve@example.com',
+        local_user.refresh_from_db()
+        self.assertIsNone(local_user.hanko_id)
+
+        linked_user = ShopUser.objects.create_user(
+            username='linked-user',
+            email='linked@example.com',
             password='pass1234',
         )
-        other_email.display_name = 'Email Existing'
-        other_email.avatar_url = 'https://example.com/email-existing.png'
-        other_email.auth_provider = 'hanko'
-        other_email.save(update_fields=['display_name', 'avatar_url', 'auth_provider'])
+        linked_user.hanko_id = 'original-hanko-id'
+        linked_user.save(update_fields=['hanko_id'])
 
-        updated_by_email = sync_hanko_user(
-            hanko_id='new-hanko-for-email',
-            email='emailpreserve@example.com',
-            username='Ignored Email Name',
-            avatar_url='https://example.com/ignored-email.png',
-            provider='legacy',
-        )
-        self.assertEqual(updated_by_email.hanko_id, 'new-hanko-for-email')
-        self.assertEqual(updated_by_email.display_name, 'Ignored Email Name')
-        self.assertEqual(updated_by_email.avatar_url, 'https://example.com/ignored-email.png')
-        self.assertEqual(updated_by_email.auth_provider, 'legacy')
+        with self.assertRaises(HankoAuthenticationError):
+            sync_hanko_user(
+                hanko_id='different-hanko-id',
+                email='linked@example.com',
+                username='Attacker',
+            )
 
     def test_sync_hanko_user_with_empty_provider_does_not_overwrite_existing_provider(self):
         user = ShopUser.objects.create_user(
@@ -655,22 +808,6 @@ class AuthAndInputCoverageTests(TestCase):
             provider='',
         )
         self.assertEqual(updated_by_hanko_id.auth_provider, 'hanko')
-
-        email_user = ShopUser.objects.create_user(
-            username='provider-email-test',
-            email='provider-email@example.com',
-            password='pass1234',
-        )
-        email_user.auth_provider = 'hanko'
-        email_user.save(update_fields=['auth_provider'])
-
-        updated_by_email = sync_hanko_user(
-            hanko_id='new-provider-hanko-id',
-            email='provider-email@example.com',
-            username='Provider Email User',
-            provider='',
-        )
-        self.assertEqual(updated_by_email.auth_provider, 'hanko')
 
     def test_car_form_validators_cover_invalid_ranges_and_duplicates(self):
         self.user = ShopUser.objects.create_user(username='validator', email='validator@example.com', password='pass1234')

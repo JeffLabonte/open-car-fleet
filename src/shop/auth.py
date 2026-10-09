@@ -148,8 +148,19 @@ def sync_hanko_user(
     if email:
         user = ShopUser.objects.filter(email__iexact=email).first()
         if user:
-            if hanko_id:
-                user.hanko_id = hanko_id
+            existing_hanko_id = (user.hanko_id or '').strip()
+            if existing_hanko_id and existing_hanko_id != hanko_id:
+                raise HankoAuthenticationError(
+                    'Hanko identity does not match the account linked to this email.'
+                )
+            if not existing_hanko_id and hanko_id:
+                # A local account with this email exists but has no Hanko identity
+                # attached. Do not silently link identities; require explicit,
+                # verified linking to prevent account takeover.
+                raise HankoAuthenticationError(
+                    'An account with this email already exists. '
+                    'Please contact an administrator to link Hanko sign-in.'
+                )
             if username:
                 user.display_name = username
             if avatar_url:
@@ -157,7 +168,7 @@ def sync_hanko_user(
             if provider:
                 user.auth_provider = provider
             user.last_login_at = timezone.now()
-            user.save(update_fields=['hanko_id', 'display_name', 'avatar_url', 'auth_provider', 'last_login_at'])
+            user.save(update_fields=['display_name', 'avatar_url', 'auth_provider', 'last_login_at'])
             return user
 
     base_username = username or email.split('@')[0] if email else None
@@ -184,6 +195,8 @@ def complete_hanko_login(request: HttpRequest, user_data: dict[str, Any]) -> Sho
         avatar_url=user_data.get('avatar_url') or user_data.get('avatar') or '',
         provider=user_data.get('provider') or 'hanko',
     )
+    if not user.is_active:
+        raise HankoAuthenticationError('Account is disabled.')
     login(request, user, backend='django.contrib.auth.backends.ModelBackend')
     request.user = user
     request.session['hanko_user_id'] = user.hanko_id or str(user.pk)

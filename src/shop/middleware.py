@@ -47,8 +47,13 @@ class HankoAuthenticationMiddleware(MiddlewareMixin):
                 last_check = request.session.get('hanko_last_check', 0)
                 if time.time() - last_check > SESSION_RECHECK_INTERVAL:
                     try:
-                        fetch_hanko_userinfo(hanko_session_token)
+                        user_info = fetch_hanko_userinfo(hanko_session_token)
                     except HankoAuthenticationError:
+                        logout(request)
+                        return cast(HttpResponse, redirect_to_login(request.get_full_path()))
+                    local_hanko_id = getattr(request.user, 'hanko_id', None)
+                    remote_hanko_id = user_info.get('id')
+                    if local_hanko_id and remote_hanko_id != local_hanko_id:
                         logout(request)
                         return cast(HttpResponse, redirect_to_login(request.get_full_path()))
                     request.session['hanko_last_check'] = time.time()
@@ -67,6 +72,12 @@ class HankoAuthenticationMiddleware(MiddlewareMixin):
             return cast(HttpResponse, redirect_to_login(request.get_full_path()))
 
         complete_hanko_login(request, user_info)
+
+        # Bind the remote Hanko identity to the local user we just authenticated.
+        if request.user.hanko_id != user_info.get('id'):
+            logout(request)
+            return cast(HttpResponse, redirect_to_login(request.get_full_path()))
+
         return None
 
 
