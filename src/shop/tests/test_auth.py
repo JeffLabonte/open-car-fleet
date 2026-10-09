@@ -446,6 +446,17 @@ class AuthAndInputCoverageTests(TestCase):
                 with self.assertRaises(HankoAuthenticationError):
                     fetch_hanko_userinfo('token')
 
+            # A stringly-typed "false" must not be treated as a boolean False.
+            with patch('shop.auth.requests.post', return_value=FakeHankoResponse({
+                'is_valid': 'false',
+                'claims': {
+                    'sub': 'stringly-false-id',
+                    'email': 'false@example.com',
+                },
+            })):
+                with self.assertRaises(HankoAuthenticationError):
+                    fetch_hanko_userinfo('token')
+
             with patch('shop.auth.requests.post', return_value=FakeHankoResponse({
                 'is_valid': True,
                 'claims': {

@@ -5,7 +5,7 @@
     state: directory
     owner: root
     group: root
-    mode: '0755'
+    mode: '0700'
   loop:
     - /opt/backups/media
     - /opt/backups/database
@@ -65,4 +65,4 @@
     state: touch
     owner: root
     group: root
-    mode: '0644'
+    mode: '0600'

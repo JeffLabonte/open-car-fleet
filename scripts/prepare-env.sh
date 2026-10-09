@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Generated credential files must be readable only by the owner.
+umask 077
+
 usage() {
   cat <<'EOF'
 Usage:
@@ -170,6 +173,9 @@ for key, value in updates.items():
 
 env_file.write_text("\n".join(lines) + "\n")
 PY
+
+# Restrict the generated file to the owner; some systems inherit group/world umasks.
+chmod 600 "${OUTPUT_FILE}"
 
 if [[ -z "${HANKO_API_URL}" ]]; then
   echo "Warning: HANKO_API_URL is empty. Set it before deploying."

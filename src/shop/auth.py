@@ -58,7 +58,7 @@ def fetch_hanko_userinfo(session_token: str) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise HankoAuthenticationError('Hanko returned an invalid session response.')
 
-    if not data.get('is_valid'):
+    if data.get('is_valid') is not True:
         raise HankoAuthenticationError('Hanko session is not valid.')
 
     claims = data.get('claims')

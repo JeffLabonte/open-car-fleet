@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.contrib.contenttypes.admin import GenericTabularInline
+from django.utils.translation import gettext_lazy as _
 
 from shop.models.attachment import Attachment
 from shop.models.car import Car
@@ -79,5 +80,7 @@ class AttachmentAdmin(admin.ModelAdmin):
 
 	@admin.display(description='Parent')
 	def parent_label(self, obj):
+		if obj.content_type is None:
+			return _('Staged upload')
 		return f'{obj.content_type.name}: {obj.object_id}'
 

@@ -1,0 +1,10 @@
+---
+- name: Upload production env file to server
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../{{ env_file }}"
+    dest: "{{ app_dir }}/src/.env"
+    owner: root
+    group: root
+    # Docker Compose reads env_file values through the daemon, so the container
+    # user does not need direct access. Restrict to root to protect secrets.
+    mode: '0600'

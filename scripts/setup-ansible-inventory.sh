@@ -2,6 +2,9 @@
 # Generate ansible/inventory.yml from the tracked template.
 set -euo pipefail
 
+# Generated credential files must be readable only by the owner.
+umask 077
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 TEMPLATE="${REPO_ROOT}/ansible/inventory.yml.template"
@@ -140,6 +143,9 @@ if become_password:
 
 path.write_text(text)
 PY
+
+# Restrict the generated file to the owner; some systems inherit group/world umasks.
+chmod 600 "$OUTPUT"
 
 echo ""
 echo "Wrote $OUTPUT"
