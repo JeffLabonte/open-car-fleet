@@ -1,4 +1,4 @@
-import { register } from './hanko/hanko-elements.js';
+import { register } from '../vendor/hanko/hanko-elements.js';
 
 const apiUrl = JSON.parse(document.getElementById('hanko-api-url').textContent);
 const profileContainer = document.getElementById('hanko-profile-container');

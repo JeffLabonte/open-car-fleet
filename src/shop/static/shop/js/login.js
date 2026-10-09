@@ -1,5 +1,5 @@
-import { Hanko } from './hanko/hanko-frontend-sdk.js';
-import { register } from './hanko/hanko-elements.js';
+import { Hanko } from '../vendor/hanko/hanko-frontend-sdk.js';
+import { register } from '../vendor/hanko/hanko-elements.js';
 
 const apiUrl = JSON.parse(document.getElementById('hanko-api-url').textContent);
 const nextUrl = JSON.parse(document.getElementById('hanko-next-url').textContent);

@@ -52,9 +52,15 @@ class TestDeploymentHardening(TestCase):
         tasks = REPO_ROOT / 'ansible' / 'roles' / 'app' / 'tasks' / 'main.yml'
         self.assertTrue(tasks.exists())
         text = tasks.read_text()
-        self.assertIn("'--exclude=ansible/'", text)
-        self.assertIn("'--exclude=.env.*'", text)
-        self.assertIn("'--exclude=src/.env.*'", text)
+        # Excludes must be anchored to the project root so nested app directories
+        # (e.g. src/shop/static/shop/js/) are not accidentally skipped.
+        self.assertIn("'--exclude=/ansible/'", text)
+        self.assertIn("'--exclude=/.env.*'", text)
+        self.assertIn("'--exclude=/src/.env.*'", text)
+        self.assertNotIn("'--exclude=static/'", text)
+        self.assertNotIn("'--exclude=media/'", text)
+        self.assertIn("'--exclude=/static/'", text)
+        self.assertIn("'--exclude=/media/'", text)
 
     def test_env_role_derives_database_env_from_deployed_env(self):
         env_role = REPO_ROOT / 'ansible' / 'roles' / 'env' / 'tasks' / 'main.yml'
