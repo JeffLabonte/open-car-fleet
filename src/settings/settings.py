@@ -103,6 +103,15 @@ SECURE_REFERRER_POLICY = 'same-origin'
 # Override via environment variables when running behind a proxy or on plain HTTP.
 SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', str(not DEBUG)).strip().lower() in ('1', 'true', 'yes')
 SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', '31536000' if not DEBUG else '0'))
+
+# SECURE_SSL_REDIRECT without a trusted proxy causes an infinite redirect loop
+# when Django is behind a reverse proxy (the proxy sees HTTPS, Django sees HTTP).
+if SECURE_SSL_REDIRECT and not trusted_proxy:
+    raise ImproperlyConfigured(
+        'SECURE_SSL_REDIRECT is enabled but DJANGO_TRUSTED_PROXY is not set. '
+        'Set DJANGO_TRUSTED_PROXY=True when running behind a reverse proxy, '
+        'or explicitly disable SECURE_SSL_REDIRECT.'
+    )
 SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_HSTS_SECONDS > 0
 SECURE_HSTS_PRELOAD = SECURE_HSTS_SECONDS > 0
 X_FRAME_OPTIONS = 'DENY'

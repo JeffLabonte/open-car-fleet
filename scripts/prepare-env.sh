@@ -18,6 +18,7 @@ Options:
   --mailersend-api-token <token>  MailerSend API token ("custom access": full Email access, no other features)
   --from-email "<addr>"           DEFAULT_FROM_EMAIL (address on the verified MailerSend domain)
   --server-email "<addr>"         SERVER_EMAIL for Django-internal mail (default: DEFAULT_FROM_EMAIL)
+  --trusted-proxy <bool>          Trust X-Forwarded-Proto from reverse proxy (default: True)
   --postgres-db <name>            Postgres DB name (default: open_garage)
   --postgres-user <user>          Postgres user (default: open_garage_user)
   --postgres-password <password>  Postgres password (default: generated)
@@ -39,6 +40,7 @@ CSRF_TRUSTED_ORIGINS=""
 MAILERSEND_API_TOKEN=""
 DEFAULT_FROM_EMAIL=""
 SERVER_EMAIL=""
+DJANGO_TRUSTED_PROXY="True"
 POSTGRES_DB="open_garage"
 POSTGRES_USER="open_garage_user"
 POSTGRES_PASSWORD=""
@@ -78,6 +80,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --server-email)
       SERVER_EMAIL="${2:-}"
+      shift 2
+      ;;
+    --trusted-proxy)
+      DJANGO_TRUSTED_PROXY="${2:-}"
       shift 2
       ;;
     --postgres-db)
@@ -151,6 +157,7 @@ updates = {
     "MAILERSEND_API_TOKEN": r"${MAILERSEND_API_TOKEN}",
     "DEFAULT_FROM_EMAIL": r"${DEFAULT_FROM_EMAIL}",
     "SERVER_EMAIL": r"${SERVER_EMAIL}",
+    "DJANGO_TRUSTED_PROXY": r"${DJANGO_TRUSTED_PROXY}",
     "POSTGRES_DB": r"${POSTGRES_DB}",
     "POSTGRES_USER": r"${POSTGRES_USER}",
     "POSTGRES_PASSWORD": r"${POSTGRES_PASSWORD}",

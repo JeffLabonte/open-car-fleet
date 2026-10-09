@@ -1,3 +1,6 @@
+import os
+import subprocess
+import tempfile
 from pathlib import Path
 
 from django.test import TestCase
@@ -72,3 +75,49 @@ class TestDeploymentHardening(TestCase):
                 stripped.startswith('POSTGRES_'),
                 f"src/.env.database must only contain POSTGRES_* variables, found: {stripped!r}",
             )
+
+    def test_prepare_env_defaults_set_trusted_proxy(self):
+        script = REPO_ROOT / 'scripts' / 'prepare-env.sh'
+        self.assertTrue(script.exists())
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / '.env.production'
+            result = subprocess.run(
+                [
+                    'bash',
+                    str(script),
+                    '--output', str(output),
+                    '--template', str(REPO_ROOT / 'src' / '.env.template'),
+                    '--hanko-api-url', 'https://hanko.example.com',
+                    '--allowed-hosts', 'test.example.com',
+                    '--csrf-trusted-origins', 'https://test.example.com',
+                ],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            content = output.read_text()
+            self.assertIn('DJANGO_TRUSTED_PROXY=True', content)
+            self.assertIn('SECURE_SSL_REDIRECT=True', content)
+
+    def test_ssl_redirect_without_trusted_proxy_raises(self):
+        env = os.environ.copy()
+        env['DJANGO_SECRET_KEY'] = 'test-secret-key-for-subprocess'
+        env['DEBUG'] = 'False'
+        env['SECURE_SSL_REDIRECT'] = 'True'
+        env['DJANGO_TRUSTED_PROXY'] = 'False'
+        # Clear any postgres vars that might be set by the test runner.
+        for key in list(env.keys()):
+            if key.startswith('POSTGRES_'):
+                del env[key]
+        result = subprocess.run(
+            [
+                'python', '-c',
+                'import django; from django.conf import settings; django.setup()',
+            ],
+            cwd=str(REPO_ROOT / 'src'),
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 1)
+        self.assertIn('DJANGO_TRUSTED_PROXY', result.stderr)

@@ -51,7 +51,7 @@ scripts/prepare-env.sh \
   --csrf-trusted-origins "https://fleet.example.com"
 ```
 
-This writes `src/.env.production` with a generated secret key and Postgres password. During deploy, Ansible derives `src/.env.database` from this file on the server, so the DB container receives only `POSTGRES_*` variables and stays in sync with the web container.
+This writes `src/.env.production` with a generated secret key and Postgres password, and sets `DJANGO_TRUSTED_PROXY=True` so Django trusts the `X-Forwarded-Proto` header from Tailscale (or another reverse proxy). During deploy, Ansible derives `src/.env.database` from this file on the server, so the DB container receives only `POSTGRES_*` variables and stays in sync with the web container.
 
 ## 4. Test connectivity
 
@@ -68,6 +68,8 @@ make ansible-deploy
 The playbook installs Docker, syncs the project source, uploads the env file, builds the production image, starts services, runs migrations, fixes media ownership, and configures hourly backups.
 
 > **Database secrets:** `docker-compose.prod.yml` mounts a dedicated `src/.env.database` file into the Postgres container. Ansible generates this file on the server from `src/.env` during deploy, so it contains only `POSTGRES_*` variables and the password always matches the web container.
+>
+> **Reverse proxy:** Production deploys are behind Tailscale HTTPS. `prepare-env.sh` sets `DJANGO_TRUSTED_PROXY=True` by default so Django trusts `X-Forwarded-Proto` and `SECURE_SSL_REDIRECT` does not create a redirect loop. If you disable the proxy, set `DJANGO_TRUSTED_PROXY=False` and `SECURE_SSL_REDIRECT=False`.
 
 ## Media
 

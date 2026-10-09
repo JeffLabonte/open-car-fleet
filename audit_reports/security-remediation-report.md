@@ -240,7 +240,7 @@ if request.user.is_authenticated:
 
 **Risk:** `SECURE_SSL_REDIRECT` defaulted to off and `SECURE_HSTS_SECONDS` to 0.
 
-**Fix:** Default to secure behavior when `DEBUG=False`.
+**Fix:** Default to secure behavior when `DEBUG=False`, and require `DJANGO_TRUSTED_PROXY=True` when SSL redirect is enabled to avoid infinite redirect loops behind a reverse proxy.
 
 ```python
 # src/settings/settings.py
@@ -248,7 +248,16 @@ SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', str(not DEBUG)).stri
 SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', '31536000' if not DEBUG else '0'))
 SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_HSTS_SECONDS > 0
 SECURE_HSTS_PRELOAD = SECURE_HSTS_SECONDS > 0
+
+if SECURE_SSL_REDIRECT and not trusted_proxy:
+    raise ImproperlyConfigured(
+        'SECURE_SSL_REDIRECT is enabled but DJANGO_TRUSTED_PROXY is not set. '
+        'Set DJANGO_TRUSTED_PROXY=True when running behind a reverse proxy, '
+        'or explicitly disable SECURE_SSL_REDIRECT.'
+    )
 ```
+
+`prepare-env.sh` now defaults `DJANGO_TRUSTED_PROXY=True`.
 
 ### SEC-003: Reflected XSS in login page
 
