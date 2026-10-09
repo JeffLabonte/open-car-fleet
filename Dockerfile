@@ -27,10 +27,10 @@ COPY . /app/
 
 # Collect static files for production.
 # The env file is mounted as a BuildKit secret so it is not baked into the image.
-# DJANGO_TRUSTED_PROXY is set here only so settings.py loads during the build;
-# runtime values come from the mounted env file.
+# DJANGO_TRUSTED_PROXY and DJANGO_SECRET_KEY are set here only so settings.py
+# loads during the build; runtime values come from the mounted env file.
 RUN --mount=type=secret,id=env_file,target=/app/src/.env \
-    DJANGO_TRUSTED_PROXY=True python src/manage.py collectstatic --noinput
+    DJANGO_TRUSTED_PROXY=True DJANGO_SECRET_KEY=build-only-secret python src/manage.py collectstatic --noinput
 
 # Use a lean runtime image.
 FROM python:3.13-slim AS final

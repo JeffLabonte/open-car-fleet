@@ -23,7 +23,15 @@ def load_dotenv(path: Path) -> None:
     if not path.exists():
         return
 
-    for raw_line in path.read_text().splitlines():
+    try:
+        text = path.read_text()
+    except PermissionError:
+        # The env file may be mounted with restrictive permissions that the
+        # container user cannot read. If the required variables are already
+        # injected via environment or env_file, skip silently.
+        return
+
+    for raw_line in text.splitlines():
         line = raw_line.strip()
         if not line or line.startswith('#') or '=' not in line:
             continue
