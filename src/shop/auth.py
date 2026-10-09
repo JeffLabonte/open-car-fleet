@@ -97,9 +97,11 @@ def fetch_hanko_userinfo(session_token: str) -> dict[str, Any]:
 def _build_username(base_name: str, hanko_id: str | None = None) -> str:
     fallback = f"hanko-{hanko_id or 'user'}"
     candidate = re.sub(r'[^\w.@+-]', '-', (base_name or '').strip()) or fallback
-    candidate = candidate[:150]
+    # Reserve room for a numeric collision suffix so the final username never
+    # exceeds Django's 150-character AbstractUser username limit.
+    candidate = candidate[:140]
     if not candidate:
-        candidate = fallback
+        candidate = fallback[:140]
 
     existing = ShopUser.objects.filter(username=candidate).exists()
     if not existing:
@@ -107,7 +109,8 @@ def _build_username(base_name: str, hanko_id: str | None = None) -> str:
 
     counter = 1
     while True:
-        alt = f"{candidate}{counter}"
+        suffix = str(counter)
+        alt = f"{candidate[:150 - len(suffix)]}{suffix}"
         if not ShopUser.objects.filter(username=alt).exists():
             return alt
         counter += 1

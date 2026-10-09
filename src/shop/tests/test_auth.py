@@ -667,8 +667,34 @@ class AuthAndInputCoverageTests(TestCase):
     def test_build_username_very_long_base_is_truncated(self):
         long_name = 'a' * 200
         result = _build_username(long_name)
-        self.assertEqual(len(result), 150)
+        # Base is truncated to 140 chars to leave room for collision suffixes.
+        self.assertEqual(len(result), 140)
         self.assertTrue(result.startswith('a' * 140))
+
+    def test_build_username_collision_suffix_respects_max_length(self):
+        long_base = 'a' * 200
+        first = _build_username(long_base)
+        self.assertEqual(len(first), 140)
+
+        ShopUser.objects.create_user(
+            username=first,
+            email='long-base@example.com',
+            password='pass1234',
+        )
+        second = _build_username(long_base)
+        self.assertLessEqual(len(second), 150)
+        self.assertTrue(second.startswith('a' * 139))
+        self.assertTrue(second.endswith('1'))
+
+        # Verify we can keep generating unique names without exceeding the limit.
+        for index in range(2, 15):
+            user = ShopUser.objects.create_user(
+                username=second,
+                email=f'long-base-{index}@example.com',
+                password='pass1234',
+            )
+            second = _build_username(long_base)
+            self.assertLessEqual(len(second), 150)
 
     def test_sync_hanko_user_finds_existing_user_by_matching_hanko_id(self):
         hanko_user = ShopUser.objects.create_user(
