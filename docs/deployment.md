@@ -36,10 +36,11 @@ all:
       hosts:
         xps-server.kanyu-bluegill.ts.net:
           ansible_user: deploy
-          ansible_ssh_extra_args: -o StrictHostKeyChecking=no
           app_dir: /opt/open-car-fleet
           env_file: ./src/.env.production
 ```
+
+> **SSH host-key verification:** Tailscale authenticates network membership, but it is not a substitute for SSH host-key verification. Ensure the deployment host's key is present in your `~/.ssh/known_hosts`, use an SSH CA, or pin fingerprints in the inventory. Do not disable `StrictHostKeyChecking`.
 
 ## 3. Prepare environment values
 
@@ -65,6 +66,8 @@ make ansible-deploy
 ```
 
 The playbook installs Docker, syncs the project source, uploads the env file, builds the production image, starts services, runs migrations, fixes media ownership, and configures hourly backups.
+
+> **Database secrets:** `docker-compose.prod.yml` mounts a dedicated `src/.env.database` file into the Postgres container. This file contains only `POSTGRES_*` variables so the database container cannot access Django, Hanko, or MailerSend secrets.
 
 ## Media
 
