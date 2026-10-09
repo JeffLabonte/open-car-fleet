@@ -1,3 +1,4 @@
+import logging
 from functools import wraps
 import time
 from typing import Any, Callable, Optional, cast
@@ -11,6 +12,8 @@ from django.utils.deprecation import MiddlewareMixin
 from django_ratelimit.exceptions import Ratelimited
 
 from shop.auth import HankoAuthenticationError, complete_hanko_login, fetch_hanko_userinfo
+
+security_log = logging.getLogger('security')
 
 
 PUBLIC_PATHS = {
@@ -89,6 +92,12 @@ class HankoAuthenticationMiddleware(MiddlewareMixin):
                     local_hanko_id = getattr(request.user, 'hanko_id', None)
                     remote_hanko_id = user_info.get('id')
                     if local_hanko_id and remote_hanko_id != local_hanko_id:
+                        security_log.warning(
+                            'hanko_session_mismatch: user=%s local_hanko_id=%s remote_hanko_id=%s',
+                            request.user.pk,
+                            local_hanko_id,
+                            remote_hanko_id,
+                        )
                         logout(request)
                         return cast(HttpResponse, redirect_to_login(request.get_full_path()))
                     request.session['hanko_last_check'] = time.time()
@@ -110,6 +119,12 @@ class HankoAuthenticationMiddleware(MiddlewareMixin):
 
         # Bind the remote Hanko identity to the local user we just authenticated.
         if request.user.hanko_id != user_info.get('id'):
+            security_log.warning(
+                'hanko_session_mismatch: user=%s local_hanko_id=%s remote_hanko_id=%s',
+                request.user.pk,
+                request.user.hanko_id,
+                user_info.get('id'),
+            )
             logout(request)
             return cast(HttpResponse, redirect_to_login(request.get_full_path()))
 

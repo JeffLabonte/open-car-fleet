@@ -1,4 +1,5 @@
 import json
+import logging
 import mimetypes
 import os
 from datetime import timedelta
@@ -60,6 +61,8 @@ from shop.view_helpers import (
     user_garages_queryset,
     user_known_shops_queryset,
 )
+
+security_log = logging.getLogger('security')
 
 # Content types that are safe to render inline in the browser. Anything else
 # (e.g. text/html disguised with a trusted extension) is served as a download.
@@ -444,6 +447,13 @@ def garage_member_role(request: HttpRequest, pk: str, membership_pk: int) -> Htt
 
     membership = get_object_or_404(garage.memberships, pk=membership_pk)
     if not perms.can_manage_member(membership.role):
+        security_log.warning(
+            'access_denied: user=%s path=%s reason=role_change_hierarchy_violation target_user=%s target_role=%s',
+            request.user.pk,
+            request.path,
+            membership.user_id,
+            membership.role,
+        )
         messages.error(request, _('You do not have permission to change this member\'s role.'))
         return redirect(reverse('shop-garage-members', args=[garage.pk]))
 
@@ -455,8 +465,17 @@ def garage_member_role(request: HttpRequest, pk: str, membership_pk: int) -> Htt
             if owner_count <= 1:
                 messages.error(request, _('Cannot remove the last owner of the fleet.'))
                 return redirect(reverse('shop-garage-members', args=[garage.pk]))
+        old_role = membership.role
         membership.role = new_role
         membership.save(update_fields=['role', 'updated_at'])
+        security_log.info(
+            'role_changed: user=%s garage=%s target_user=%s old_role=%s new_role=%s',
+            request.user.pk,
+            garage.pk,
+            membership.user_id,
+            old_role,
+            new_role,
+        )
         messages.success(request, _('Role updated successfully.'))
     else:
         messages.error(request, _('Invalid role selected.'))
@@ -475,6 +494,13 @@ def garage_member_remove(request: HttpRequest, pk: str, membership_pk: int) -> H
 
     membership = get_object_or_404(garage.memberships, pk=membership_pk)
     if not perms.can_manage_member(membership.role):
+        security_log.warning(
+            'access_denied: user=%s path=%s reason=member_remove_hierarchy_violation target_user=%s target_role=%s',
+            request.user.pk,
+            request.path,
+            membership.user_id,
+            membership.role,
+        )
         messages.error(request, _('You do not have permission to remove this member.'))
         return redirect(reverse('shop-garage-members', args=[garage.pk]))
 
@@ -484,7 +510,16 @@ def garage_member_remove(request: HttpRequest, pk: str, membership_pk: int) -> H
             messages.error(request, _('Cannot remove the last owner of the fleet.'))
             return redirect(reverse('shop-garage-members', args=[garage.pk]))
 
+    target_user_id = membership.user_id
+    target_role = membership.role
     membership.delete()
+    security_log.info(
+        'member_removed: user=%s garage=%s target_user=%s target_role=%s',
+        request.user.pk,
+        garage.pk,
+        target_user_id,
+        target_role,
+    )
     messages.success(request, _('Member removed successfully.'))
     return redirect(reverse('shop-garage-members', args=[garage.pk]))
 
@@ -513,6 +548,12 @@ def garage_invitation_cancel(request: HttpRequest, pk: str, invitation_pk: str) 
 def garage_import(request: HttpRequest, pk: str) -> HttpResponse:
     garage = get_object_or_404(user_garages_queryset(request.user), pk=pk)
     if not user_can_manage_garage(request.user, garage):
+        security_log.warning(
+            'access_denied: user=%s path=%s reason=garage_import_not_manager garage=%s',
+            request.user.pk,
+            request.path,
+            garage.pk,
+        )
         messages.error(request, _('You do not have permission to import data into this fleet.'))
         return redirect(reverse('shop-garage-detail', args=[garage.pk]))
 
@@ -571,6 +612,12 @@ def garage_import(request: HttpRequest, pk: str) -> HttpResponse:
 def garage_export(request: HttpRequest, pk: str) -> HttpResponse:
     garage = get_object_or_404(user_garages_queryset(request.user), pk=pk)
     if not user_can_manage_garage(request.user, garage):
+        security_log.warning(
+            'access_denied: user=%s path=%s reason=garage_export_not_manager garage=%s',
+            request.user.pk,
+            request.path,
+            garage.pk,
+        )
         messages.error(request, _('You do not have permission to export data from this fleet.'))
         return redirect(reverse('shop-garage-detail', args=[garage.pk]))
 
@@ -627,6 +674,12 @@ def known_shop_detail(request: HttpRequest, pk: int) -> HttpResponse:
 def known_shop_proof_create(request: HttpRequest, shop_pk: int) -> HttpResponse:
     shop = get_object_or_404(user_known_shops_queryset(request.user), pk=shop_pk)
     if not user_can_manage_known_shop(request.user, shop):
+        security_log.warning(
+            'access_denied: user=%s path=%s reason=known_shop_proof_not_manager shop=%s',
+            request.user.pk,
+            request.path,
+            shop.pk,
+        )
         messages.error(request, _('You do not have permission to add proof for this shop.'))
         return redirect(reverse('shop-known-shop-list'))
     if request.method == 'POST':
@@ -840,6 +893,13 @@ def car_delete(request: HttpRequest, pk: str) -> HttpResponse:
     """Delete a car from a garage the user can manage."""
     car = get_object_or_404(user_cars_queryset(request.user).select_related('garage'), pk=pk)
     if not user_can_manage_garage(request.user, car.garage):
+        security_log.warning(
+            'access_denied: user=%s path=%s reason=car_delete_not_manager car=%s garage=%s',
+            request.user.pk,
+            request.path,
+            car.pk,
+            car.garage_id,
+        )
         messages.error(request, _('You do not have permission to delete this car.'))
         return redirect(reverse('shop-car-list'))
 

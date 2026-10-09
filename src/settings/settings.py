@@ -283,3 +283,32 @@ DEFAULT_FROM_EMAIL = os.environ.get(
     'Open Car Fleet <noreply@localhost>',
 )
 SERVER_EMAIL = os.environ.get('SERVER_EMAIL', DEFAULT_FROM_EMAIL)
+
+
+# Logging configuration. The 'security' logger is reserved for auditable events
+# (logins, access-control decisions, membership changes, etc.) and can be
+# routed to a separate, append-only destination in production.
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'security': {
+            'format': '{levelname} {asctime} {name} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'security_console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'security',
+        },
+    },
+    'loggers': {
+        'security': {
+            'handlers': ['security_console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}

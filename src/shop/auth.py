@@ -1,3 +1,4 @@
+import logging
 import re
 import os
 from typing import Any, Optional
@@ -9,6 +10,8 @@ from django.http import HttpRequest
 from django.utils import timezone
 
 from shop.models.user import ShopUser
+
+security_log = logging.getLogger('security')
 
 
 class HankoAuthenticationError(ValueError):
@@ -38,10 +41,12 @@ def _extract_hanko_username(raw_username: Any) -> str:
 def fetch_hanko_userinfo(session_token: str) -> dict[str, Any]:
     """Fetch and validate the identity bound to a Hanko session token."""
     if not isinstance(session_token, str) or not session_token.strip():
+        security_log.warning('hanko_auth_failed: reason=missing_session_token')
         raise HankoAuthenticationError('A Hanko session token is required.')
 
     api_url = getattr(settings, 'HANKO_API_URL', '') or os.environ.get('HANKO_API_URL', '')
     if not api_url:
+        security_log.warning('hanko_auth_failed: reason=missing_api_url')
         raise HankoAuthenticationError('HANKO_API_URL is not configured.')
 
     try:
@@ -53,6 +58,7 @@ def fetch_hanko_userinfo(session_token: str) -> dict[str, Any]:
         response.raise_for_status()
         data = response.json()
     except (requests.RequestException, ValueError, TypeError) as exc:
+        security_log.warning('hanko_auth_failed: reason=api_error error=%s', exc)
         raise HankoAuthenticationError('Unable to verify the Hanko session.') from exc
 
     if not isinstance(data, dict):
@@ -153,6 +159,12 @@ def sync_hanko_user(
         if user:
             existing_hanko_id = (user.hanko_id or '').strip()
             if existing_hanko_id and existing_hanko_id != hanko_id:
+                security_log.warning(
+                    'hanko_auth_failed: reason=hanko_id_mismatch email=%s existing_hanko_id=%s attempted_hanko_id=%s',
+                    email,
+                    existing_hanko_id,
+                    hanko_id,
+                )
                 raise HankoAuthenticationError(
                     'Hanko identity does not match the account linked to this email.'
                 )
@@ -160,6 +172,11 @@ def sync_hanko_user(
                 # A local account with this email exists but has no Hanko identity
                 # attached. Do not silently link identities; require explicit,
                 # verified linking to prevent account takeover.
+                security_log.warning(
+                    'hanko_auth_failed: reason=silent_link_prevented email=%s attempted_hanko_id=%s',
+                    email,
+                    hanko_id,
+                )
                 raise HankoAuthenticationError(
                     'An account with this email already exists. '
                     'Please contact an administrator to link Hanko sign-in.'
@@ -199,6 +216,11 @@ def complete_hanko_login(request: HttpRequest, user_data: dict[str, Any]) -> Sho
         provider=user_data.get('provider') or 'hanko',
     )
     if not user.is_active:
+        security_log.warning(
+            'hanko_auth_failed: reason=disabled_account user=%s hanko_id=%s',
+            user.pk,
+            user.hanko_id,
+        )
         raise HankoAuthenticationError('Account is disabled.')
     login(request, user, backend='django.contrib.auth.backends.ModelBackend')
     request.user = user

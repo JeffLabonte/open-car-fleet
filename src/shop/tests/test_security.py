@@ -262,3 +262,51 @@ class SecurityHardeningTests(TestCase):
         self.assertNotContains(response, '<script>')
         self.assertIn('Content-Security-Policy', response)
         self.assertIn("script-src 'self'", response['Content-Security-Policy'])
+
+    def test_admin_remove_owner_emits_security_log(self):
+        from shop.models.garage import GarageMembership
+
+        admin = ShopUser.objects.create_user(
+            username='security-admin',
+            email='security-admin@example.com',
+            password='pass1234',
+        )
+        GarageMembership.objects.create(
+            garage=self.garage,
+            user=admin,
+            role=GarageMembership.ROLE_ADMIN,
+        )
+        owner_membership = GarageMembership.objects.get(garage=self.garage, user=self.owner)
+
+        self.client.force_login(admin)
+        with self.assertLogs('security', level='WARNING') as cm:
+            self.client.post(
+                reverse('shop-garage-member-remove', args=[self.garage.pk, owner_membership.pk]),
+            )
+        self.assertTrue(
+            any('access_denied' in message and 'member_remove_hierarchy_violation' in message for message in cm.output)
+        )
+
+    def test_successful_role_change_emits_security_log(self):
+        from shop.models.garage import GarageMembership
+
+        viewer = ShopUser.objects.create_user(
+            username='security-viewer',
+            email='security-viewer@example.com',
+            password='pass1234',
+        )
+        membership = GarageMembership.objects.create(
+            garage=self.garage,
+            user=viewer,
+            role=GarageMembership.ROLE_VIEWER,
+        )
+
+        self.client.force_login(self.owner)
+        with self.assertLogs('security', level='INFO') as cm:
+            self.client.post(
+                reverse('shop-garage-member-role', args=[self.garage.pk, membership.pk]),
+                data={'role': GarageMembership.ROLE_MECHANIC},
+            )
+        self.assertTrue(
+            any('role_changed' in message and 'mechanic' in message for message in cm.output)
+        )
