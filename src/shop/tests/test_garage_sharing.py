@@ -382,6 +382,56 @@ class GarageSharingMemberManagementTests(TestCase):
             GarageMembership.objects.filter(pk=self._owner_membership().pk).exists()
         )
 
+    def test_admin_cannot_remove_owner(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(
+            reverse('shop-garage-member-remove', args=[self.garage.pk, self._owner_membership().pk]),
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            GarageMembership.objects.filter(pk=self._owner_membership().pk).exists()
+        )
+
+    def test_admin_cannot_demote_owner(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(
+            reverse('shop-garage-member-role', args=[self.garage.pk, self._owner_membership().pk]),
+            data={'role': GarageMembership.ROLE_MECHANIC},
+        )
+        self.assertEqual(response.status_code, 302)
+        self._owner_membership().refresh_from_db()
+        self.assertEqual(self._owner_membership().role, GarageMembership.ROLE_OWNER)
+
+    def test_owner_can_remove_admin(self):
+        self.client.force_login(self.owner)
+        response = self.client.post(
+            reverse('shop-garage-member-remove', args=[self.garage.pk, self.admin_membership.pk]),
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(
+            GarageMembership.objects.filter(pk=self.admin_membership.pk).exists()
+        )
+
+    def test_owner_can_demote_admin(self):
+        self.client.force_login(self.owner)
+        response = self.client.post(
+            reverse('shop-garage-member-role', args=[self.garage.pk, self.admin_membership.pk]),
+            data={'role': GarageMembership.ROLE_MECHANIC},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.admin_membership.refresh_from_db()
+        self.assertEqual(self.admin_membership.role, GarageMembership.ROLE_MECHANIC)
+
+    def test_admin_can_still_remove_viewer(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(
+            reverse('shop-garage-member-remove', args=[self.garage.pk, self.viewer_membership.pk]),
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(
+            GarageMembership.objects.filter(pk=self.viewer_membership.pk).exists()
+        )
+
     def test_stranger_gets_404_for_member_list(self):
         other_garage = Garage.objects.create(name='Other Garage', created_by=self.stranger)
         GarageMembership.objects.create(
@@ -395,6 +445,51 @@ class GarageSharingMemberManagementTests(TestCase):
 
     def _owner_membership(self):
         return GarageMembership.objects.get(garage=self.garage, user=self.owner)
+
+
+class GarageSharingPermissionsHierarchyTests(TestCase):
+    def setUp(self) -> None:
+        self.owner = ShopUser.objects.create_user(
+            username='perm-owner',
+            email='perm-owner@example.com',
+            password='pass1234',
+        )
+        self.admin = ShopUser.objects.create_user(
+            username='perm-admin',
+            email='perm-admin@example.com',
+            password='pass1234',
+        )
+        self.mechanic = ShopUser.objects.create_user(
+            username='perm-mechanic',
+            email='perm-mechanic@example.com',
+            password='pass1234',
+        )
+        self.viewer = ShopUser.objects.create_user(
+            username='perm-viewer',
+            email='perm-viewer@example.com',
+            password='pass1234',
+        )
+        self.garage = Garage.objects.create(name='Perm Garage', created_by=self.owner)
+        GarageMembership.objects.create(garage=self.garage, user=self.owner, role=GarageMembership.ROLE_OWNER)
+        GarageMembership.objects.create(garage=self.garage, user=self.admin, role=GarageMembership.ROLE_ADMIN)
+        GarageMembership.objects.create(garage=self.garage, user=self.mechanic, role=GarageMembership.ROLE_MECHANIC)
+        GarageMembership.objects.create(garage=self.garage, user=self.viewer, role=GarageMembership.ROLE_VIEWER)
+
+    def test_role_hierarchy_enforcement(self):
+        from shop.permissions import GarageSharingPermissions
+
+        owner_perms = GarageSharingPermissions(self.owner, self.garage)
+        self.assertTrue(owner_perms.can_manage_member(GarageMembership.ROLE_ADMIN))
+        self.assertTrue(owner_perms.can_manage_member(GarageMembership.ROLE_VIEWER))
+
+        admin_perms = GarageSharingPermissions(self.admin, self.garage)
+        self.assertTrue(admin_perms.can_manage_member(GarageMembership.ROLE_MECHANIC))
+        self.assertTrue(admin_perms.can_manage_member(GarageMembership.ROLE_VIEWER))
+        self.assertFalse(admin_perms.can_manage_member(GarageMembership.ROLE_OWNER))
+        self.assertFalse(admin_perms.can_manage_member(GarageMembership.ROLE_ADMIN))
+
+        mechanic_perms = GarageSharingPermissions(self.mechanic, self.garage)
+        self.assertFalse(mechanic_perms.can_manage_member(GarageMembership.ROLE_VIEWER))
 
 
 class GarageSharingAcceptDeclineTests(TestCase):

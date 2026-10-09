@@ -46,12 +46,14 @@
                 <td data-label="{% translate 'Make' %}">{{ car.make }}</td>
                 <td data-label="{% translate 'Year' %}">{{ car.year|default:'—' }}</td>
                 <td data-label="{% translate 'Odometer' %}">{{ car.mileage|default:'—' }}</td>
-                {% if can_edit_garage_data %}
+                {% if car.garage_id in manageable_garage_ids %}
                   <td data-label="">
                     <button class="button is-small is-danger" type="button" data-dialog-open="dialog-car-delete" data-dialog-action="{% url 'shop-car-delete' car.pk %}" data-testid="delete-car-button">
                       {% translate 'Delete' %}
                     </button>
                   </td>
+                {% else %}
+                  <td data-label=""></td>
                 {% endif %}
               </tr>
             {% endfor %}

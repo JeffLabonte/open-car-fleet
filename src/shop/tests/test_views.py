@@ -362,6 +362,36 @@ class ViewCoverageTests(TestCase):
         index_response = self.client.get(reverse('shop-index'))
         self.assertEqual(index_response.status_code, 200)
 
+    def test_car_list_reflects_actual_edit_permissions(self):
+        viewer_only_garage = Garage.objects.create(name='Viewer Only Garage', created_by=self.stranger)
+        GarageMembership.objects.create(
+            garage=viewer_only_garage,
+            user=self.member,
+            role=GarageMembership.ROLE_MEMBER,
+        )
+        viewer_car = Car.objects.create(
+            garage=viewer_only_garage,
+            make='Toyota',
+            model='Yaris',
+            vin='JTDKB20U793512348',
+        )
+
+        self.client.force_login(self.member)
+        response = self.client.get(reverse('shop-car-list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context['can_edit_garage_data'])
+        self.assertNotIn(self.garage.pk, response.context['manageable_garage_ids'])
+        self.assertNotIn(viewer_only_garage.pk, response.context['manageable_garage_ids'])
+        self.assertNotContains(response, f'data-dialog-action="/cars/{self.car.pk}/delete/"')
+        self.assertNotContains(response, f'data-dialog-action="/cars/{viewer_car.pk}/delete/"')
+
+        self.client.force_login(self.owner)
+        response = self.client.get(reverse('shop-car-list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['can_edit_garage_data'])
+        self.assertIn(self.garage.pk, response.context['manageable_garage_ids'])
+        self.assertContains(response, f'data-dialog-action="/cars/{self.car.pk}/delete/"')
+
     def test_garage_share_branches(self):
         self.client.force_login(self.owner)
 

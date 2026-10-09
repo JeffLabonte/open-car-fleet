@@ -7,6 +7,17 @@ from django.utils.translation import gettext as _
 from shop.models.garage import Garage, GarageMembership
 
 
+# Strict role hierarchy used for membership-management authorization.
+# Higher number = more privilege. A member may only modify or remove members
+# whose role is strictly lower than their own.
+ROLE_RANK = {
+    GarageMembership.ROLE_VIEWER: 1,
+    GarageMembership.ROLE_MECHANIC: 2,
+    GarageMembership.ROLE_ADMIN: 3,
+    GarageMembership.ROLE_OWNER: 4,
+}
+
+
 class GarageSharingPermissions:
     """Role-based access helpers for a user's relationship with a garage."""
 
@@ -77,6 +88,13 @@ class GarageSharingPermissions:
     @property
     def can_remove_members(self) -> bool:
         return self.is_manager
+
+    def can_manage_member(self, target_role: str) -> bool:
+        """Return True if this user may modify or remove a member with target_role."""
+        own_role = self.role
+        if not self.can_manage_members or own_role is None or target_role not in ROLE_RANK:
+            return False
+        return ROLE_RANK[own_role] > ROLE_RANK[target_role]
 
     @property
     def can_invite_owners(self) -> bool:

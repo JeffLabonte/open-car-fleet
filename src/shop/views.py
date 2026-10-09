@@ -443,6 +443,10 @@ def garage_member_role(request: HttpRequest, pk: str, membership_pk: int) -> Htt
         return redirect(reverse('shop-garage-members', args=[garage.pk]))
 
     membership = get_object_or_404(garage.memberships, pk=membership_pk)
+    if not perms.can_manage_member(membership.role):
+        messages.error(request, _('You do not have permission to change this member\'s role.'))
+        return redirect(reverse('shop-garage-members', args=[garage.pk]))
+
     form = GarageMembershipRoleForm(request.POST, allowed_roles=perms.can_change_role_to)
     if form.is_valid():
         new_role = form.cleaned_data['role']
@@ -470,6 +474,10 @@ def garage_member_remove(request: HttpRequest, pk: str, membership_pk: int) -> H
         return redirect(reverse('shop-garage-members', args=[garage.pk]))
 
     membership = get_object_or_404(garage.memberships, pk=membership_pk)
+    if not perms.can_manage_member(membership.role):
+        messages.error(request, _('You do not have permission to remove this member.'))
+        return redirect(reverse('shop-garage-members', args=[garage.pk]))
+
     if membership.role == GarageMembership.ROLE_OWNER:
         owner_count = garage.memberships.filter(role=GarageMembership.ROLE_OWNER).count()
         if owner_count <= 1:
@@ -809,7 +817,21 @@ def garage_invitation_decline(request: HttpRequest, token: str) -> HttpResponse:
 def car_list(request: HttpRequest) -> HttpResponse:
     """Display list of cars with basic info."""
     cars = user_cars_queryset(request.user).order_by('-created_at')
-    return render(request, 'shop/car_list.html', {'cars': cars, 'can_edit_garage_data': True})
+    manageable_garage_ids = set(
+        GarageMembership.objects.filter(
+            user=request.user,
+            role__in=GarageMembership.WRITE_DATA_ROLES,
+        ).values_list('garage_id', flat=True)
+    )
+    return render(
+        request,
+        'shop/car_list.html',
+        {
+            'cars': cars,
+            'can_edit_garage_data': bool(manageable_garage_ids),
+            'manageable_garage_ids': manageable_garage_ids,
+        },
+    )
 
 
 @hanko_login_required
