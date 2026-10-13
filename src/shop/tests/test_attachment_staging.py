@@ -16,7 +16,7 @@ from shop.models.garage import Garage, GarageMembership
 from shop.models.report import Report
 from shop.models.user import ShopUser
 from shop.tests.helpers import PNG_SIGNATURE
-from shop.views import purge_stale_staged_attachments
+from shop.services.attachments import purge_stale_staged_attachments
 
 
 class AttachmentStagingEndpointTests(TestCase):

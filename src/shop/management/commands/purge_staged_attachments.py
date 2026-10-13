@@ -2,7 +2,7 @@ from typing import Any
 
 from django.core.management.base import BaseCommand
 
-from shop.views import purge_stale_staged_attachments
+from shop.services.attachments import purge_stale_staged_attachments
 
 
 class Command(BaseCommand):

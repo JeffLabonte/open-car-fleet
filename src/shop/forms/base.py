@@ -15,9 +15,6 @@ from shop.validators import validate_single_assignment
 ATTACHMENT_MAX_UPLOAD_BYTES = 100 * 1024 * 1024
 # Upper bound of files accepted in a single form submission.
 ATTACHMENT_MAX_FILES = 10
-# Per-user quota for staged (unclaimed) uploads (1 GB). Claimed attachments
-# are counted against the parent object, not this transient quota.
-ATTACHMENT_USER_STAGED_QUOTA_BYTES = 1024 * 1024 * 1024
 
 # File signatures (magic bytes) mapped to the attachment extensions that may
 # carry them. Uploads are sniffed so a renamed executable cannot masquerade as

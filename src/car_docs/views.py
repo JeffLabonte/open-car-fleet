@@ -9,7 +9,8 @@ from car_docs.forms import CarDocForm
 from car_docs.models import CarDoc
 from shop.middleware import hanko_login_required
 from shop.permissions import GarageSharingPermissions
-from shop.view_helpers import save_attachments, user_car_docs_queryset, user_cars_queryset
+from shop.services.attachments import save_attachments
+from shop.view_helpers import user_car_docs_queryset, user_cars_queryset
 
 
 @hanko_login_required

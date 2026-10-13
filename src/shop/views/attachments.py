@@ -1,4 +1,3 @@
-from datetime import timedelta
 from typing import Any
 import mimetypes
 import os
@@ -7,48 +6,28 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.http import FileResponse, Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
-from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 from django_ratelimit.decorators import ratelimit
 
 from car_docs.models import CarDoc
-from shop.forms.base import ATTACHMENT_USER_STAGED_QUOTA_BYTES, AttachmentField, validate_uploaded_file
+from shop.forms.base import AttachmentField, validate_uploaded_file
 from shop.middleware import hanko_login_required
 from shop.models.attachment import Attachment
 from shop.models.garage import Garage, GarageInvitation, GarageMembership, KnownShop, KnownShopProof
 from shop.models.report import Report
+from shop.services.attachments import (
+    ATTACHMENT_USER_STAGED_QUOTA_BYTES,
+    INLINE_SAFE_ATTACHMENT_TYPES,
+    purge_stale_staged_attachments,
+)
 from shop.view_helpers import (
-    save_attachments,
     user_can_manage_garage,
     user_can_manage_known_shop,
     user_cars_queryset,
     user_garages_queryset,
     user_known_shops_queryset,
 )
-
-INLINE_SAFE_ATTACHMENT_TYPES = {
-    'image/jpeg',
-    'image/png',
-    'image/gif',
-    'image/webp',
-    'video/mp4',
-    'video/webm',
-    'video/quicktime',
-    'application/pdf',
-}
-
-
-STAGED_ATTACHMENT_MAX_AGE = timedelta(hours=12)
-
-
-def purge_stale_staged_attachments() -> int:
-    """Delete staged uploads no parent form claimed within the retention window."""
-    cutoff = timezone.now() - STAGED_ATTACHMENT_MAX_AGE
-    stale = Attachment.objects.filter(content_type__isnull=True, created_at__lt=cutoff)
-    count = stale.count()
-    stale.delete()
-    return count
 
 
 @hanko_login_required

@@ -2,17 +2,19 @@
 # This package re-exports all view functions so existing imports keep working.
 
 # Backwards-compatible re-exports for tests/code that patch these names on shop.views.
-from shop.forms.base import ATTACHMENT_USER_STAGED_QUOTA_BYTES
-from shop.view_helpers import save_attachments
-
-from shop.views.attachments import (
+from shop.services.attachments import (
+    ATTACHMENT_USER_STAGED_QUOTA_BYTES,
     INLINE_SAFE_ATTACHMENT_TYPES,
     STAGED_ATTACHMENT_MAX_AGE,
+    purge_stale_staged_attachments,
+    save_attachments,
+)
+
+from shop.views.attachments import (
     _user_can_view_attachment,
     attachment_delete,
     attachment_file,
     attachment_upload,
-    purge_stale_staged_attachments,
 )
 
 from shop.views.auth import (

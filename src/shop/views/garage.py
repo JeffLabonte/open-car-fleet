@@ -31,8 +31,8 @@ from shop.importers import ImportContext
 from shop.middleware import hanko_login_required
 from shop.models.garage import Garage, GarageInvitation, GarageMembership, KnownShop, KnownShopProof
 from shop.permissions import GarageSharingPermissions, get_membership_or_404
+from shop.services.attachments import save_attachments
 from shop.view_helpers import (
-    save_attachments,
     user_can_manage_garage,
     user_can_manage_known_shop,
     user_cars_queryset,

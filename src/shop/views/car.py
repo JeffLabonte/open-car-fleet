@@ -31,8 +31,8 @@ from shop.models.job import WorkJob
 from shop.models.report import Report
 from shop.permissions import GarageSharingPermissions, get_membership_or_404
 from shop.services import update_car_odometer_from_report
+from shop.services.attachments import save_attachments
 from shop.view_helpers import (
-    save_attachments,
     user_can_manage_garage,
     user_can_manage_known_shop,
     user_cars_queryset,

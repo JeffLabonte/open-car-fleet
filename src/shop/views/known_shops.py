@@ -23,8 +23,8 @@ from shop.forms import (
     WorkJobForm,
 )
 from shop.middleware import hanko_login_required
+from shop.services.attachments import save_attachments
 from shop.view_helpers import (
-    save_attachments,
     user_can_manage_garage,
     user_can_manage_known_shop,
     user_cars_queryset,
