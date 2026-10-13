@@ -7,7 +7,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 
-from shop.models.garage import KnownShop
+from shop.models.fleet import KnownShop
 from shop.validators import validate_single_assignment
 
 # Per-file upload ceiling for unified attachments (100 MB). Large enough for
@@ -47,19 +47,19 @@ class LineListFieldMixin:
 
 
 class AssignedToShopFormMixin:
-    def __init__(self, *args: Any, user: Any = None, garage: Any = None, **kwargs: Any) -> None:
+    def __init__(self, *args: Any, user: Any = None, fleet: Any = None, **kwargs: Any) -> None:
         # Store before super().__init__ so StagedAttachmentsMixin (further
         # down the MRO) can read it without receiving the kwarg itself.
         self.user = user
         super().__init__(*args, **kwargs)
-        self.configure_assigned_fields(user=user, garage=garage)
+        self.configure_assigned_fields(user=user, fleet=fleet)
 
-    def configure_assigned_fields(self, *, user: Any = None, garage: Any = None) -> None:
+    def configure_assigned_fields(self, *, user: Any = None, fleet: Any = None) -> None:
         mechanics = get_user_model().objects.filter(is_mechanic=True)
-        if garage is not None:
+        if fleet is not None:
             mechanics = mechanics.filter(
-                garage_memberships__garage=garage,
-                garage_memberships__role__in=['owner', 'admin', 'mechanic'],
+                fleet_memberships__fleet=fleet,
+                fleet_memberships__role__in=['owner', 'admin', 'mechanic'],
             ).distinct()
         self.fields['assigned_to'].queryset = mechanics
         self.fields['assigned_to'].help_text = _('Only users converted to mechanics can be selected.')

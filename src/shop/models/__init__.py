@@ -1,10 +1,10 @@
 from car_docs.models import CarDoc
 from shop.models.attachment import Attachment
 from shop.models.car import Car, CarPart, CarPartStatusHistory
-from shop.models.garage import (
-    Garage,
-    GarageInvitation,
-    GarageMembership,
+from shop.models.fleet import (
+    Fleet,
+    FleetInvitation,
+    FleetMembership,
     KnownShop,
     KnownShopProof,
 )
@@ -17,9 +17,9 @@ __all__ = [
     "CarPart",
     "CarPartStatusHistory",
     "CarDoc",
-    "Garage",
-    "GarageInvitation",
-    "GarageMembership",
+    "Fleet",
+    "FleetInvitation",
+    "FleetMembership",
     "KnownShop",
     "KnownShopProof",
     "WorkJob",

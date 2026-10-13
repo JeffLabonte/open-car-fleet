@@ -5,7 +5,7 @@
   <header class="page-header">
     {% include 'shop/partials/_page_header.html' with heading=_('Cars') subheading=_('Browse the vehicles in your shared fleets.') %}
     <div class="page-actions">
-      {% if can_edit_garage_data %}
+      {% if can_edit_fleet_data %}
         <a class="button is-primary" href="{% url 'shop-car-create' %}">
           {% include 'shop/partials/_icon.html' with name='plus' %}
           <span>{% translate 'Add a new car' %}</span>
@@ -24,7 +24,7 @@
               <th scope="col">{% translate 'Make' %}</th>
               <th scope="col">{% translate 'Year' %}</th>
               <th scope="col">{% translate 'Odometer' %}</th>
-              {% if can_edit_garage_data %}<th scope="col">{% translate 'Actions' %}</th>{% endif %}
+              {% if can_edit_fleet_data %}<th scope="col">{% translate 'Actions' %}</th>{% endif %}
             </tr>
           </thead>
           <tbody>
@@ -46,7 +46,7 @@
                 <td data-label="{% translate 'Make' %}">{{ car.make }}</td>
                 <td data-label="{% translate 'Year' %}">{{ car.year|default:'—' }}</td>
                 <td data-label="{% translate 'Odometer' %}">{{ car.mileage|default:'—' }}</td>
-                {% if car.garage_id in manageable_garage_ids %}
+                {% if car.fleet_id in manageable_fleet_ids %}
                   <td data-label="">
                     <button class="button is-small is-danger" type="button" data-dialog-open="dialog-car-delete" data-dialog-action="{% url 'shop-car-delete' car.pk %}" data-testid="delete-car-button">
                       {% translate 'Delete' %}
@@ -66,7 +66,7 @@
     {% include 'shop/partials/_empty_state.html' with empty_message=_('No cars yet.') empty_action_url=add_car_url empty_action_label=_('Add a new car') %}
   {% endif %}
 
-  {% if can_edit_garage_data %}
+  {% if can_edit_fleet_data %}
     <dialog class="dialog" id="dialog-car-delete">
       <form method="post" action="#" data-dialog-action-form>
         {% csrf_token %}

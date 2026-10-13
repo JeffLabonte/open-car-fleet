@@ -34,9 +34,9 @@ class CarPartForm(forms.ModelForm):
 class CarForm(forms.ModelForm):
     class Meta:
         model = Car
-        fields = ['garage', 'usual_name', 'make', 'model', 'colour', 'year', 'vin', 'license_plate']
+        fields = ['fleet', 'usual_name', 'make', 'model', 'colour', 'year', 'vin', 'license_plate']
         labels = {
-            'garage': _('Fleet'),
+            'fleet': _('Fleet'),
             'usual_name': _('Usual name'),
             'make': _('Make'),
             'model': _('Model'),
@@ -46,7 +46,7 @@ class CarForm(forms.ModelForm):
             'license_plate': _('License plate'),
         }
         widgets = {
-            'garage': forms.Select(attrs={'class': 'input'}),
+            'fleet': forms.Select(attrs={'class': 'input'}),
             'usual_name': forms.TextInput(attrs={'class': 'input', 'placeholder': _('Optional nickname')}),
             'make': forms.TextInput(attrs={'class': 'input', 'placeholder': _('Make')}),
             'model': forms.TextInput(attrs={'class': 'input', 'placeholder': _('Model')}),
@@ -60,16 +60,16 @@ class CarForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self._user = user
         if user is not None:
-            self.fields['garage'].queryset = user.garages.order_by('name')
+            self.fields['fleet'].queryset = user.fleets.order_by('name')
 
-    def clean_garage(self):
-        garage = self.cleaned_data.get('garage')
-        if garage is None:
-            return garage
+    def clean_fleet(self):
+        fleet = self.cleaned_data.get('fleet')
+        if fleet is None:
+            return fleet
 
-        if self._user is not None and not self._user.garages.filter(pk=garage.pk).exists():
-            raise ValidationError(_('You can only select a garage you are a member of.'))
-        return garage
+        if self._user is not None and not self._user.fleets.filter(pk=fleet.pk).exists():
+            raise ValidationError(_('You can only select a fleet you are a member of.'))
+        return fleet
 
     def clean_year(self) -> int | None:
         year = self.cleaned_data.get('year')

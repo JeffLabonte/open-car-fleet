@@ -13,11 +13,11 @@ from shop.importers import ImportValidationError
 from shop.models.attachment import Attachment
 from shop.models.car import Car
 from shop.models.car import CarPart
-from shop.models.garage import Garage
-from shop.models.garage import GarageInvitation
-from shop.models.garage import GarageMembership
-from shop.models.garage import KnownShop
-from shop.models.garage import KnownShopProof
+from shop.models.fleet import Fleet
+from shop.models.fleet import FleetInvitation
+from shop.models.fleet import FleetMembership
+from shop.models.fleet import KnownShop
+from shop.models.fleet import KnownShopProof
 from shop.models.job import WorkJob
 from shop.models.report import Report
 from shop.models.user import ShopUser
@@ -37,11 +37,11 @@ class AdditionalCoverageRegressionTests(TestCase):
             email='coverage-member@example.com',
             password='pass1234',
         )
-        self.garage = Garage.objects.create(name='Coverage Garage', created_by=self.owner)
-        GarageMembership.objects.create(garage=self.garage, user=self.owner, role=GarageMembership.ROLE_OWNER)
-        GarageMembership.objects.create(garage=self.garage, user=self.member, role=GarageMembership.ROLE_MEMBER)
+        self.fleet = Fleet.objects.create(name='Coverage Fleet', created_by=self.owner)
+        FleetMembership.objects.create(fleet=self.fleet, user=self.owner, role=FleetMembership.ROLE_OWNER)
+        FleetMembership.objects.create(fleet=self.fleet, user=self.member, role=FleetMembership.ROLE_MEMBER)
         self.car = Car.objects.create(
-            garage=self.garage,
+            fleet=self.fleet,
             make='Honda',
             model='Accord',
             vin='1HGCM82633A004352',
@@ -97,16 +97,16 @@ class AdditionalCoverageRegressionTests(TestCase):
         self.assertEqual(callback_response.json()['user']['email'], 'new-coverage@example.com')
         self.assertEqual(self.client.session['hanko_session_token'], 'token-coverage-123')
 
-    def test_garage_share_and_invitation_branches(self):
+    def test_fleet_share_and_invitation_branches(self):
         self.client.force_login(self.member)
-        response = self.client.get(reverse('shop-garage-share', args=[self.garage.pk]))
+        response = self.client.get(reverse('shop-fleet-share', args=[self.fleet.pk]))
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response['Location'], reverse('shop-garage-detail', args=[self.garage.pk]))
+        self.assertEqual(response['Location'], reverse('shop-fleet-detail', args=[self.fleet.pk]))
 
         self.client.force_login(self.owner)
-        with patch('shop.models.garage.send_mail', side_effect=Exception('mail failed')):
+        with patch('shop.models.fleet.send_mail', side_effect=Exception('mail failed')):
             response = self.client.post(
-                reverse('shop-garage-share', args=[self.garage.pk]),
+                reverse('shop-fleet-share', args=[self.fleet.pk]),
                 data={
                     'invited_email': 'someone@example.com',
                     'message': 'Join us',
@@ -115,30 +115,30 @@ class AdditionalCoverageRegressionTests(TestCase):
                 follow=True,
             )
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(GarageInvitation.objects.filter(invited_email='someone@example.com').exists())
+        self.assertTrue(FleetInvitation.objects.filter(invited_email='someone@example.com').exists())
 
-        invitation = GarageInvitation.objects.create(
-            garage=self.garage,
+        invitation = FleetInvitation.objects.create(
+            fleet=self.fleet,
             invited_email='coverage-member@example.com',
             invited_by=self.owner,
-            status=GarageInvitation.STATUS_PENDING,
+            status=FleetInvitation.STATUS_PENDING,
             expires_at=timezone.now() - timedelta(days=1),
         )
         self.client.force_login(self.member)
-        response = self.client.get(reverse('shop-garage-invitation-accept', args=[invitation.token]), follow=True)
+        response = self.client.get(reverse('shop-fleet-invitation-accept', args=[invitation.token]), follow=True)
         self.assertEqual(response.status_code, 200)
         invitation.refresh_from_db()
-        self.assertEqual(invitation.status, GarageInvitation.STATUS_EXPIRED)
+        self.assertEqual(invitation.status, FleetInvitation.STATUS_EXPIRED)
 
-        other_invitation = GarageInvitation.objects.create(
-            garage=self.garage,
+        other_invitation = FleetInvitation.objects.create(
+            fleet=self.fleet,
             invited_email='coverage-member@example.com',
             invited_by=self.owner,
-            status=GarageInvitation.STATUS_PENDING,
+            status=FleetInvitation.STATUS_PENDING,
             expires_at=timezone.now() + timedelta(days=7),
         )
         self.client.force_login(self.owner)
-        response = self.client.get(reverse('shop-garage-invitation-accept', args=[other_invitation.token]), follow=True)
+        response = self.client.get(reverse('shop-fleet-invitation-accept', args=[other_invitation.token]), follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.redirect_chain[-1][0], reverse('shop-index'))
 
@@ -147,7 +147,7 @@ class AdditionalCoverageRegressionTests(TestCase):
         create_response = self.client.post(
             reverse('shop-car-create'),
             data={
-                'garage': str(self.garage.pk),
+                'fleet': str(self.fleet.pk),
                 'usual_name': 'Roadster',
                 'make': 'Mazda',
                 'model': 'MX-5',
@@ -163,7 +163,7 @@ class AdditionalCoverageRegressionTests(TestCase):
         update_response = self.client.post(
             reverse('shop-car-update', args=[created_car.pk]),
             data={
-                'garage': str(self.garage.pk),
+                'fleet': str(self.fleet.pk),
                 'usual_name': 'Roadster Updated',
                 'make': 'Mazda',
                 'model': 'MX-5',
@@ -267,11 +267,11 @@ class AdditionalCoverageRegressionTests(TestCase):
         with self.assertRaises(ImportValidationError):
             importer.resolve_model('unknown_model')
 
-        result = importer.import_records(Car, [{'make': 'Nope'}], context=ImportContext(garage=self.garage))
+        result = importer.import_records(Car, [{'make': 'Nope'}], context=ImportContext(fleet=self.fleet))
         self.assertTrue(result.has_errors)
         self.assertIn("model", result.errors[0].message.lower())
 
-        result = importer.import_records(Car, [42], context=ImportContext(garage=self.garage))
+        result = importer.import_records(Car, [42], context=ImportContext(fleet=self.fleet))
         self.assertTrue(result.has_errors)
         self.assertIn('Record is not an object', result.errors[0].message)
 
@@ -284,7 +284,7 @@ class AdditionalCoverageRegressionTests(TestCase):
                 'assigned_to': 'missing-user@example.com',
                 'assigned_shop': 'missing-shop@example.com',
             }],
-            context=ImportContext(garage=self.garage),
+            context=ImportContext(fleet=self.fleet),
         )
         self.assertTrue(result.has_errors)
 
@@ -297,7 +297,7 @@ class AdditionalCoverageRegressionTests(TestCase):
                 'assigned_to': 'not-a-mechanic@example.com',
                 'assigned_shop': 'not-a-shop@example.com',
             }],
-            context=ImportContext(garage=self.garage),
+            context=ImportContext(fleet=self.fleet),
         )
         self.assertTrue(result.has_errors)
 
@@ -324,53 +324,53 @@ class ViewCoverageTests(TestCase):
             email='view-stranger@example.com',
             password='pass1234',
         )
-        self.garage = Garage.objects.create(name='View Garage', created_by=self.owner)
-        GarageMembership.objects.create(
-            garage=self.garage,
+        self.fleet = Fleet.objects.create(name='View Fleet', created_by=self.owner)
+        FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.owner,
-            role=GarageMembership.ROLE_OWNER,
+            role=FleetMembership.ROLE_OWNER,
         )
-        GarageMembership.objects.create(
-            garage=self.garage,
+        FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.member,
-            role=GarageMembership.ROLE_MEMBER,
+            role=FleetMembership.ROLE_MEMBER,
         )
         self.car = Car.objects.create(
-            garage=self.garage,
+            fleet=self.fleet,
             make='Honda',
             model='Civic',
             vin='2HGFG12698H512347',
             year=2022,
         )
 
-    def test_garage_create_renders_form_and_handles_invalid_post(self):
+    def test_fleet_create_renders_form_and_handles_invalid_post(self):
         self.client.force_login(self.owner)
 
-        get_response = self.client.get(reverse('shop-garage-create'))
+        get_response = self.client.get(reverse('shop-fleet-create'))
         self.assertEqual(get_response.status_code, 200)
 
-        post_response = self.client.post(reverse('shop-garage-create'), data={'name': ''})
+        post_response = self.client.post(reverse('shop-fleet-create'), data={'name': ''})
         self.assertEqual(post_response.status_code, 200)
-        self.assertFalse(Garage.objects.filter(name='').exists())
+        self.assertFalse(Fleet.objects.filter(name='').exists())
 
-    def test_garage_detail_and_index_render_for_member(self):
+    def test_fleet_detail_and_index_render_for_member(self):
         self.client.force_login(self.owner)
 
-        detail_response = self.client.get(reverse('shop-garage-detail', args=[self.garage.pk]))
+        detail_response = self.client.get(reverse('shop-fleet-detail', args=[self.fleet.pk]))
         self.assertEqual(detail_response.status_code, 200)
 
         index_response = self.client.get(reverse('shop-index'))
         self.assertEqual(index_response.status_code, 200)
 
     def test_car_list_reflects_actual_edit_permissions(self):
-        viewer_only_garage = Garage.objects.create(name='Viewer Only Garage', created_by=self.stranger)
-        GarageMembership.objects.create(
-            garage=viewer_only_garage,
+        viewer_only_fleet = Fleet.objects.create(name='Viewer Only Fleet', created_by=self.stranger)
+        FleetMembership.objects.create(
+            fleet=viewer_only_fleet,
             user=self.member,
-            role=GarageMembership.ROLE_MEMBER,
+            role=FleetMembership.ROLE_MEMBER,
         )
         viewer_car = Car.objects.create(
-            garage=viewer_only_garage,
+            fleet=viewer_only_fleet,
             make='Toyota',
             model='Yaris',
             vin='JTDKB20U793512348',
@@ -379,25 +379,25 @@ class ViewCoverageTests(TestCase):
         self.client.force_login(self.member)
         response = self.client.get(reverse('shop-car-list'))
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(response.context['can_edit_garage_data'])
-        self.assertNotIn(self.garage.pk, response.context['manageable_garage_ids'])
-        self.assertNotIn(viewer_only_garage.pk, response.context['manageable_garage_ids'])
+        self.assertFalse(response.context['can_edit_fleet_data'])
+        self.assertNotIn(self.fleet.pk, response.context['manageable_fleet_ids'])
+        self.assertNotIn(viewer_only_fleet.pk, response.context['manageable_fleet_ids'])
         self.assertNotContains(response, f'data-dialog-action="/cars/{self.car.pk}/delete/"')
         self.assertNotContains(response, f'data-dialog-action="/cars/{viewer_car.pk}/delete/"')
 
         self.client.force_login(self.owner)
         response = self.client.get(reverse('shop-car-list'))
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.context['can_edit_garage_data'])
-        self.assertIn(self.garage.pk, response.context['manageable_garage_ids'])
+        self.assertTrue(response.context['can_edit_fleet_data'])
+        self.assertIn(self.fleet.pk, response.context['manageable_fleet_ids'])
         self.assertContains(response, f'data-dialog-action="/cars/{self.car.pk}/delete/"')
 
-    def test_garage_share_branches(self):
+    def test_fleet_share_branches(self):
         self.client.force_login(self.owner)
 
         # Already a member
         member_response = self.client.post(
-            reverse('shop-garage-share', args=[self.garage.pk]),
+            reverse('shop-fleet-share', args=[self.fleet.pk]),
             data={
                 'invited_email': self.member.email,
                 'message': 'Already member',
@@ -408,7 +408,7 @@ class ViewCoverageTests(TestCase):
 
         # Invalid form
         invalid_response = self.client.post(
-            reverse('shop-garage-share', args=[self.garage.pk]),
+            reverse('shop-fleet-share', args=[self.fleet.pk]),
             data={
                 'invited_email': 'not-an-email',
                 'message': 'Bad',
@@ -418,9 +418,9 @@ class ViewCoverageTests(TestCase):
         self.assertEqual(invalid_response.status_code, 200)
 
         # Successful invitation renders GET form
-        with patch('shop.models.garage.send_mail', side_effect=Exception('SMTP down')):
+        with patch('shop.models.fleet.send_mail', side_effect=Exception('SMTP down')):
             send_failure_response = self.client.post(
-                reverse('shop-garage-share', args=[self.garage.pk]),
+                reverse('shop-fleet-share', args=[self.fleet.pk]),
                 data={
                     'invited_email': 'new-invite@example.com',
                     'message': 'Join us',
@@ -429,12 +429,12 @@ class ViewCoverageTests(TestCase):
             )
         self.assertEqual(send_failure_response.status_code, 302)
 
-    def test_garage_import_branches(self):
+    def test_fleet_import_branches(self):
         self.client.force_login(self.owner)
 
         csv_content = b'make,model,vin\nFord,F-150,1FTFW1ET5DFC12345\n'
         valid_response = self.client.post(
-            reverse('shop-garage-import', args=[self.garage.pk]),
+            reverse('shop-fleet-import', args=[self.fleet.pk]),
             data={
                 'import_file': SimpleUploadedFile('cars.csv', csv_content, content_type='text/csv'),
                 'dry_run': 'on',
@@ -443,7 +443,7 @@ class ViewCoverageTests(TestCase):
         self.assertEqual(valid_response.status_code, 200)
 
         invalid_response = self.client.post(
-            reverse('shop-garage-import', args=[self.garage.pk]),
+            reverse('shop-fleet-import', args=[self.fleet.pk]),
             data={
                 'import_file': SimpleUploadedFile('bad.txt', b'garbage', content_type='text/plain'),
                 'dry_run': '',
@@ -452,18 +452,18 @@ class ViewCoverageTests(TestCase):
         self.assertEqual(invalid_response.status_code, 200)
         self.assertIn('import_file', invalid_response.context['form'].errors)
 
-        get_response = self.client.get(reverse('shop-garage-import', args=[self.garage.pk]))
+        get_response = self.client.get(reverse('shop-fleet-import', args=[self.fleet.pk]))
         self.assertEqual(get_response.status_code, 200)
 
         self.client.force_login(self.member)
-        forbidden_response = self.client.get(reverse('shop-garage-import', args=[self.garage.pk]))
+        forbidden_response = self.client.get(reverse('shop-fleet-import', args=[self.fleet.pk]))
         self.assertEqual(forbidden_response.status_code, 302)
 
-    def test_garage_export_forbidden_to_non_managers(self):
+    def test_fleet_export_forbidden_to_non_managers(self):
         self.client.force_login(self.member)
-        response = self.client.get(reverse('shop-garage-export', args=[self.garage.pk]))
+        response = self.client.get(reverse('shop-fleet-export', args=[self.fleet.pk]))
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response['Location'], reverse('shop-garage-detail', args=[self.garage.pk]))
+        self.assertEqual(response['Location'], reverse('shop-fleet-detail', args=[self.fleet.pk]))
 
     def test_known_shop_create_and_detail_and_proof_branches(self):
         self.client.force_login(self.owner)
@@ -701,7 +701,7 @@ class ViewCoverageTests(TestCase):
 
         invalid_create = self.client.post(
             reverse('shop-car-create'),
-            data={'make': '', 'model': '', 'garage': str(self.garage.pk)},
+            data={'make': '', 'model': '', 'fleet': str(self.fleet.pk)},
         )
         self.assertEqual(invalid_create.status_code, 200)
 

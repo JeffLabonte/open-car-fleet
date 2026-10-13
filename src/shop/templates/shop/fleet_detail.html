@@ -3,28 +3,28 @@
 
 {% block content %}
   <header class="page-header">
-    {% include 'shop/partials/_page_header.html' with heading=garage.name subheading=_('Review the vehicles in this fleet and manage access.') %}
+    {% include 'shop/partials/_page_header.html' with heading=fleet.name subheading=_('Review the vehicles in this fleet and manage access.') %}
     <div class="page-actions">
       <a class="button is-light" href="{% url 'shop-index' %}">{% translate 'Back to fleets' %}</a>
-      {% if can_manage_garage %}
+      {% if can_manage_fleet %}
         <button class="button is-light" type="button" data-dialog-open="dialog-fleet-edit" data-testid="edit-fleet-button">
           {% include 'shop/partials/_icon.html' with name='edit' %}
           <span>{% translate 'Edit fleet' %}</span>
         </button>
-        <a class="button is-link" href="{% url 'shop-garage-share' garage.pk %}">
+        <a class="button is-link" href="{% url 'shop-fleet-share' fleet.pk %}">
           {% include 'shop/partials/_icon.html' with name='share' %}
           <span>{% translate 'Share fleet' %}</span>
         </a>
-        <a class="button is-info" href="{% url 'shop-garage-import' garage.pk %}">
+        <a class="button is-info" href="{% url 'shop-fleet-import' fleet.pk %}">
           {% include 'shop/partials/_icon.html' with name='upload' %}
           <span>{% translate 'Import cars' %}</span>
         </a>
-        <a class="button is-success" href="{% url 'shop-garage-export' garage.pk %}">
+        <a class="button is-success" href="{% url 'shop-fleet-export' fleet.pk %}">
           {% include 'shop/partials/_icon.html' with name='download' %}
           <span>{% translate 'Export to Excel' %}</span>
         </a>
       {% endif %}
-      {% if can_edit_garage_data %}
+      {% if can_edit_fleet_data %}
         <a class="button is-primary" href="{% url 'shop-car-create' %}">
           {% include 'shop/partials/_icon.html' with name='plus' %}
           <span>{% translate 'Add car' %}</span>
@@ -63,7 +63,7 @@
           </div>
         </div>
       {% else %}
-        {% if can_edit_garage_data %}
+        {% if can_edit_fleet_data %}
           {% url 'shop-car-create' as add_car_url %}
           {% include 'shop/partials/_empty_state.html' with empty_message=_('No cars in this fleet yet.') empty_action_url=add_car_url empty_action_label=_('Add car') %}
         {% else %}
@@ -75,8 +75,8 @@
     <aside class="split__aside">
       <div class="content-card" data-testid="fleet-meta">
         <h2 class="title is-4 mb-3">{% translate 'Fleet details' %}</h2>
-        {% if garage.description %}
-          <p>{{ garage.description }}</p>
+        {% if fleet.description %}
+          <p>{{ fleet.description }}</p>
         {% else %}
           <p class="has-text-grey">{% translate 'No description provided for this fleet.' %}</p>
         {% endif %}
@@ -85,15 +85,15 @@
             {% include 'shop/partials/_icon.html' with name='car' %}
             {% blocktranslate count counter=cars|length %}{{ counter }} car{% plural %}{{ counter }} cars{% endblocktranslate %}
           </span>
-          <span class="chip">{% translate 'Created' %} {{ garage.created_at|date:'M j, Y' }}</span>
+          <span class="chip">{% translate 'Created' %} {{ fleet.created_at|date:'M j, Y' }}</span>
         </div>
       </div>
     </aside>
   </div>
 
-  {% if can_manage_garage %}
+  {% if can_manage_fleet %}
     <dialog class="dialog dialog--fleet-edit" id="dialog-fleet-edit" data-testid="fleet-edit-dialog" data-open-on-error="{{ form.errors|yesno:'true,false' }}">
-      <form method="post" action="{% url 'shop-garage-update' garage.pk %}">
+      <form method="post" action="{% url 'shop-fleet-update' fleet.pk %}">
         {% csrf_token %}
         <h2 class="dialog__title">{% translate 'Edit fleet' %}</h2>
 

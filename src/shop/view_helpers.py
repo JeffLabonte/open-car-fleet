@@ -3,27 +3,27 @@ from typing import Any
 from django.db.models import Q
 
 from shop.models.car import Car
-from shop.models.garage import Garage, KnownShop
+from shop.models.fleet import Fleet, KnownShop
 from shop.permissions import (
-    GarageSharingPermissions,
-    user_can_edit_garage_data,
-    user_can_manage_garage,
-    user_can_view_garage,
+    FleetSharingPermissions,
+    user_can_edit_fleet_data,
+    user_can_manage_fleet,
+    user_can_view_fleet,
 )
 from shop.services.attachments import save_attachments  # noqa: F401
 
 
 def user_cars_queryset(user: Any):
-    return Car.objects.filter(garage__members=user).distinct()
+    return Car.objects.filter(fleet__members=user).distinct()
 
 
-def user_garages_queryset(user: Any):
-    return Garage.objects.filter(members=user).distinct()
+def user_fleets_queryset(user: Any):
+    return Fleet.objects.filter(members=user).distinct()
 
 
 def user_car_docs_queryset(user: Any):
     from car_docs.models import CarDoc
-    return CarDoc.objects.filter(car__garage__members=user).distinct()
+    return CarDoc.objects.filter(car__fleet__members=user).distinct()
 
 
 def user_known_shops_queryset(user: Any):

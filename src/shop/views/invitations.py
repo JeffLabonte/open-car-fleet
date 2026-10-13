@@ -9,33 +9,33 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 
 from shop.middleware import hanko_login_required
-from shop.models.garage import Garage, GarageInvitation, GarageMembership, KnownShop, KnownShopProof
+from shop.models.fleet import Fleet, FleetInvitation, FleetMembership, KnownShop, KnownShopProof
 
-def _render_invitation_response(request: HttpRequest, invitation: GarageInvitation) -> HttpResponse:
+def _render_invitation_response(request: HttpRequest, invitation: FleetInvitation) -> HttpResponse:
     return render(
         request,
         'shop/fleet_invitation_accept.html',
         {
             'invitation': invitation,
             'title': _('Accept fleet invitation'),
-            'subtitle': invitation.garage.name,
+            'subtitle': invitation.fleet.name,
         },
     )
 
 
 @hanko_login_required
-def garage_invitation_accept(request: HttpRequest, token: str) -> HttpResponse:
+def fleet_invitation_accept(request: HttpRequest, token: str) -> HttpResponse:
     invitation = get_object_or_404(
-        GarageInvitation.objects.select_related('garage'),
+        FleetInvitation.objects.select_related('fleet'),
         token=token,
     )
 
-    if invitation.status != GarageInvitation.STATUS_PENDING:
+    if invitation.status != FleetInvitation.STATUS_PENDING:
         messages.info(request, _('This invitation is no longer active.'))
         return redirect(reverse('shop-index'))
 
     if invitation.is_expired:
-        invitation.status = GarageInvitation.STATUS_EXPIRED
+        invitation.status = FleetInvitation.STATUS_EXPIRED
         invitation.save(update_fields=['status', 'updated_at'])
         messages.error(request, _('This invitation has expired.'))
         return redirect(reverse('shop-index'))
@@ -53,40 +53,40 @@ def garage_invitation_accept(request: HttpRequest, token: str) -> HttpResponse:
         return _render_invitation_response(request, invitation)
 
     with transaction.atomic():
-        membership, created = GarageMembership.objects.get_or_create(
-            garage=invitation.garage,
+        membership, created = FleetMembership.objects.get_or_create(
+            fleet=invitation.fleet,
             user=request.user,
             defaults={'role': invitation.role},
         )
         if not created:
             membership.role = invitation.role
             membership.save(update_fields=['role', 'updated_at'])
-        invitation.status = GarageInvitation.STATUS_ACCEPTED
+        invitation.status = FleetInvitation.STATUS_ACCEPTED
         invitation.accepted_at = timezone.now()
         invitation.accepted_by = request.user
         invitation.save(update_fields=['status', 'accepted_at', 'accepted_by', 'updated_at'])
 
     if created:
-        messages.success(request, _("You have joined '%(fleet)s'.") % {'fleet': invitation.garage.name})
+        messages.success(request, _("You have joined '%(fleet)s'.") % {'fleet': invitation.fleet.name})
     else:
-        messages.info(request, _("You are already a member of '%(fleet)s'.") % {'fleet': invitation.garage.name})
-    return redirect(reverse('shop-garage-detail', args=[invitation.garage.pk]))
+        messages.info(request, _("You are already a member of '%(fleet)s'.") % {'fleet': invitation.fleet.name})
+    return redirect(reverse('shop-fleet-detail', args=[invitation.fleet.pk]))
 
 
 @hanko_login_required
 @require_POST
-def garage_invitation_decline(request: HttpRequest, token: str) -> HttpResponse:
+def fleet_invitation_decline(request: HttpRequest, token: str) -> HttpResponse:
     invitation = get_object_or_404(
-        GarageInvitation.objects.select_related('garage'),
+        FleetInvitation.objects.select_related('fleet'),
         token=token,
     )
 
-    if invitation.status != GarageInvitation.STATUS_PENDING:
+    if invitation.status != FleetInvitation.STATUS_PENDING:
         messages.info(request, _('This invitation is no longer active.'))
         return redirect(reverse('shop-index'))
 
     if invitation.is_expired:
-        invitation.status = GarageInvitation.STATUS_EXPIRED
+        invitation.status = FleetInvitation.STATUS_EXPIRED
         invitation.save(update_fields=['status', 'updated_at'])
         messages.error(request, _('This invitation has expired.'))
         return redirect(reverse('shop-index'))
@@ -100,7 +100,7 @@ def garage_invitation_decline(request: HttpRequest, token: str) -> HttpResponse:
         )
         return redirect(reverse('shop-index'))
 
-    invitation.status = GarageInvitation.STATUS_DECLINED
+    invitation.status = FleetInvitation.STATUS_DECLINED
     invitation.declined_at = timezone.now()
     invitation.declined_by = request.user
     invitation.save(update_fields=['status', 'declined_at', 'declined_by', 'updated_at'])

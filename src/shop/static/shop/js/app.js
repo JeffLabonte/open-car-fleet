@@ -35,7 +35,7 @@
       const linkPath = new URL(link.href, window.location.origin).pathname;
       let isCurrent = false;
       if (linkPath === '/' || linkPath === '') {
-        isCurrent = path === '/' || path.startsWith('/garages/');
+        isCurrent = path === '/' || path.startsWith('/fleets/');
       } else {
         const prefix = linkPath.endsWith('/') ? linkPath : `${linkPath}/`;
         isCurrent = path === linkPath || path === prefix || path.startsWith(prefix);

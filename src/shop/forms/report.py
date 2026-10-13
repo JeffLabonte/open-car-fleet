@@ -62,10 +62,10 @@ class ReportForm(AssignedToShopFormMixin, StagedAttachmentsMixin, forms.ModelFor
         }
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        garage = kwargs.pop('garage', None)
+        fleet = kwargs.pop('fleet', None)
         car = kwargs.pop('car', None)
         super().__init__(*args, **kwargs)
-        self.configure_assigned_fields(user=self.user, garage=garage)
+        self.configure_assigned_fields(user=self.user, fleet=fleet)
         if car is not None:
             current = car.mileage if car.mileage is not None else _('unknown')
             self.fields['mileage'].help_text = _(

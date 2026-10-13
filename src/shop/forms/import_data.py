@@ -30,7 +30,7 @@ class BaseImportForm(forms.Form):
         return uploaded_file
 
 
-class GarageImportForm(BaseImportForm):
+class FleetImportForm(BaseImportForm):
     pass
 
 

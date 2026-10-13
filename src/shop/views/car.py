@@ -13,9 +13,8 @@ from shop.forms import (
     CarImportForm,
     CarPartForm,
     FleetForm,
-    GarageCreateForm,
-    GarageInviteForm,
-    GarageMembershipRoleForm,
+    FleetInviteForm,
+    FleetMembershipRoleForm,
     KnownShopForm,
     KnownShopProofForm,
     ReportForm,
@@ -24,17 +23,17 @@ from shop.forms import (
 from shop.importers import ImportContext
 from shop.middleware import hanko_login_required
 from shop.models.car import CarPart
-from shop.models.garage import Garage, GarageInvitation, GarageMembership, KnownShop, KnownShopProof
+from shop.models.fleet import Fleet, FleetInvitation, FleetMembership, KnownShop, KnownShopProof
 from shop.models.job import WorkJob
 from shop.models.report import Report
-from shop.permissions import GarageSharingPermissions, get_membership_or_404
+from shop.permissions import FleetSharingPermissions, get_membership_or_404
 from shop.services import update_car_odometer_from_report
 from shop.services.attachments import save_attachments
 from shop.view_helpers import (
-    user_can_manage_garage,
+    user_can_manage_fleet,
     user_can_manage_known_shop,
     user_cars_queryset,
-    user_garages_queryset,
+    user_fleets_queryset,
     user_known_shops_queryset,
 )
 from shop.views.helpers import handle_model_form, process_import_form
@@ -43,8 +42,8 @@ security_log = logging.getLogger('security')
 
 @hanko_login_required
 def car_import(request: HttpRequest, pk: str) -> HttpResponse:
-    car = get_object_or_404(user_cars_queryset(request.user).select_related('garage'), pk=pk)
-    if not user_can_manage_garage(request.user, car.garage):
+    car = get_object_or_404(user_cars_queryset(request.user).select_related('fleet'), pk=pk)
+    if not user_can_manage_fleet(request.user, car.fleet):
         messages.error(request, _('You do not have permission to import data into this car.'))
         return redirect(reverse('shop-car-detail', args=[car.pk]))
 
@@ -55,7 +54,7 @@ def car_import(request: HttpRequest, pk: str) -> HttpResponse:
                 request,
                 form,
                 lambda: form.cleaned_data['import_type'],
-                ImportContext(garage=car.garage, car=car, user=request.user),
+                ImportContext(fleet=car.fleet, car=car, user=request.user),
                 success_url=reverse('shop-car-detail', args=[car.pk]),
                 success_message=lambda result: _('Imported %(count)s records for %(car)s.') % {
                     'count': result.created_count,
@@ -90,19 +89,19 @@ def car_import(request: HttpRequest, pk: str) -> HttpResponse:
 def car_list(request: HttpRequest) -> HttpResponse:
     """Display list of cars with basic info."""
     cars = user_cars_queryset(request.user).order_by('-created_at')
-    manageable_garage_ids = set(
-        GarageMembership.objects.filter(
+    manageable_fleet_ids = set(
+        FleetMembership.objects.filter(
             user=request.user,
-            role__in=GarageMembership.WRITE_DATA_ROLES,
-        ).values_list('garage_id', flat=True)
+            role__in=FleetMembership.WRITE_DATA_ROLES,
+        ).values_list('fleet_id', flat=True)
     )
     return render(
         request,
         'shop/car_list.html',
         {
             'cars': cars,
-            'can_edit_garage_data': bool(manageable_garage_ids),
-            'manageable_garage_ids': manageable_garage_ids,
+            'can_edit_fleet_data': bool(manageable_fleet_ids),
+            'manageable_fleet_ids': manageable_fleet_ids,
         },
     )
 
@@ -110,15 +109,15 @@ def car_list(request: HttpRequest) -> HttpResponse:
 @hanko_login_required
 @require_POST
 def car_delete(request: HttpRequest, pk: str) -> HttpResponse:
-    """Delete a car from a garage the user can manage."""
-    car = get_object_or_404(user_cars_queryset(request.user).select_related('garage'), pk=pk)
-    if not user_can_manage_garage(request.user, car.garage):
+    """Delete a car from a fleet the user can manage."""
+    car = get_object_or_404(user_cars_queryset(request.user).select_related('fleet'), pk=pk)
+    if not user_can_manage_fleet(request.user, car.fleet):
         security_log.warning(
-            'access_denied: user=%s path=%s reason=car_delete_not_manager car=%s garage=%s',
+            'access_denied: user=%s path=%s reason=car_delete_not_manager car=%s fleet=%s',
             request.user.pk,
             request.path,
             car.pk,
-            car.garage_id,
+            car.fleet_id,
         )
         messages.error(request, _('You do not have permission to delete this car.'))
         return redirect(reverse('shop-car-list'))
@@ -132,7 +131,7 @@ def car_delete(request: HttpRequest, pk: str) -> HttpResponse:
 def car_detail(request: HttpRequest, pk: str) -> HttpResponse:
     """Show a single car's full details, maintenance plan and status ledger."""
     car = get_object_or_404(
-        user_cars_queryset(request.user).select_related('garage').prefetch_related('work_jobs', 'reports', 'parts__status_history'),
+        user_cars_queryset(request.user).select_related('fleet').prefetch_related('work_jobs', 'reports', 'parts__status_history'),
         pk=pk,
     )
     show_done = request.GET.get('show_done') == '1'
@@ -146,7 +145,7 @@ def car_detail(request: HttpRequest, pk: str) -> HttpResponse:
         .exclude(pk=car.pk)
         .order_by('year', 'usual_name')
     )
-    can_edit = GarageSharingPermissions(request.user, car.garage).can_edit_garage_data
+    can_edit = FleetSharingPermissions(request.user, car.fleet).can_edit_fleet_data
     return render(
         request,
         'shop/car_detail.html',
@@ -156,7 +155,7 @@ def car_detail(request: HttpRequest, pk: str) -> HttpResponse:
             'work_jobs': work_jobs_qs,
             'reports': reports,
             'parts': parts,
-            'can_edit_garage_data': can_edit,
+            'can_edit_fleet_data': can_edit,
             'show_done': show_done,
         },
     )
@@ -168,8 +167,8 @@ def car_create(request: HttpRequest) -> HttpResponse:
     if request.method == 'POST':
         form = CarForm(request.POST, user=request.user)
         if form.is_valid():
-            garage = form.cleaned_data.get('garage')
-            if garage is not None and not GarageSharingPermissions(request.user, garage).can_edit_garage_data:
+            fleet = form.cleaned_data.get('fleet')
+            if fleet is not None and not FleetSharingPermissions(request.user, fleet).can_edit_fleet_data:
                 messages.error(request, _('You do not have permission to add a car to this fleet.'))
                 return redirect(reverse('shop-car-list'))
             car = form.save()
@@ -183,16 +182,16 @@ def car_create(request: HttpRequest) -> HttpResponse:
 @hanko_login_required
 def car_update(request: HttpRequest, pk: str) -> HttpResponse:
     """Update an existing Car. Preserves CSRF protection via template token."""
-    car = get_object_or_404(user_cars_queryset(request.user).select_related('garage'), pk=pk)
-    if not GarageSharingPermissions(request.user, car.garage).can_edit_garage_data:
+    car = get_object_or_404(user_cars_queryset(request.user).select_related('fleet'), pk=pk)
+    if not FleetSharingPermissions(request.user, car.fleet).can_edit_fleet_data:
         messages.error(request, _('You do not have permission to edit this car.'))
         return redirect(reverse('shop-car-detail', args=[car.pk]))
     if request.method == 'POST':
         form = CarForm(request.POST, instance=car, user=request.user)
         if form.is_valid():
-            garage = form.cleaned_data.get('garage')
-            if garage is not None and garage.pk != car.garage_id:
-                if not GarageSharingPermissions(request.user, garage).can_edit_garage_data:
+            fleet = form.cleaned_data.get('fleet')
+            if fleet is not None and fleet.pk != car.fleet_id:
+                if not FleetSharingPermissions(request.user, fleet).can_edit_fleet_data:
                     messages.error(request, _('You do not have permission to move this car to the selected fleet.'))
                     return redirect(reverse('shop-car-detail', args=[car.pk]))
             form.save()
@@ -205,8 +204,8 @@ def car_update(request: HttpRequest, pk: str) -> HttpResponse:
 
 @hanko_login_required
 def part_create(request: HttpRequest, car_pk: str) -> HttpResponse:
-    car = get_object_or_404(user_cars_queryset(request.user).select_related('garage'), pk=car_pk)
-    if not GarageSharingPermissions(request.user, car.garage).can_edit_garage_data:
+    car = get_object_or_404(user_cars_queryset(request.user).select_related('fleet'), pk=car_pk)
+    if not FleetSharingPermissions(request.user, car.fleet).can_edit_fleet_data:
         messages.error(request, _('You do not have permission to add parts to this car.'))
         return redirect(reverse('shop-car-detail', args=[car.pk]))
 
@@ -226,8 +225,8 @@ def part_create(request: HttpRequest, car_pk: str) -> HttpResponse:
 
 @hanko_login_required
 def part_update(request: HttpRequest, car_pk: str, pk: str) -> HttpResponse:
-    car = get_object_or_404(user_cars_queryset(request.user).select_related('garage'), pk=car_pk)
-    if not GarageSharingPermissions(request.user, car.garage).can_edit_garage_data:
+    car = get_object_or_404(user_cars_queryset(request.user).select_related('fleet'), pk=car_pk)
+    if not FleetSharingPermissions(request.user, car.fleet).can_edit_fleet_data:
         messages.error(request, _('You do not have permission to update parts for this car.'))
         return redirect(reverse('shop-car-detail', args=[car.pk]))
     part = get_object_or_404(CarPart, pk=pk, car=car)
@@ -244,12 +243,12 @@ def part_update(request: HttpRequest, car_pk: str, pk: str) -> HttpResponse:
 
 @hanko_login_required
 def workjob_create(request: HttpRequest, car_pk: str) -> HttpResponse:
-    car = get_object_or_404(user_cars_queryset(request.user).select_related('garage'), pk=car_pk)
-    if not GarageSharingPermissions(request.user, car.garage).can_edit_garage_data:
+    car = get_object_or_404(user_cars_queryset(request.user).select_related('fleet'), pk=car_pk)
+    if not FleetSharingPermissions(request.user, car.fleet).can_edit_fleet_data:
         messages.error(request, _('You do not have permission to add planned work to this car.'))
         return redirect(reverse('shop-car-detail', args=[car.pk]))
     if request.method == 'POST':
-        form = WorkJobForm(request.POST, user=request.user, garage=car.garage)
+        form = WorkJobForm(request.POST, user=request.user, fleet=car.fleet)
         if form.is_valid():
             work_job = form.save(commit=False)
             work_job.car = car
@@ -257,36 +256,36 @@ def workjob_create(request: HttpRequest, car_pk: str) -> HttpResponse:
             messages.success(request, _('Planned work added successfully.'))
             return redirect(reverse('shop-car-detail', args=[car.pk]))
     else:
-        form = WorkJobForm(user=request.user, garage=car.garage)
+        form = WorkJobForm(user=request.user, fleet=car.fleet)
     return render(request, 'shop/workjob_form.html', {'form': form, 'is_create': True, 'car': car})
 
 
 @hanko_login_required
 def workjob_update(request: HttpRequest, car_pk: str, pk: str) -> HttpResponse:
-    car = get_object_or_404(user_cars_queryset(request.user).select_related('garage'), pk=car_pk)
-    if not GarageSharingPermissions(request.user, car.garage).can_edit_garage_data:
+    car = get_object_or_404(user_cars_queryset(request.user).select_related('fleet'), pk=car_pk)
+    if not FleetSharingPermissions(request.user, car.fleet).can_edit_fleet_data:
         messages.error(request, _('You do not have permission to update planned work for this car.'))
         return redirect(reverse('shop-car-detail', args=[car.pk]))
     work_job = get_object_or_404(WorkJob, pk=pk, car=car)
     if request.method == 'POST':
-        form = WorkJobForm(request.POST, instance=work_job, user=request.user, garage=car.garage)
+        form = WorkJobForm(request.POST, instance=work_job, user=request.user, fleet=car.fleet)
         if form.is_valid():
             form.save()
             messages.success(request, _('Planned work updated successfully.'))
             return redirect(reverse('shop-car-detail', args=[car.pk]))
     else:
-        form = WorkJobForm(instance=work_job, user=request.user, garage=car.garage)
+        form = WorkJobForm(instance=work_job, user=request.user, fleet=car.fleet)
     return render(request, 'shop/workjob_form.html', {'form': form, 'is_create': False, 'car': car, 'work_job': work_job})
 
 
 @hanko_login_required
 def report_create(request: HttpRequest, car_pk: str) -> HttpResponse:
-    car = get_object_or_404(user_cars_queryset(request.user).select_related('garage'), pk=car_pk)
-    if not GarageSharingPermissions(request.user, car.garage).can_edit_garage_data:
+    car = get_object_or_404(user_cars_queryset(request.user).select_related('fleet'), pk=car_pk)
+    if not FleetSharingPermissions(request.user, car.fleet).can_edit_fleet_data:
         messages.error(request, _('You do not have permission to add reports to this car.'))
         return redirect(reverse('shop-car-detail', args=[car.pk]))
     if request.method == 'POST':
-        form = ReportForm(request.POST, request.FILES, user=request.user, garage=car.garage, car=car)
+        form = ReportForm(request.POST, request.FILES, user=request.user, fleet=car.fleet, car=car)
         if form.is_valid():
             with transaction.atomic():
                 report = form.save(commit=False)
@@ -307,19 +306,19 @@ def report_create(request: HttpRequest, car_pk: str) -> HttpResponse:
             messages.success(request, _('Maintenance report added successfully.'))
             return redirect(reverse('shop-car-detail', args=[car.pk]))
     else:
-        form = ReportForm(user=request.user, garage=car.garage, car=car)
+        form = ReportForm(user=request.user, fleet=car.fleet, car=car)
     return render(request, 'shop/report_form.html', {'form': form, 'is_create': True, 'car': car})
 
 
 @hanko_login_required
 def report_update(request: HttpRequest, car_pk: str, pk: str) -> HttpResponse:
-    car = get_object_or_404(user_cars_queryset(request.user).select_related('garage'), pk=car_pk)
-    if not GarageSharingPermissions(request.user, car.garage).can_edit_garage_data:
+    car = get_object_or_404(user_cars_queryset(request.user).select_related('fleet'), pk=car_pk)
+    if not FleetSharingPermissions(request.user, car.fleet).can_edit_fleet_data:
         messages.error(request, _('You do not have permission to update reports for this car.'))
         return redirect(reverse('shop-car-detail', args=[car.pk]))
     report = get_object_or_404(Report, pk=pk, car=car)
     if request.method == 'POST':
-        form = ReportForm(request.POST, request.FILES, instance=report, user=request.user, garage=car.garage, car=car)
+        form = ReportForm(request.POST, request.FILES, instance=report, user=request.user, fleet=car.fleet, car=car)
         if form.is_valid():
             with transaction.atomic():
                 form.save()
@@ -338,7 +337,7 @@ def report_update(request: HttpRequest, car_pk: str, pk: str) -> HttpResponse:
             messages.success(request, _('Maintenance report updated successfully.'))
             return redirect(reverse('shop-car-detail', args=[car.pk]))
     else:
-        form = ReportForm(instance=report, user=request.user, garage=car.garage, car=car)
+        form = ReportForm(instance=report, user=request.user, fleet=car.fleet, car=car)
     return render(request, 'shop/report_form.html', {'form': form, 'is_create': False, 'car': car, 'report': report})
 
 

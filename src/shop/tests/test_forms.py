@@ -2,11 +2,11 @@ from django.db import models
 from django.test import TestCase
 from shop.forms import CarCreateForm
 from shop.forms import CarUpdateForm
-from shop.forms import GarageCreateForm
+from shop.forms import FleetForm
 from shop.forms import ReportForm
 from shop.forms import WorkJobForm
 from shop.models.car import Car
-from shop.models.garage import Garage
+from shop.models.fleet import Fleet
 from shop.models.job import WorkJob
 from shop.models.report import Report
 
@@ -28,9 +28,9 @@ class FormEditableFieldsCoverageTests(TestCase):
         expected = self._editable_model_field_names(Car, exclude={'mileage'})
         self.assertSetEqual(set(CarUpdateForm.base_fields.keys()), expected)
 
-    def test_garage_create_form_covers_user_editable_garage_fields(self):
-        expected = self._editable_model_field_names(Garage, exclude={'created_by'})
-        self.assertSetEqual(set(GarageCreateForm.base_fields.keys()), expected)
+    def test_fleet_create_form_covers_user_editable_fleet_fields(self):
+        expected = self._editable_model_field_names(Fleet, exclude={'created_by'})
+        self.assertSetEqual(set(FleetForm.base_fields.keys()), expected)
 
     def test_workjob_form_covers_user_editable_workjob_fields(self):
         expected = self._editable_model_field_names(WorkJob, exclude={'car'})

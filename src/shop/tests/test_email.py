@@ -17,7 +17,7 @@ from anymail.exceptions import (
     AnymailRequestsAPIError,
 )
 
-from shop.models.garage import Garage, GarageInvitation
+from shop.models.fleet import Fleet, FleetInvitation
 from shop.models.user import ShopUser
 
 
@@ -145,12 +145,12 @@ class LocmemEndToEndTests(TestCase):
         self.owner = ShopUser.objects.create_user(
             username='owner', email='owner@example.com', password='pass1234',
         )
-        self.garage = Garage.objects.create(name='Alpha Garage', created_by=self.owner)
-        self.invitation = GarageInvitation.objects.create(
-            garage=self.garage,
+        self.fleet = Fleet.objects.create(name='Alpha Fleet', created_by=self.owner)
+        self.invitation = FleetInvitation.objects.create(
+            fleet=self.fleet,
             invited_email='member@example.com',
             invited_by=self.owner,
-            status=GarageInvitation.STATUS_PENDING,
+            status=FleetInvitation.STATUS_PENDING,
             expires_at=timezone.now() + timedelta(days=14),
         )
 

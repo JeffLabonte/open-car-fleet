@@ -5,17 +5,17 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 from openpyxl import load_workbook
-from shop.exporters import export_garage_to_excel
+from shop.exporters import export_fleet_to_excel
 from shop.models.attachment import Attachment
 from shop.models.car import Car
-from shop.models.garage import Garage
-from shop.models.garage import GarageMembership
+from shop.models.fleet import Fleet
+from shop.models.fleet import FleetMembership
 from shop.models.job import WorkJob
 from shop.models.report import Report
 from shop.models.user import ShopUser
 
 
-class GarageExportServiceTests(TestCase):
+class FleetExportServiceTests(TestCase):
     def setUp(self) -> None:
         self.owner = ShopUser.objects.create_user(
             username='export-owner',
@@ -23,29 +23,29 @@ class GarageExportServiceTests(TestCase):
             password='pass1234',
             is_mechanic=True,
         )
-        self.garage = Garage.objects.create(name='Primary Garage', created_by=self.owner)
-        GarageMembership.objects.create(
-            garage=self.garage,
+        self.fleet = Fleet.objects.create(name='Primary Fleet', created_by=self.owner)
+        FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.owner,
-            role=GarageMembership.ROLE_OWNER,
+            role=FleetMembership.ROLE_OWNER,
         )
 
-        self.other_garage = Garage.objects.create(name='Other Garage', created_by=self.owner)
-        GarageMembership.objects.create(
-            garage=self.other_garage,
+        self.other_fleet = Fleet.objects.create(name='Other Fleet', created_by=self.owner)
+        FleetMembership.objects.create(
+            fleet=self.other_fleet,
             user=self.owner,
-            role=GarageMembership.ROLE_OWNER,
+            role=FleetMembership.ROLE_OWNER,
         )
 
         self.primary_car = Car.objects.create(
-            garage=self.garage,
+            fleet=self.fleet,
             usual_name='Daily Driver',
             make='Toyota',
             model='Corolla',
             vin='2T1BURHE5JC512345',
         )
         self.other_car = Car.objects.create(
-            garage=self.other_garage,
+            fleet=self.other_fleet,
             usual_name='Spare Car',
             make='Honda',
             model='Civic',
@@ -96,12 +96,12 @@ class GarageExportServiceTests(TestCase):
             date_done=timezone.now().date(),
         )
 
-    def test_export_garage_to_excel_includes_expected_sheets_and_rows(self):
-        workbook_file = export_garage_to_excel(self.garage)
+    def test_export_fleet_to_excel_includes_expected_sheets_and_rows(self):
+        workbook_file = export_fleet_to_excel(self.fleet)
         workbook = load_workbook(filename=BytesIO(workbook_file.content))
 
         self.assertIn('meta', workbook.sheetnames)
-        self.assertIn('garage', workbook.sheetnames)
+        self.assertIn('fleet', workbook.sheetnames)
         self.assertIn('memberships', workbook.sheetnames)
         self.assertIn('cars_import', workbook.sheetnames)
         self.assertIn('workjobs_import', workbook.sheetnames)
@@ -123,7 +123,7 @@ class GarageExportServiceTests(TestCase):
         self.assertEqual(report_rows[0][12], 'invoice.pdf\nhttps://example.com/before.jpg')
 
 
-class GarageExportViewTests(TestCase):
+class FleetExportViewTests(TestCase):
     def setUp(self) -> None:
         self.owner = ShopUser.objects.create_user(
             username='export-view-owner',
@@ -142,70 +142,70 @@ class GarageExportViewTests(TestCase):
             password='pass1234',
         )
 
-        self.garage = Garage.objects.create(name='Export View Garage', created_by=self.owner)
-        GarageMembership.objects.create(
-            garage=self.garage,
+        self.fleet = Fleet.objects.create(name='Export View Fleet', created_by=self.owner)
+        FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.owner,
-            role=GarageMembership.ROLE_OWNER,
+            role=FleetMembership.ROLE_OWNER,
         )
-        GarageMembership.objects.create(
-            garage=self.garage,
+        FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.manager,
-            role=GarageMembership.ROLE_MANAGER,
+            role=FleetMembership.ROLE_MANAGER,
         )
-        GarageMembership.objects.create(
-            garage=self.garage,
+        FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.member,
-            role=GarageMembership.ROLE_MEMBER,
+            role=FleetMembership.ROLE_MEMBER,
         )
 
         self.primary_car = Car.objects.create(
-            garage=self.garage,
+            fleet=self.fleet,
             usual_name='Exportable',
             make='Ford',
             model='Focus',
             vin='1FAHP3F28CL512345',
         )
 
-        self.other_garage = Garage.objects.create(name='External Garage', created_by=self.owner)
-        GarageMembership.objects.create(
-            garage=self.other_garage,
+        self.other_fleet = Fleet.objects.create(name='External Fleet', created_by=self.owner)
+        FleetMembership.objects.create(
+            fleet=self.other_fleet,
             user=self.owner,
-            role=GarageMembership.ROLE_OWNER,
+            role=FleetMembership.ROLE_OWNER,
         )
         Car.objects.create(
-            garage=self.other_garage,
+            fleet=self.other_fleet,
             usual_name='Hidden',
             make='Tesla',
             model='Model 3',
             vin='5YJ3E1EA7LF512345',
         )
 
-    def test_unauthenticated_user_is_redirected_from_garage_export(self):
-        response = self.client.get(reverse('shop-garage-export', args=[self.garage.pk]))
+    def test_unauthenticated_user_is_redirected_from_fleet_export(self):
+        response = self.client.get(reverse('shop-fleet-export', args=[self.fleet.pk]))
 
         self.assertEqual(response.status_code, 302)
         self.assertTrue(response['Location'].startswith(f"{reverse('shop-login')}?next="))
 
-    def test_non_manager_is_redirected_from_garage_export(self):
+    def test_non_manager_is_redirected_from_fleet_export(self):
         self.client.force_login(self.member)
 
-        response = self.client.get(reverse('shop-garage-export', args=[self.garage.pk]))
+        response = self.client.get(reverse('shop-fleet-export', args=[self.fleet.pk]))
 
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response['Location'], reverse('shop-garage-detail', args=[self.garage.pk]))
+        self.assertEqual(response['Location'], reverse('shop-fleet-detail', args=[self.fleet.pk]))
 
-    def test_manager_can_download_garage_export_workbook(self):
+    def test_manager_can_download_fleet_export_workbook(self):
         self.client.force_login(self.manager)
 
-        response = self.client.get(reverse('shop-garage-export', args=[self.garage.pk]))
+        response = self.client.get(reverse('shop-fleet-export', args=[self.fleet.pk]))
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response['Content-Type'],
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         )
-        self.assertIn('attachment; filename="garage_export-view-garage_', response['Content-Disposition'])
+        self.assertIn('attachment; filename="fleet_export-view-fleet_', response['Content-Disposition'])
 
         workbook = load_workbook(filename=BytesIO(response.content))
         cars_rows = list(workbook['cars_import'].iter_rows(min_row=2, values_only=True))

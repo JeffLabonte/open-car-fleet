@@ -5,13 +5,13 @@
   <header class="page-header">
     {% include 'shop/partials/_page_header.html' with heading=title subheading=subtitle %}
     <div class="page-actions">
-      <a class="button is-light" href="{% url 'shop-garage-detail' garage.pk %}">{% translate 'Back' %}</a>
+      <a class="button is-light" href="{% url 'shop-fleet-detail' fleet.pk %}">{% translate 'Back' %}</a>
     </div>
   </header>
 
   <div class="split split--aside">
     <section class="box" data-testid="invite-form">
-      <h2 class="title is-4 mb-4">{% translate 'Share Fleet:' %} {{ garage.name }}</h2>
+      <h2 class="title is-4 mb-4">{% translate 'Share Fleet:' %} {{ fleet.name }}</h2>
 
       <form method="post" novalidate>
         {% csrf_token %}
@@ -32,7 +32,7 @@
             <button class="button is-primary" type="submit">{% translate 'Send invitation' %}</button>
           </div>
           <div class="control">
-            <a class="button is-light" href="{% url 'shop-garage-detail' garage.pk %}">{% translate 'Back' %}</a>
+            <a class="button is-light" href="{% url 'shop-fleet-detail' fleet.pk %}">{% translate 'Back' %}</a>
           </div>
         </div>
       </form>
@@ -52,7 +52,7 @@
               {% if invite.expires_at %}
                 <p class="help mb-0">{% translate 'Expires' %} {{ invite.expires_at|date:'F j, Y, g:i a' }}</p>
               {% endif %}
-              <form method="post" action="{% url 'shop-garage-invitation-cancel' garage.pk invite.pk %}" class="mt-2">
+              <form method="post" action="{% url 'shop-fleet-invitation-cancel' fleet.pk invite.pk %}" class="mt-2">
                 {% csrf_token %}
                 {% translate 'Cancel this invitation?' as cancel_confirmation %}
                 <button class="button is-small is-danger" type="submit" aria-label="{{ cancel_confirmation }}" data-testid="cancel-invitation-button">{% translate 'Cancel' %}</button>
@@ -64,7 +64,7 @@
         <p class="has-text-grey">{% translate 'No pending invitations.' %}</p>
       {% endif %}
       <div class="mt-4">
-        <a class="button is-light is-small" href="{% url 'shop-garage-members' garage.pk %}">{% translate 'Manage members' %}</a>
+        <a class="button is-light is-small" href="{% url 'shop-fleet-members' fleet.pk %}">{% translate 'Manage members' %}</a>
       </div>
     </aside>
   </div>

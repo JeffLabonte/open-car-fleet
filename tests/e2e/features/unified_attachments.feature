@@ -57,7 +57,7 @@ Feature: Unified attachment mechanism
 
   Scenario: A known shop proof can be created with a PDF attachment
     Given "owner@example.com" is signed in
-    When they create a known shop named "Proofed Garage"
+    When they create a known shop named "Proofed Fleet"
     And they open the add proof form for that shop
     And they fill the proof with title "Business registration"
     And they attach the pdf file to the proof form

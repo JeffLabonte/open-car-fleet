@@ -89,9 +89,9 @@ poetry run pytest src/shop/tests/test_auth.py::TestClass::test_name    # single 
 ### Unit test conventions
 
 - pytest-django is configured through `pytest.ini`; tests collect from `src` and `tests/bdd`.
-- Shop unit tests live in the `src/shop/tests/` package, one module per domain: `test_auth`, `test_garage_sharing`, `test_shops`, `test_cars`, `test_forms`, `test_attachments`, `test_importers`, `test_exporters`, `test_views`, `test_security`. Shared fakes and file signatures are in `src/shop/tests/helpers.py`.
+- Shop unit tests live in the `src/shop/tests/` package, one module per domain: `test_auth`, `test_fleet_sharing`, `test_shops`, `test_cars`, `test_forms`, `test_attachments`, `test_importers`, `test_exporters`, `test_views`, `test_security`. Shared fakes and file signatures are in `src/shop/tests/helpers.py`.
 - Auth mocking: `@patch('shop.auth.requests.get', ...)` for the Hanko API; authenticate test clients via `self.client.session['hanko_session_token'] = '...'` + `.save()`.
-- Email mocking: `@patch('shop.models.garage.send_mail')` for invitations, `@patch('anymail.backends.base_requests.requests.Session', return_value=fake_session)` for the MailerSend/Anymail backend (see `src/shop/tests/test_email.py`).
+- Email mocking: `@patch('shop.models.fleet.send_mail')` for invitations, `@patch('anymail.backends.base_requests.requests.Session', return_value=fake_session)` for the MailerSend/Anymail backend (see `src/shop/tests/test_email.py`).
 - `settings/test_settings.py` adds fast password hashing (MD5), a per-process temporary `MEDIA_ROOT`, and forces `django.core.mail.backends.locmem.EmailBackend` so no test reaches the MailerSend API.
 
 ### End-to-end suite (`make test-e2e`)
@@ -103,7 +103,7 @@ The e2e suite drives a real dev server with headless Firefox:
 3. Starts the server with `DJANGO_SETTINGS_MODULE=settings.test_settings`, `E2E_DB_PATH`, `DEBUG=True`, `HANKO_API_URL=''`, and cleared `POSTGRES_*` variables, then waits for `/login/` to respond.
 4. Runs `pytest -q -n0 tests/e2e` with the same environment, so the pytest process and the server **share the same database**. Fixture data created through the ORM is visible to the server.
 
-The server and pytest must never use different databases: fixtures that create users, garages, or cars via the ORM are invisible to the server otherwise, and every browser navigation 404s or times out.
+The server and pytest must never use different databases: fixtures that create users, fleets, or cars via the ORM are invisible to the server otherwise, and every browser navigation 404s or times out.
 
 Browser setup:
 

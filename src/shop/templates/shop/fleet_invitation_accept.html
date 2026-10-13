@@ -4,7 +4,7 @@
 {% block content %}
   <section class="box content-card auth-card" data-testid="invitation-card">
     <h1 class="title">{% translate 'Accept fleet invitation' %}</h1>
-    <p class="subtitle">{{ invitation.garage.name }}</p>
+    <p class="subtitle">{{ invitation.fleet.name }}</p>
 
     <p>
       {% blocktranslate with email=invitation.invited_email %}
@@ -20,11 +20,11 @@
     {% endif %}
 
     <div class="buttons mt-5">
-      <form method="post" action="{% url 'shop-garage-invitation-accept' invitation.token %}">
+      <form method="post" action="{% url 'shop-fleet-invitation-accept' invitation.token %}">
         {% csrf_token %}
         <button class="button is-primary" type="submit">{% translate 'Accept invitation' %}</button>
       </form>
-      <form method="post" action="{% url 'shop-garage-invitation-decline' invitation.token %}">
+      <form method="post" action="{% url 'shop-fleet-invitation-decline' invitation.token %}">
         {% csrf_token %}
         <button class="button is-light" type="submit">{% translate 'Decline' %}</button>
       </form>

@@ -1,6 +1,6 @@
 # Open Car Fleet — Agent Instructions
 
-Django 6 vehicle maintenance app (Poetry, Python ≥3.12) with two apps: `shop` (garages, cars, work jobs, reports) and `car_docs` (PDF car documents). Custom user model `shop.ShopUser`.
+Django 6 vehicle maintenance app (Poetry, Python ≥3.12) with two apps: `shop` (fleets, cars, work jobs, reports) and `car_docs` (PDF car documents). Custom user model `shop.ShopUser`.
 
 ## Commands
 
@@ -21,10 +21,10 @@ poetry run pytest src/shop/tests/test_auth.py -k NameFragment     # focused run
 poetry run pytest src/shop/tests/test_auth.py::TestClass::test_name    # single test
 
 # Management commands
-poetry run python src/manage.py import_csv Car src/imports/cars.csv --garage <garage-uuid>  # --garage REQUIRED for Car
-poetry run python src/manage.py import_csv WorkJob src/imports/workjobs.csv --garage <garage-uuid>
-poetry run python src/manage.py import_csv Report src/imports/reports_FMG3809.csv --garage <garage-uuid>
-poetry run python src/manage.py export_garage <garage-uuid> [--output path.xlsx]
+poetry run python src/manage.py import_csv Car src/imports/cars.csv --fleet <fleet-uuid>  # --fleet REQUIRED for Car
+poetry run python src/manage.py import_csv WorkJob src/imports/workjobs.csv --fleet <fleet-uuid>
+poetry run python src/manage.py import_csv Report src/imports/reports_FMG3809.csv --fleet <fleet-uuid>
+poetry run python src/manage.py export_fleet <fleet-uuid> [--output path.xlsx]
 poetry run python src/manage.py convert_user_to_mechanic <email>
 poetry run python src/manage.py send_test_email --to <email> [--from <addr>] [--backend <path>]
 
@@ -47,7 +47,7 @@ Other useful targets:
 - Tests need no Postgres or Docker: pytest-env clears `POSTGRES_*` variables before pytest-django initializes the settings module, forcing SQLite.
 - **`make test-e2e` runs the server and pytest against one shared SQLite file** (`E2E_DB`, default `/tmp/open-car-fleet-e2e-<port>.sqlite3`, wiped each run) via `DJANGO_SETTINGS_MODULE=settings.test_settings` + `E2E_DB_PATH`, with `POSTGRES_*` cleared. ORM fixture data is visible to the live server; never point the two processes at different databases.
 - Auth mocking: `@patch('shop.auth.requests.get', ...)` for the Hanko API; authenticate test clients via `self.client.session['hanko_session_token'] = '...'` + `.save()`.
-- Email mocking: `@patch('shop.models.garage.send_mail')` for invitations, `@patch('anymail.backends.base_requests.requests.Session', return_value=fake_session)` for the MailerSend/Anymail backend (see `src/shop/tests/test_email.py`). Unit tests and e2e force `django.core.mail.backends.locmem.EmailBackend` in `settings/test_settings.py`.
+- Email mocking: `@patch('shop.models.fleet.send_mail')` for invitations, `@patch('anymail.backends.base_requests.requests.Session', return_value=fake_session)` for the MailerSend/Anymail backend (see `src/shop/tests/test_email.py`). Unit tests and e2e force `django.core.mail.backends.locmem.EmailBackend` in `settings/test_settings.py`.
 - CI is `.github/workflows/test.yml`: the unit suite runs in Fedora and a separate PR job installs Firefox with `browser-actions/setup-firefox@v1` before running `make test-e2e`.
 
 ## Environment & Database
@@ -66,11 +66,11 @@ All protected views in both apps use `@hanko_login_required` from `shop.middlewa
 
 ## Data access
 
-Scope all queries to the requesting user via `src/shop/view_helpers.py`: `user_cars_queryset`, `user_garages_queryset`, `user_car_docs_queryset`, `user_can_manage_garage`. Never `Car.objects.all()` / `Garage.objects.all()` in views.
+Scope all queries to the requesting user via `src/shop/view_helpers.py`: `user_cars_queryset`, `user_fleets_queryset`, `user_car_docs_queryset`, `user_can_manage_fleet`. Never `Car.objects.all()` / `Fleet.objects.all()` in views.
 
 ## Model gotchas
 
-- **UUID PKs**: `Car`, `Garage`, `GarageInvitation` (other models use integer PKs).
+- **UUID PKs**: `Car`, `Fleet`, `FleetInvitation` (other models use integer PKs).
 - **Assignment mutual exclusion**: `WorkJob`/`Report` take `assigned_to` (mechanic user) OR `assigned_shop` (`KnownShop`), never both. Enforced by DB CheckConstraints (`workjob_single_assignment_target`, `report_single_assignment_target`) plus `AssignedToShopFormMixin.clean()` — saving both via the ORM raises IntegrityError. Model `clean()` additionally requires `assigned_to.is_mechanic`.
 - **VIN rules (11–17 alphanumerics, no I/O/Q, unique) live in `CarBaseForm.clean_vin` and `shop/importers.py`, NOT the model** — the model field is just `max_length=50, unique=True, nullable`, so ORM-created cars bypass VIN validation.
 - **Unified attachments**: `shop.Attachment` is the single generic attachment model (GenericForeignKey) used by `Report`, `CarDoc`, and `KnownShopProof`; parents declare a `GenericRelation` named `attachments`. There are NO separate `Report.documents`/`Report.photos` JSON fields or `CarDoc.file`/`KnownShopProof.file` upload fields. Uploads validate through `AttachmentField` (`src/shop/forms/base.py`: extension + declared content-type + magic-byte sniffing + 25 MB/file + max 10 files). Serving goes through one permission-checked view `shop-attachment-file` (`/attachments/<pk>/file/`). CSV `documents`/`photos`/`attachments` columns map to external-link attachments; the Excel export writes a single `attachments_text` column.
@@ -83,13 +83,13 @@ Scope all queries to the requesting user via `src/shop/view_helpers.py`: `user_c
 src/
   settings/         # Django settings, root urls.py
   shop/
-    models/         # one file per model: attachment, car, garage, job, report, user
-    forms/          # forms package: base.py (mixins, AttachmentField), car, garage, job, report, shop, import_data
-    views.py        # all shop views (function-based)
+    models/         # one file per model: attachment, car, fleet, job, report, user
+    forms/          # forms package: base.py (mixins, AttachmentField), car, fleet, job, report, shop, import_data
+    views/          # view package: auth, fleet, car, known_shops, invitations, attachments, helpers
     view_helpers.py, middleware.py, auth.py
     importers.py    # CSV import logic (import_csv command + web UI)
-    exporters.py    # Excel garage export (export_garage command + web UI)
-    management/commands/  # import_csv, export_garage, convert_user_to_mechanic
+    exporters.py    # Excel fleet export (export_fleet command + web UI)
+    management/commands/  # import_csv, export_fleet, convert_user_to_mechanic
   car_docs/         # CarDoc notes/documents; reuses shop's middleware and view_helpers
   imports/          # sample CSVs for import_csv
 ```

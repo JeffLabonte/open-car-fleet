@@ -9,55 +9,55 @@ from django.utils import timezone
 from openpyxl import Workbook
 
 from shop.models.car import Car
-from shop.models.garage import Garage
+from shop.models.fleet import Fleet
 from shop.models.job import WorkJob
 from shop.models.report import Report
 
 
 @dataclass(slots=True)
-class GarageExportWorkbook:
+class FleetExportWorkbook:
     filename: str
     content: bytes
 
 
-def export_garage_to_excel(garage: Garage) -> GarageExportWorkbook:
+def export_fleet_to_excel(fleet: Fleet) -> FleetExportWorkbook:
     exported_at = timezone.now()
-    data = _gather_export_data(garage)
+    data = _gather_export_data(fleet)
 
     workbook = Workbook()
-    _build_meta_sheet(workbook.active, garage, exported_at, data)
-    _build_garage_sheet(workbook.create_sheet("garage"), garage)
-    _build_memberships_sheet(workbook.create_sheet("memberships"), garage, data["memberships"])
-    _build_cars_sheet(workbook.create_sheet("cars_import"), garage, data["cars"])
+    _build_meta_sheet(workbook.active, fleet, exported_at, data)
+    _build_fleet_sheet(workbook.create_sheet("fleet"), fleet)
+    _build_memberships_sheet(workbook.create_sheet("memberships"), fleet, data["memberships"])
+    _build_cars_sheet(workbook.create_sheet("cars_import"), fleet, data["cars"])
     _build_jobs_sheet(workbook.create_sheet("workjobs_import"), data["jobs"])
     _build_reports_sheet(workbook.create_sheet("reports_import"), data["reports"])
 
     content = _serialize_workbook(workbook)
-    filename = _build_filename(garage, exported_at)
-    return GarageExportWorkbook(filename=filename, content=content)
+    filename = _build_filename(fleet, exported_at)
+    return FleetExportWorkbook(filename=filename, content=content)
 
 
-def _gather_export_data(garage: Garage) -> dict[str, Any]:
+def _gather_export_data(fleet: Fleet) -> dict[str, Any]:
     return {
-        "cars": list(Car.objects.filter(garage=garage).order_by("created_at")),
+        "cars": list(Car.objects.filter(fleet=fleet).order_by("created_at")),
         "jobs": list(
-            WorkJob.objects.filter(car__garage=garage)
+            WorkJob.objects.filter(car__fleet=fleet)
             .select_related("car", "assigned_to", "assigned_shop")
             .order_by("id")
         ),
         "reports": list(
-            Report.objects.filter(car__garage=garage)
+            Report.objects.filter(car__fleet=fleet)
             .select_related("car", "assigned_to", "assigned_shop")
             .prefetch_related("attachments")
             .order_by("id")
         ),
-        "memberships": list(garage.memberships.select_related("user").order_by("created_at", "id")),
+        "memberships": list(fleet.memberships.select_related("user").order_by("created_at", "id")),
     }
 
 
 def _build_meta_sheet(
     sheet: Any,
-    garage: Garage,
+    fleet: Fleet,
     exported_at: datetime,
     data: dict[str, Any],
 ) -> None:
@@ -68,8 +68,8 @@ def _build_meta_sheet(
         [
             ["export_version", "1"],
             ["exported_at_utc", exported_at.isoformat()],
-            ["garage_id", str(garage.pk)],
-            ["garage_name", garage.name],
+            ["fleet_id", str(fleet.pk)],
+            ["fleet_name", fleet.name],
             [
                 "row_counts_json",
                 json.dumps(
@@ -85,11 +85,11 @@ def _build_meta_sheet(
     )
 
 
-def _build_garage_sheet(sheet: Any, garage: Garage) -> None:
+def _build_fleet_sheet(sheet: Any, fleet: Fleet) -> None:
     _append_rows(
         sheet,
         [
-            "garage_id",
+            "fleet_id",
             "name",
             "description",
             "created_by_user_id",
@@ -98,22 +98,22 @@ def _build_garage_sheet(sheet: Any, garage: Garage) -> None:
         ],
         [
             [
-                str(garage.pk),
-                garage.name,
-                garage.description,
-                _string_or_empty(garage.created_by_id),
-                _format_datetime(garage.created_at),
-                _format_datetime(garage.updated_at),
+                str(fleet.pk),
+                fleet.name,
+                fleet.description,
+                _string_or_empty(fleet.created_by_id),
+                _format_datetime(fleet.created_at),
+                _format_datetime(fleet.updated_at),
             ]
         ],
     )
 
 
-def _build_memberships_sheet(sheet: Any, garage: Garage, memberships: list[Any]) -> None:
+def _build_memberships_sheet(sheet: Any, fleet: Fleet, memberships: list[Any]) -> None:
     _append_rows(
         sheet,
         [
-            "garage_id",
+            "fleet_id",
             "user_id",
             "user_email",
             "username",
@@ -123,7 +123,7 @@ def _build_memberships_sheet(sheet: Any, garage: Garage, memberships: list[Any])
         ],
         [
             [
-                str(garage.pk),
+                str(fleet.pk),
                 _string_or_empty(membership.user_id),
                 membership.user.email,
                 membership.user.username,
@@ -136,12 +136,12 @@ def _build_memberships_sheet(sheet: Any, garage: Garage, memberships: list[Any])
     )
 
 
-def _build_cars_sheet(sheet: Any, garage: Garage, cars: list[Car]) -> None:
+def _build_cars_sheet(sheet: Any, fleet: Fleet, cars: list[Car]) -> None:
     _append_rows(
         sheet,
         [
             "car_id",
-            "garage_id",
+            "fleet_id",
             "usual_name",
             "make",
             "model",
@@ -156,7 +156,7 @@ def _build_cars_sheet(sheet: Any, garage: Garage, cars: list[Car]) -> None:
         [
             [
                 str(car.pk),
-                str(garage.pk),
+                str(fleet.pk),
                 car.usual_name,
                 car.make,
                 car.model,
@@ -325,8 +325,8 @@ def _car_reference(car: Car) -> str:
     return car.vin or car.license_plate or car.usual_name or str(car.pk)
 
 
-def _build_filename(garage: Garage, exported_at: datetime) -> str:
-    slug = "".join(ch.lower() if ch.isalnum() else "-" for ch in garage.name).strip("-")
-    compact_slug = "-".join(part for part in slug.split("-") if part) or str(garage.pk)
+def _build_filename(fleet: Fleet, exported_at: datetime) -> str:
+    slug = "".join(ch.lower() if ch.isalnum() else "-" for ch in fleet.name).strip("-")
+    compact_slug = "-".join(part for part in slug.split("-") if part) or str(fleet.pk)
     timestamp = exported_at.strftime("%Y%m%d_%H%M%S")
-    return f"garage_{compact_slug}_{timestamp}.xlsx"
+    return f"fleet_{compact_slug}_{timestamp}.xlsx"

@@ -3,15 +3,15 @@
 # Open Car Fleet
 
 Open Car Fleet is an open-source Django 6 application for automotive maintenance management.
-It helps individuals and shared garages organize vehicles, plan maintenance work, and record completed service reports in one place.
+It helps individuals and shared fleets organize vehicles, plan maintenance work, and record completed service reports in one place.
 
 ## Project description
 
-- Manage garages and memberships with role-based access.
+- Manage fleets and memberships with role-based access.
 - Track cars with key identity and maintenance context.
 - Plan and assign work jobs to mechanics or known shops.
 - Record maintenance reports with dates, mileage, notes, and attachments.
-- Import normalized CSV datasets and export garage backups to Excel.
+- Import normalized CSV datasets and export fleet backups to Excel.
 
 ## Quick start
 
@@ -54,7 +54,7 @@ See [docs/deployment.md](docs/deployment.md) for the full deployment guide.
 
 | Document | Contents |
 | --- | --- |
-| [docs/management-commands.md](docs/management-commands.md) | `import_csv`, `export_garage`, `convert_user_to_mechanic`; CSV import schemas. |
+| [docs/management-commands.md](docs/management-commands.md) | `import_csv`, `export_fleet`, `convert_user_to_mechanic`; CSV import schemas. |
 | [docs/development.md](docs/development.md) | Makefile targets, environment, test suites, translations, migrations guard. |
 | [docs/deployment.md](docs/deployment.md) | Ansible + Docker Compose deployment, media persistence, and hourly backups. |
 | [docs/branding.md](docs/branding.md) | Logo-inspired accent colors and CSS variables. |
@@ -63,7 +63,7 @@ See [docs/deployment.md](docs/deployment.md) for the full deployment guide.
 
 Django 6 vehicle maintenance app (Poetry, Python ≥3.12) with two apps:
 
-- `shop`: garages, cars, work jobs, reports, memberships, and attachments.
+- `shop`: fleets, cars, work jobs, reports, memberships, and attachments.
 - `car_docs`: per-car document notes and files.
 
 Custom user model `shop.ShopUser`; authentication is Hanko-based (passkeys) with a Django session bridge. See [docs/development.md](docs/development.md) for environment variables and database selection.

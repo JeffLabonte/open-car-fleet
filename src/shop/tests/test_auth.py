@@ -35,9 +35,9 @@ from shop.importers import ImportValidationError
 from shop.middleware import HankoAuthenticationMiddleware
 from shop.middleware import hanko_login_required
 from shop.models.car import Car
-from shop.models.garage import Garage
-from shop.models.garage import GarageMembership
-from shop.models.garage import KnownShop
+from shop.models.fleet import Fleet
+from shop.models.fleet import FleetMembership
+from shop.models.fleet import KnownShop
 from shop.models.job import WorkJob
 from shop.models.report import Report
 from shop.models.user import ShopUser
@@ -89,7 +89,7 @@ class HankoAuthenticationIntegrationTests(TestCase):
         self.assertEqual(user.hanko_id, 'hanko-user-123')
         self.assertEqual(user.display_name, 'Test Driver')
         self.assertTrue(user.is_active)
-        self.assertFalse(user.garages.exists())
+        self.assertFalse(user.fleets.exists())
 
         self.client.logout()
         self.client.session['hanko_session_token'] = 'session-token-123'
@@ -837,13 +837,13 @@ class AuthAndInputCoverageTests(TestCase):
 
     def test_car_form_validators_cover_invalid_ranges_and_duplicates(self):
         self.user = ShopUser.objects.create_user(username='validator', email='validator@example.com', password='pass1234')
-        self.garage = Garage.objects.create(name='Validator Garage', created_by=self.user)
-        GarageMembership.objects.create(garage=self.garage, user=self.user, role=GarageMembership.ROLE_OWNER)
+        self.fleet = Fleet.objects.create(name='Validator Fleet', created_by=self.user)
+        FleetMembership.objects.create(fleet=self.fleet, user=self.user, role=FleetMembership.ROLE_OWNER)
 
-        Car.objects.create(garage=self.garage, make='Toyota', model='Yaris', vin='JTDKB20U793512346')
+        Car.objects.create(fleet=self.fleet, make='Toyota', model='Yaris', vin='JTDKB20U793512346')
 
         invalid_year = CarCreateForm(data={
-            'garage': self.garage.pk,
+            'fleet': self.fleet.pk,
             'make': 'Honda',
             'model': 'Civic',
             'year': '1800',
@@ -854,7 +854,7 @@ class AuthAndInputCoverageTests(TestCase):
         self.assertIn('year', invalid_year.errors)
 
         duplicate_vin = CarCreateForm(data={
-            'garage': self.garage.pk,
+            'fleet': self.fleet.pk,
             'make': 'Honda',
             'model': 'Civic',
             'year': '2024',
@@ -865,7 +865,7 @@ class AuthAndInputCoverageTests(TestCase):
         self.assertIn('vin', duplicate_vin.errors)
 
         invalid_chars = CarCreateForm(data={
-            'garage': self.garage.pk,
+            'fleet': self.fleet.pk,
             'make': 'Honda',
             'model': 'Civic',
             'year': '2024',
@@ -876,7 +876,7 @@ class AuthAndInputCoverageTests(TestCase):
         self.assertIn('vin', invalid_chars.errors)
 
         invalid_plate = CarCreateForm(data={
-            'garage': self.garage.pk,
+            'fleet': self.fleet.pk,
             'make': 'Honda',
             'model': 'Civic',
             'year': '2024',
@@ -893,11 +893,11 @@ class AuthAndInputCoverageTests(TestCase):
             email='orm-car-validator@example.com',
             password='pass1234',
         )
-        garage = Garage.objects.create(name='ORM Car Garage', created_by=user)
-        GarageMembership.objects.create(garage=garage, user=user, role=GarageMembership.ROLE_OWNER)
+        fleet = Fleet.objects.create(name='ORM Car Fleet', created_by=user)
+        FleetMembership.objects.create(fleet=fleet, user=user, role=FleetMembership.ROLE_OWNER)
 
         car = Car.objects.create(
-            garage=garage,
+            fleet=fleet,
             make='Honda',
             model='Civic',
             vin='SHORT',
@@ -905,7 +905,7 @@ class AuthAndInputCoverageTests(TestCase):
         self.assertEqual(car.vin, 'SHORT')
 
         car2 = Car.objects.create(
-            garage=garage,
+            fleet=fleet,
             make='Honda',
             model='Civic',
             vin='JTDKB20U793512351',
@@ -984,14 +984,14 @@ class AuthAndInputCoverageTests(TestCase):
             email='orm-non-mechanic@example.com',
             password='pass1234',
         )
-        garage = Garage.objects.create(name='ORM Guard Garage', created_by=non_mechanic)
-        GarageMembership.objects.create(
-            garage=garage,
+        fleet = Fleet.objects.create(name='ORM Guard Fleet', created_by=non_mechanic)
+        FleetMembership.objects.create(
+            fleet=fleet,
             user=non_mechanic,
-            role=GarageMembership.ROLE_OWNER,
+            role=FleetMembership.ROLE_OWNER,
         )
         car = Car.objects.create(
-            garage=garage,
+            fleet=fleet,
             make='Honda',
             model='Civic',
             vin='2HGFG12698H512346',

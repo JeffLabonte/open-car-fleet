@@ -11,30 +11,30 @@ poetry run python src/manage.py <command>
 Import normalized CSV datasets into the database.
 
 ```bash
-poetry run python ./src/manage.py import_csv Car src/imports/cars.csv --garage <garage-uuid>
+poetry run python ./src/manage.py import_csv Car src/imports/cars.csv --fleet <fleet-uuid>
 poetry run python ./src/manage.py import_csv WorkJob src/imports/workjobs.csv
 poetry run python ./src/manage.py import_csv Report src/imports/reports_FMG3809.csv
 ```
 
 - The importer supports normalized UTF-8 CSV files for `Car`, `WorkJob`, and `Report`.
 - Automatic dialect detection via Python's `csv.Sniffer` supports comma, semicolon, tab, or pipe delimited CSV files.
-- Car imports require a single target garage. In the web UI, use the garage detail page and choose `Import cars`; in the CLI, pass `--garage <garage-uuid>`.
+- Car imports require a single target fleet. In the web UI, use the fleet detail page and choose `Import cars`; in the CLI, pass `--fleet <fleet-uuid>`.
 - Work jobs and reports are imported from the selected car page in the web UI. In that flow, the selected car is applied automatically, so the CSV file can omit `car`.
 - In the CLI or any non-car-scoped flow, the `car` field can reference an existing car by UUID, VIN, license plate, or usual name.
 - List fields such as `required_items`, `documents`, and `photos` accept newline-delimited strings in quoted CSV cells.
 
-## export_garage
+## export_fleet
 
-Export one garage to an Excel backup workbook.
+Export one fleet to an Excel backup workbook.
 
 ```bash
-poetry run python ./src/manage.py export_garage <garage-uuid>
-poetry run python ./src/manage.py export_garage <garage-uuid> --output ./backups/my-garage.xlsx
+poetry run python ./src/manage.py export_fleet <fleet-uuid>
+poetry run python ./src/manage.py export_fleet <fleet-uuid> --output ./backups/my-fleet.xlsx
 ```
 
-- Garage backups are available from the garage detail page (`Export to Excel`), from the garage list quick action, and from the `export_garage` management command.
-- Export requires owner or manager role for the target garage in the web UI.
-- The default workbook includes `meta`, `garage`, `memberships`, `cars_import`, `workjobs_import`, and `reports_import` sheets.
+- Fleet backups are available from the fleet detail page (`Export to Excel`), from the fleet list quick action, and from the `export_fleet` management command.
+- Export requires owner or manager role for the target fleet in the web UI.
+- The default workbook includes `meta`, `fleet`, `memberships`, `cars_import`, `workjobs_import`, and `reports_import` sheets.
 - Invitation history is intentionally excluded from the default export.
 
 ## convert_user_to_mechanic
@@ -51,7 +51,7 @@ Each import file contains a header row with field names, followed by data rows.
 
 ## Car import schema
 
-Use this from a garage page in the web UI or with `import_csv Car ... --garage <garage-uuid>` in the CLI.
+Use this from a fleet page in the web UI or with `import_csv Car ... --fleet <fleet-uuid>` in the CLI.
 
 Required fields:
 - `make`: string
@@ -74,8 +74,8 @@ Daily Driver,Toyota,Corolla,,2018,92450,2T1BURHE5JC512345,ABC 123
 ```
 
 Notes:
-- Do not include `garage` in the CSV for the web flow. The selected garage is applied by the UI.
-- The CLI also ignores any `garage` field in the CSV and uses `--garage` instead.
+- Do not include `fleet` in the CSV for the web flow. The selected fleet is applied by the UI.
+- The CLI also ignores any `fleet` field in the CSV and uses `--fleet` instead.
 
 ## Work job import schema
 
@@ -158,4 +158,4 @@ Notes:
 - Unknown fields are ignored and reported as warnings.
 - If any row has validation errors, the whole import is treated as invalid and nothing is written.
 - `dry_run` validates records without saving them.
-- In the web flow, garage pages import cars only, and car pages import work jobs or reports only.
+- In the web flow, fleet pages import cars only, and car pages import work jobs or reports only.

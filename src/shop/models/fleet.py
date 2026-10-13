@@ -8,8 +8,8 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 
-class Garage(models.Model):
-    """A shared garage workspace that contains cars and members."""
+class Fleet(models.Model):
+    """A shared fleet workspace that contains cars and members."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=200)
@@ -19,26 +19,26 @@ class Garage(models.Model):
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name="owned_garages",
+        related_name="owned_fleets",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     members = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
-        through="GarageMembership",
-        related_name="garages",
+        through="FleetMembership",
+        related_name="fleets",
     )
 
     class Meta:
-        db_table = "garage"
+        db_table = "fleet"
         ordering = ["name"]
 
     def __str__(self) -> str:
         return self.name
 
 
-class GarageMembership(models.Model):
+class FleetMembership(models.Model):
     """Membership relation between a user and a fleet."""
 
     ROLE_OWNER = "owner"
@@ -60,27 +60,27 @@ class GarageMembership(models.Model):
     MANAGEMENT_ROLES = {ROLE_OWNER, ROLE_ADMIN}
     WRITE_DATA_ROLES = {ROLE_OWNER, ROLE_ADMIN, ROLE_MECHANIC}
 
-    garage = models.ForeignKey(Garage, on_delete=models.CASCADE, related_name="memberships")
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="garage_memberships")
+    fleet = models.ForeignKey(Fleet, on_delete=models.CASCADE, related_name="memberships")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="fleet_memberships")
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_VIEWER)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = "garage_membership"
-        unique_together = ("garage", "user")
+        db_table = "fleet_membership"
+        unique_together = ("fleet", "user")
         constraints = [
             models.CheckConstraint(
                 condition=models.Q(role__in=['owner', 'admin', 'mechanic', 'viewer']),
-                name="garage_membership_valid_role",
+                name="fleet_membership_valid_role",
             ),
         ]
 
     def __str__(self) -> str:
-        return f"{self.user} in fleet {self.garage} ({self.role})"
+        return f"{self.user} in fleet {self.fleet} ({self.role})"
 
 
-class GarageInvitation(models.Model):
+class FleetInvitation(models.Model):
     """Invitation used to share a fleet with an email recipient."""
 
     STATUS_PENDING = "pending"
@@ -98,21 +98,21 @@ class GarageInvitation(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    garage = models.ForeignKey(Garage, on_delete=models.CASCADE, related_name="invitations")
+    fleet = models.ForeignKey(Fleet, on_delete=models.CASCADE, related_name="invitations")
     invited_email = models.EmailField(db_index=True)
     invited_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name="sent_garage_invitations",
+        related_name="sent_fleet_invitations",
     )
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
     role = models.CharField(
         max_length=20,
-        choices=GarageMembership.ROLE_CHOICES,
-        default=GarageMembership.ROLE_VIEWER,
+        choices=FleetMembership.ROLE_CHOICES,
+        default=FleetMembership.ROLE_VIEWER,
     )
     message = models.TextField(blank=True)
     expires_at = models.DateTimeField(null=True, blank=True)
@@ -122,7 +122,7 @@ class GarageInvitation(models.Model):
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name="accepted_garage_invitations",
+        related_name="accepted_fleet_invitations",
     )
     declined_at = models.DateTimeField(null=True, blank=True)
     declined_by = models.ForeignKey(
@@ -130,27 +130,27 @@ class GarageInvitation(models.Model):
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name="declined_garage_invitations",
+        related_name="declined_fleet_invitations",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = "garage_invitation"
+        db_table = "fleet_invitation"
         indexes = [
             models.Index(fields=["invited_email"]),
             models.Index(fields=["status", "expires_at"]),
         ]
         constraints = [
             models.UniqueConstraint(
-                fields=["garage", "invited_email"],
+                fields=["fleet", "invited_email"],
                 condition=models.Q(status="pending"),
-                name="uniq_pending_invitation_per_garage_email",
+                name="uniq_pending_invitation_per_fleet_email",
             ),
         ]
 
     def __str__(self) -> str:
-        return f"Invite {self.invited_email} to fleet {self.garage}"
+        return f"Invite {self.invited_email} to fleet {self.fleet}"
 
     @property
     def is_expired(self) -> bool:
@@ -159,13 +159,13 @@ class GarageInvitation(models.Model):
     def send_invitation_email(self, accept_base_url: str, sender_email: str | None = None) -> int:
         """Send invitation email containing a tokenized acceptance URL."""
         tokenized_url = f"{accept_base_url.rstrip('/')}/{self.token}"
-        subject = _("You have been invited to join the fleet '%(name)s'") % {'name': self.garage.name}
+        subject = _("You have been invited to join the fleet '%(name)s'") % {'name': self.fleet.name}
         body = _(
             "You have been invited to join a shared fleet. "
             "Sign in with your social account (Google, Microsoft, or GitHub) to accept the invitation.\n\n"
             "Accept invitation: %(url)s\n\n"
             "Fleet: %(name)s\n"
-        ) % {'url': tokenized_url, 'name': self.garage.name}
+        ) % {'url': tokenized_url, 'name': self.fleet.name}
         if self.message:
             body += _("\nMessage from inviter:\n%(message)s\n") % {'message': self.message}
 

@@ -5,13 +5,13 @@ from django.core.management.base import BaseCommand, CommandError
 from django.utils.translation import gettext as _
 
 from shop.importers import CSVImporter, ImportContext, ImportValidationError
-from shop.models.garage import Garage
+from shop.models.fleet import Fleet
 
 
 class Command(BaseCommand):
     help = (
         "Import normalized CSV objects into Car, WorkJob, or Report. "
-        "All command-line imports require a target garage."
+        "All command-line imports require a target fleet."
     )
 
     def add_arguments(self, parser: Any) -> None:
@@ -35,8 +35,8 @@ class Command(BaseCommand):
             help="Validate the CSV data without saving any objects.",
         )
         parser.add_argument(
-            "--garage",
-            help="Required for every command-line import. Garage UUID used to scope records.",
+            "--fleet",
+            help="Required for every command-line import. Fleet UUID used to scope records.",
         )
 
     def handle(self, *args: Any, **options: Any) -> None:
@@ -45,10 +45,10 @@ class Command(BaseCommand):
         try:
             model = importer.resolve_model(options["model_name"])
             records = importer.parse_csv_file(options["csv_file"])
-            garage = self._resolve_garage(options.get("garage"))
-            if garage is None:
-                raise ImportValidationError('A target garage is required for command-line imports.')
-            context = ImportContext(garage=garage, user=garage.created_by)
+            fleet = self._resolve_fleet(options.get("fleet"))
+            if fleet is None:
+                raise ImportValidationError('A target fleet is required for command-line imports.')
+            context = ImportContext(fleet=fleet, user=fleet.created_by)
             result = importer.import_records(
                 model,
                 records,
@@ -81,10 +81,10 @@ class Command(BaseCommand):
             )
         )
 
-    def _resolve_garage(self, raw_value: str | None) -> Garage | None:
+    def _resolve_fleet(self, raw_value: str | None) -> Fleet | None:
         if raw_value in (None, ""):
             return None
         try:
-            return Garage.objects.get(pk=raw_value)
-        except (Garage.DoesNotExist, ValidationError, ValueError) as exc:
-            raise ImportValidationError(_("Garage not found for id '%(value)s'.") % {'value': raw_value}) from exc
+            return Fleet.objects.get(pk=raw_value)
+        except (Fleet.DoesNotExist, ValidationError, ValueError) as exc:
+            raise ImportValidationError(_("Fleet not found for id '%(value)s'.") % {'value': raw_value}) from exc

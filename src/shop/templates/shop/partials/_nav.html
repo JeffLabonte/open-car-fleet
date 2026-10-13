@@ -7,7 +7,7 @@
   </a>
   <nav class="app-sidebar__nav">
     <a class="app-navlink" href="{% url 'shop-index' %}" data-testid="nav-fleets">
-      {% include 'shop/partials/_icon.html' with name='garage' %}
+      {% include 'shop/partials/_icon.html' with name='fleet' %}
       <span>{% translate 'My Fleets' %}</span>
     </a>
     <a class="app-navlink" href="{% url 'shop-car-list' %}" data-testid="nav-cars">
@@ -52,7 +52,7 @@
 
 <nav class="app-tabbar" aria-label="{% translate 'Main navigation' %}" data-testid="app-tabbar">
   <a class="app-tab" href="{% url 'shop-index' %}">
-    {% include 'shop/partials/_icon.html' with name='garage' %}
+    {% include 'shop/partials/_icon.html' with name='fleet' %}
     <span>{% translate 'Fleets' %}</span>
   </a>
   <a class="app-tab" href="{% url 'shop-car-list' %}">

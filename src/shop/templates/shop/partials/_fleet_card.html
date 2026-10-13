@@ -1,23 +1,23 @@
 {% load i18n %}
-{% with cars=garage.cars.all %}
+{% with cars=fleet.cars.all %}
 <article class="fleet-card content-card" data-testid="fleet-card">
   <div class="fleet-card__head">
     <h2 class="fleet-card__title">
-      <a href="{% url 'shop-garage-detail' garage.pk %}">{{ garage.name }}</a>
+      <a href="{% url 'shop-fleet-detail' fleet.pk %}">{{ fleet.name }}</a>
     </h2>
-    {% if garage.pk in manageable_garage_ids %}
+    {% if fleet.pk in manageable_fleet_ids %}
       <span class="badge badge--owner">{% translate 'Manage' %}</span>
     {% endif %}
   </div>
-  {% if garage.description %}
-    <p class="fleet-card__desc">{{ garage.description }}</p>
+  {% if fleet.description %}
+    <p class="fleet-card__desc">{{ fleet.description }}</p>
   {% endif %}
   <div class="fleet-card__meta">
     <span class="chip">
       {% include 'shop/partials/_icon.html' with name='car' %}
       {% blocktranslate count counter=cars|length %}{{ counter }} car{% plural %}{{ counter }} cars{% endblocktranslate %}
     </span>
-    <span class="chip">{% translate 'Created' %} {{ garage.created_at|date:'M j, Y' }}</span>
+    <span class="chip">{% translate 'Created' %} {{ fleet.created_at|date:'M j, Y' }}</span>
   </div>
   {% if cars %}
     <ul class="fleet-card__cars">
@@ -35,9 +35,9 @@
     {% endif %}
   {% endif %}
   <div class="fleet-card__actions">
-    <a class="button is-light is-small" href="{% url 'shop-garage-detail' garage.pk %}">{% translate 'Open fleet' %}</a>
-    {% if garage.pk in manageable_garage_ids %}
-      <a class="button is-light is-small" href="{% url 'shop-garage-export' garage.pk %}">
+    <a class="button is-light is-small" href="{% url 'shop-fleet-detail' fleet.pk %}">{% translate 'Open fleet' %}</a>
+    {% if fleet.pk in manageable_fleet_ids %}
+      <a class="button is-light is-small" href="{% url 'shop-fleet-export' fleet.pk %}">
         {% include 'shop/partials/_icon.html' with name='download' %}
         <span>{% translate 'Export' %}</span>
       </a>

@@ -4,13 +4,13 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 from shop.models.car import Car
-from shop.models.garage import Garage
-from shop.models.garage import GarageInvitation
-from shop.models.garage import GarageMembership
+from shop.models.fleet import Fleet
+from shop.models.fleet import FleetInvitation
+from shop.models.fleet import FleetMembership
 from shop.models.user import ShopUser
 
 
-class GarageSharingTests(TestCase):
+class FleetSharingTests(TestCase):
     def setUp(self) -> None:
         self.owner = ShopUser.objects.create_user(
             username='owner',
@@ -27,64 +27,64 @@ class GarageSharingTests(TestCase):
             email='stranger@example.com',
             password='pass1234',
         )
-        self.garage = Garage.objects.create(name='Alpha Garage', created_by=self.owner)
-        GarageMembership.objects.create(
-            garage=self.garage,
+        self.fleet = Fleet.objects.create(name='Alpha Fleet', created_by=self.owner)
+        FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.owner,
-            role=GarageMembership.ROLE_OWNER,
+            role=FleetMembership.ROLE_OWNER,
         )
 
 
-    def test_create_garage_adds_owner_membership(self):
+    def test_create_fleet_adds_owner_membership(self):
         self.client.force_login(self.owner)
 
         response = self.client.post(
-            reverse('shop-garage-create'),
-            data={'name': 'Second Garage', 'description': 'Family vehicles'},
+            reverse('shop-fleet-create'),
+            data={'name': 'Second Fleet', 'description': 'Family vehicles'},
         )
 
         self.assertEqual(response.status_code, 302)
-        created = Garage.objects.get(name='Second Garage')
+        created = Fleet.objects.get(name='Second Fleet')
         self.assertTrue(
-            GarageMembership.objects.filter(
-                garage=created,
+            FleetMembership.objects.filter(
+                fleet=created,
                 user=self.owner,
-                role=GarageMembership.ROLE_OWNER,
+                role=FleetMembership.ROLE_OWNER,
             ).exists()
         )
 
-    @patch('shop.models.garage.send_mail', return_value=1)
-    def test_share_garage_creates_pending_invitation(self, _mock_send_mail: object):
+    @patch('shop.models.fleet.send_mail', return_value=1)
+    def test_share_fleet_creates_pending_invitation(self, _mock_send_mail: object):
         self.client.force_login(self.owner)
 
         response = self.client.post(
-            reverse('shop-garage-share', args=[self.garage.pk]),
+            reverse('shop-fleet-share', args=[self.fleet.pk]),
             data={
                 'invited_email': 'member@example.com',
-                'message': 'Join this garage.',
+                'message': 'Join this fleet.',
                 'expires_in_days': 14,
             },
         )
 
         self.assertEqual(response.status_code, 302)
-        invitation = GarageInvitation.objects.get(garage=self.garage, invited_email='member@example.com')
-        self.assertEqual(invitation.status, GarageInvitation.STATUS_PENDING)
+        invitation = FleetInvitation.objects.get(fleet=self.fleet, invited_email='member@example.com')
+        self.assertEqual(invitation.status, FleetInvitation.STATUS_PENDING)
         self.assertEqual(invitation.invited_by, self.owner)
         self.assertIsNotNone(invitation.expires_at)
 
-    @patch('shop.models.garage.send_mail', return_value=1)
+    @patch('shop.models.fleet.send_mail', return_value=1)
     def test_duplicate_pending_invitation_is_not_created(self, _mock_send_mail: object):
         self.client.force_login(self.owner)
-        GarageInvitation.objects.create(
-            garage=self.garage,
+        FleetInvitation.objects.create(
+            fleet=self.fleet,
             invited_email='member@example.com',
             invited_by=self.owner,
-            status=GarageInvitation.STATUS_PENDING,
+            status=FleetInvitation.STATUS_PENDING,
             expires_at=timezone.now() + timedelta(days=14),
         )
 
         response = self.client.post(
-            reverse('shop-garage-share', args=[self.garage.pk]),
+            reverse('shop-fleet-share', args=[self.fleet.pk]),
             data={
                 'invited_email': 'member@example.com',
                 'message': 'Second invite',
@@ -94,77 +94,77 @@ class GarageSharingTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(
-            GarageInvitation.objects.filter(
-                garage=self.garage,
+            FleetInvitation.objects.filter(
+                fleet=self.fleet,
                 invited_email='member@example.com',
-                status=GarageInvitation.STATUS_PENDING,
+                status=FleetInvitation.STATUS_PENDING,
             ).count(),
             1,
         )
 
-    @patch('shop.models.garage.send_mail', return_value=1)
+    @patch('shop.models.fleet.send_mail', return_value=1)
     def test_accept_invitation_adds_membership(self, _mock_send_mail: object):
-        invitation = GarageInvitation.objects.create(
-            garage=self.garage,
+        invitation = FleetInvitation.objects.create(
+            fleet=self.fleet,
             invited_email='member@example.com',
             invited_by=self.owner,
-            status=GarageInvitation.STATUS_PENDING,
+            status=FleetInvitation.STATUS_PENDING,
             expires_at=timezone.now() + timedelta(days=14),
         )
         self.client.force_login(self.member)
 
-        response = self.client.post(reverse('shop-garage-invitation-accept', args=[invitation.token]))
+        response = self.client.post(reverse('shop-fleet-invitation-accept', args=[invitation.token]))
 
         self.assertEqual(response.status_code, 302)
         self.assertTrue(
-            GarageMembership.objects.filter(
-                garage=self.garage,
+            FleetMembership.objects.filter(
+                fleet=self.fleet,
                 user=self.member,
             ).exists()
         )
         invitation.refresh_from_db()
-        self.assertEqual(invitation.status, GarageInvitation.STATUS_ACCEPTED)
+        self.assertEqual(invitation.status, FleetInvitation.STATUS_ACCEPTED)
         self.assertEqual(invitation.accepted_by, self.member)
 
     def test_accept_invitation_requires_matching_email(self):
-        invitation = GarageInvitation.objects.create(
-            garage=self.garage,
+        invitation = FleetInvitation.objects.create(
+            fleet=self.fleet,
             invited_email='member@example.com',
             invited_by=self.owner,
-            status=GarageInvitation.STATUS_PENDING,
+            status=FleetInvitation.STATUS_PENDING,
             expires_at=timezone.now() + timedelta(days=14),
         )
         self.client.force_login(self.stranger)
 
-        response = self.client.get(reverse('shop-garage-invitation-accept', args=[invitation.token]))
+        response = self.client.get(reverse('shop-fleet-invitation-accept', args=[invitation.token]))
 
         self.assertEqual(response.status_code, 302)
         self.assertFalse(
-            GarageMembership.objects.filter(
-                garage=self.garage,
+            FleetMembership.objects.filter(
+                fleet=self.fleet,
                 user=self.stranger,
             ).exists()
         )
         invitation.refresh_from_db()
-        self.assertEqual(invitation.status, GarageInvitation.STATUS_PENDING)
+        self.assertEqual(invitation.status, FleetInvitation.STATUS_PENDING)
 
-    def test_non_manager_cannot_share_garage(self):
-        GarageMembership.objects.create(
-            garage=self.garage,
+    def test_non_manager_cannot_share_fleet(self):
+        FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.member,
-            role=GarageMembership.ROLE_MEMBER,
+            role=FleetMembership.ROLE_MEMBER,
         )
         self.client.force_login(self.member)
 
-        response = self.client.get(reverse('shop-garage-share', args=[self.garage.pk]))
+        response = self.client.get(reverse('shop-fleet-share', args=[self.fleet.pk]))
 
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response['Location'], reverse('shop-garage-detail', args=[self.garage.pk]))
+        self.assertEqual(response['Location'], reverse('shop-fleet-detail', args=[self.fleet.pk]))
 
     def test_owner_can_delete_car_from_car_list(self):
         self.client.force_login(self.owner)
         car = Car.objects.create(
-            garage=self.garage,
+            fleet=self.fleet,
             make='Toyota',
             model='Yaris',
             vin='JTDKB20U793512345',
@@ -177,20 +177,20 @@ class GarageSharingTests(TestCase):
         self.assertFalse(Car.objects.filter(pk=car.pk).exists())
 
 
-class GarageSharingRoleModelTests(TestCase):
+class FleetSharingRoleModelTests(TestCase):
     def setUp(self) -> None:
         self.owner = ShopUser.objects.create_user(
             username='role-owner',
             email='role-owner@example.com',
             password='pass1234',
         )
-        self.garage = Garage.objects.create(name='Role Garage', created_by=self.owner)
+        self.fleet = Fleet.objects.create(name='Role Fleet', created_by=self.owner)
 
     def test_membership_has_audit_timestamps(self):
-        membership = GarageMembership.objects.create(
-            garage=self.garage,
+        membership = FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.owner,
-            role=GarageMembership.ROLE_OWNER,
+            role=FleetMembership.ROLE_OWNER,
         )
         self.assertIsNotNone(membership.created_at)
         self.assertIsNotNone(membership.updated_at)
@@ -201,12 +201,12 @@ class GarageSharingRoleModelTests(TestCase):
             email='role-admin@example.com',
             password='pass1234',
         )
-        membership = GarageMembership.objects.create(
-            garage=self.garage,
+        membership = FleetMembership.objects.create(
+            fleet=self.fleet,
             user=admin,
-            role=GarageMembership.ROLE_ADMIN,
+            role=FleetMembership.ROLE_ADMIN,
         )
-        self.assertEqual(membership.role, GarageMembership.ROLE_ADMIN)
+        self.assertEqual(membership.role, FleetMembership.ROLE_ADMIN)
 
     def test_invalid_role_is_rejected(self):
         user = ShopUser.objects.create_user(
@@ -214,8 +214,8 @@ class GarageSharingRoleModelTests(TestCase):
             email='role-user@example.com',
             password='pass1234',
         )
-        membership = GarageMembership(
-            garage=self.garage,
+        membership = FleetMembership(
+            fleet=self.fleet,
             user=user,
             role='superuser',
         )
@@ -223,55 +223,55 @@ class GarageSharingRoleModelTests(TestCase):
             membership.full_clean()
 
     def test_duplicate_membership_is_rejected(self):
-        GarageMembership.objects.create(
-            garage=self.garage,
+        FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.owner,
-            role=GarageMembership.ROLE_OWNER,
+            role=FleetMembership.ROLE_OWNER,
         )
-        duplicate = GarageMembership(
-            garage=self.garage,
+        duplicate = FleetMembership(
+            fleet=self.fleet,
             user=self.owner,
-            role=GarageMembership.ROLE_VIEWER,
+            role=FleetMembership.ROLE_VIEWER,
         )
         with self.assertRaises(Exception):
             duplicate.save()
 
 
-class GarageSharingInvitationRoleTests(TestCase):
+class FleetSharingInvitationRoleTests(TestCase):
     def setUp(self) -> None:
         self.owner = ShopUser.objects.create_user(
             username='invite-owner',
             email='invite-owner@example.com',
             password='pass1234',
         )
-        self.garage = Garage.objects.create(name='Invite Role Garage', created_by=self.owner)
-        GarageMembership.objects.create(
-            garage=self.garage,
+        self.fleet = Fleet.objects.create(name='Invite Role Fleet', created_by=self.owner)
+        FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.owner,
-            role=GarageMembership.ROLE_OWNER,
+            role=FleetMembership.ROLE_OWNER,
         )
 
-    @patch('shop.models.garage.send_mail', return_value=1)
+    @patch('shop.models.fleet.send_mail', return_value=1)
     def test_invitation_can_specify_role(self, _mock_send_mail: object):
         self.client.force_login(self.owner)
         response = self.client.post(
-            reverse('shop-garage-share', args=[self.garage.pk]),
+            reverse('shop-fleet-share', args=[self.fleet.pk]),
             data={
                 'invited_email': 'mechanic@example.com',
                 'message': 'Join as mechanic',
                 'expires_in_days': 14,
-                'role': GarageMembership.ROLE_MECHANIC,
+                'role': FleetMembership.ROLE_MECHANIC,
             },
         )
         self.assertEqual(response.status_code, 302)
-        invitation = GarageInvitation.objects.get(garage=self.garage, invited_email='mechanic@example.com')
-        self.assertEqual(invitation.role, GarageMembership.ROLE_MECHANIC)
+        invitation = FleetInvitation.objects.get(fleet=self.fleet, invited_email='mechanic@example.com')
+        self.assertEqual(invitation.role, FleetMembership.ROLE_MECHANIC)
 
-    @patch('shop.models.garage.send_mail', return_value=1)
+    @patch('shop.models.fleet.send_mail', return_value=1)
     def test_invitation_defaults_to_viewer_role(self, _mock_send_mail: object):
         self.client.force_login(self.owner)
         response = self.client.post(
-            reverse('shop-garage-share', args=[self.garage.pk]),
+            reverse('shop-fleet-share', args=[self.fleet.pk]),
             data={
                 'invited_email': 'viewer@example.com',
                 'message': 'Join as viewer',
@@ -279,11 +279,11 @@ class GarageSharingInvitationRoleTests(TestCase):
             },
         )
         self.assertEqual(response.status_code, 302)
-        invitation = GarageInvitation.objects.get(garage=self.garage, invited_email='viewer@example.com')
-        self.assertEqual(invitation.role, GarageMembership.ROLE_VIEWER)
+        invitation = FleetInvitation.objects.get(fleet=self.fleet, invited_email='viewer@example.com')
+        self.assertEqual(invitation.role, FleetMembership.ROLE_VIEWER)
 
 
-class GarageSharingMemberManagementTests(TestCase):
+class FleetSharingMemberManagementTests(TestCase):
     def setUp(self) -> None:
         self.owner = ShopUser.objects.create_user(
             username='mgmt-owner',
@@ -305,26 +305,26 @@ class GarageSharingMemberManagementTests(TestCase):
             email='mgmt-stranger@example.com',
             password='pass1234',
         )
-        self.garage = Garage.objects.create(name='Mgmt Garage', created_by=self.owner)
-        GarageMembership.objects.create(
-            garage=self.garage,
+        self.fleet = Fleet.objects.create(name='Mgmt Fleet', created_by=self.owner)
+        FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.owner,
-            role=GarageMembership.ROLE_OWNER,
+            role=FleetMembership.ROLE_OWNER,
         )
-        self.admin_membership = GarageMembership.objects.create(
-            garage=self.garage,
+        self.admin_membership = FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.admin,
-            role=GarageMembership.ROLE_ADMIN,
+            role=FleetMembership.ROLE_ADMIN,
         )
-        self.viewer_membership = GarageMembership.objects.create(
-            garage=self.garage,
+        self.viewer_membership = FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.viewer,
-            role=GarageMembership.ROLE_VIEWER,
+            role=FleetMembership.ROLE_VIEWER,
         )
 
     def test_owner_can_list_members(self):
         self.client.force_login(self.owner)
-        response = self.client.get(reverse('shop-garage-members', args=[self.garage.pk]))
+        response = self.client.get(reverse('shop-fleet-members', args=[self.fleet.pk]))
         self.assertEqual(response.status_code, 200)
         self.assertIn('members', response.context)
         member_emails = {m.user.email for m in response.context['members']}
@@ -335,119 +335,119 @@ class GarageSharingMemberManagementTests(TestCase):
     def test_owner_can_change_member_role(self):
         self.client.force_login(self.owner)
         response = self.client.post(
-            reverse('shop-garage-member-role', args=[self.garage.pk, self.viewer_membership.pk]),
-            data={'role': GarageMembership.ROLE_MECHANIC},
+            reverse('shop-fleet-member-role', args=[self.fleet.pk, self.viewer_membership.pk]),
+            data={'role': FleetMembership.ROLE_MECHANIC},
         )
         self.assertEqual(response.status_code, 302)
         self.viewer_membership.refresh_from_db()
-        self.assertEqual(self.viewer_membership.role, GarageMembership.ROLE_MECHANIC)
+        self.assertEqual(self.viewer_membership.role, FleetMembership.ROLE_MECHANIC)
 
     def test_admin_cannot_promote_to_admin_or_owner(self):
         self.client.force_login(self.admin)
         response = self.client.post(
-            reverse('shop-garage-member-role', args=[self.garage.pk, self.viewer_membership.pk]),
-            data={'role': GarageMembership.ROLE_ADMIN},
+            reverse('shop-fleet-member-role', args=[self.fleet.pk, self.viewer_membership.pk]),
+            data={'role': FleetMembership.ROLE_ADMIN},
         )
         self.assertEqual(response.status_code, 302)
         self.viewer_membership.refresh_from_db()
-        self.assertEqual(self.viewer_membership.role, GarageMembership.ROLE_VIEWER)
+        self.assertEqual(self.viewer_membership.role, FleetMembership.ROLE_VIEWER)
 
     def test_viewer_cannot_change_roles(self):
         self.client.force_login(self.viewer)
         response = self.client.post(
-            reverse('shop-garage-member-role', args=[self.garage.pk, self.admin_membership.pk]),
-            data={'role': GarageMembership.ROLE_VIEWER},
+            reverse('shop-fleet-member-role', args=[self.fleet.pk, self.admin_membership.pk]),
+            data={'role': FleetMembership.ROLE_VIEWER},
         )
         self.assertEqual(response.status_code, 302)
         self.admin_membership.refresh_from_db()
-        self.assertEqual(self.admin_membership.role, GarageMembership.ROLE_ADMIN)
+        self.assertEqual(self.admin_membership.role, FleetMembership.ROLE_ADMIN)
 
     def test_owner_can_remove_member(self):
         self.client.force_login(self.owner)
         response = self.client.post(
-            reverse('shop-garage-member-remove', args=[self.garage.pk, self.viewer_membership.pk]),
+            reverse('shop-fleet-member-remove', args=[self.fleet.pk, self.viewer_membership.pk]),
         )
         self.assertEqual(response.status_code, 302)
         self.assertFalse(
-            GarageMembership.objects.filter(pk=self.viewer_membership.pk).exists()
+            FleetMembership.objects.filter(pk=self.viewer_membership.pk).exists()
         )
 
     def test_cannot_remove_last_owner(self):
         self.client.force_login(self.owner)
         response = self.client.post(
-            reverse('shop-garage-member-remove', args=[self.garage.pk, self._owner_membership().pk]),
+            reverse('shop-fleet-member-remove', args=[self.fleet.pk, self._owner_membership().pk]),
         )
         self.assertEqual(response.status_code, 302)
         self.assertTrue(
-            GarageMembership.objects.filter(pk=self._owner_membership().pk).exists()
+            FleetMembership.objects.filter(pk=self._owner_membership().pk).exists()
         )
 
     def test_admin_cannot_remove_owner(self):
         self.client.force_login(self.admin)
         response = self.client.post(
-            reverse('shop-garage-member-remove', args=[self.garage.pk, self._owner_membership().pk]),
+            reverse('shop-fleet-member-remove', args=[self.fleet.pk, self._owner_membership().pk]),
         )
         self.assertEqual(response.status_code, 302)
         self.assertTrue(
-            GarageMembership.objects.filter(pk=self._owner_membership().pk).exists()
+            FleetMembership.objects.filter(pk=self._owner_membership().pk).exists()
         )
 
     def test_admin_cannot_demote_owner(self):
         self.client.force_login(self.admin)
         response = self.client.post(
-            reverse('shop-garage-member-role', args=[self.garage.pk, self._owner_membership().pk]),
-            data={'role': GarageMembership.ROLE_MECHANIC},
+            reverse('shop-fleet-member-role', args=[self.fleet.pk, self._owner_membership().pk]),
+            data={'role': FleetMembership.ROLE_MECHANIC},
         )
         self.assertEqual(response.status_code, 302)
         self._owner_membership().refresh_from_db()
-        self.assertEqual(self._owner_membership().role, GarageMembership.ROLE_OWNER)
+        self.assertEqual(self._owner_membership().role, FleetMembership.ROLE_OWNER)
 
     def test_owner_can_remove_admin(self):
         self.client.force_login(self.owner)
         response = self.client.post(
-            reverse('shop-garage-member-remove', args=[self.garage.pk, self.admin_membership.pk]),
+            reverse('shop-fleet-member-remove', args=[self.fleet.pk, self.admin_membership.pk]),
         )
         self.assertEqual(response.status_code, 302)
         self.assertFalse(
-            GarageMembership.objects.filter(pk=self.admin_membership.pk).exists()
+            FleetMembership.objects.filter(pk=self.admin_membership.pk).exists()
         )
 
     def test_owner_can_demote_admin(self):
         self.client.force_login(self.owner)
         response = self.client.post(
-            reverse('shop-garage-member-role', args=[self.garage.pk, self.admin_membership.pk]),
-            data={'role': GarageMembership.ROLE_MECHANIC},
+            reverse('shop-fleet-member-role', args=[self.fleet.pk, self.admin_membership.pk]),
+            data={'role': FleetMembership.ROLE_MECHANIC},
         )
         self.assertEqual(response.status_code, 302)
         self.admin_membership.refresh_from_db()
-        self.assertEqual(self.admin_membership.role, GarageMembership.ROLE_MECHANIC)
+        self.assertEqual(self.admin_membership.role, FleetMembership.ROLE_MECHANIC)
 
     def test_admin_can_still_remove_viewer(self):
         self.client.force_login(self.admin)
         response = self.client.post(
-            reverse('shop-garage-member-remove', args=[self.garage.pk, self.viewer_membership.pk]),
+            reverse('shop-fleet-member-remove', args=[self.fleet.pk, self.viewer_membership.pk]),
         )
         self.assertEqual(response.status_code, 302)
         self.assertFalse(
-            GarageMembership.objects.filter(pk=self.viewer_membership.pk).exists()
+            FleetMembership.objects.filter(pk=self.viewer_membership.pk).exists()
         )
 
     def test_stranger_gets_404_for_member_list(self):
-        other_garage = Garage.objects.create(name='Other Garage', created_by=self.stranger)
-        GarageMembership.objects.create(
-            garage=other_garage,
+        other_fleet = Fleet.objects.create(name='Other Fleet', created_by=self.stranger)
+        FleetMembership.objects.create(
+            fleet=other_fleet,
             user=self.stranger,
-            role=GarageMembership.ROLE_OWNER,
+            role=FleetMembership.ROLE_OWNER,
         )
         self.client.force_login(self.stranger)
-        response = self.client.get(reverse('shop-garage-members', args=[self.garage.pk]))
+        response = self.client.get(reverse('shop-fleet-members', args=[self.fleet.pk]))
         self.assertEqual(response.status_code, 404)
 
     def _owner_membership(self):
-        return GarageMembership.objects.get(garage=self.garage, user=self.owner)
+        return FleetMembership.objects.get(fleet=self.fleet, user=self.owner)
 
 
-class GarageSharingPermissionsHierarchyTests(TestCase):
+class FleetSharingPermissionsHierarchyTests(TestCase):
     def setUp(self) -> None:
         self.owner = ShopUser.objects.create_user(
             username='perm-owner',
@@ -469,30 +469,30 @@ class GarageSharingPermissionsHierarchyTests(TestCase):
             email='perm-viewer@example.com',
             password='pass1234',
         )
-        self.garage = Garage.objects.create(name='Perm Garage', created_by=self.owner)
-        GarageMembership.objects.create(garage=self.garage, user=self.owner, role=GarageMembership.ROLE_OWNER)
-        GarageMembership.objects.create(garage=self.garage, user=self.admin, role=GarageMembership.ROLE_ADMIN)
-        GarageMembership.objects.create(garage=self.garage, user=self.mechanic, role=GarageMembership.ROLE_MECHANIC)
-        GarageMembership.objects.create(garage=self.garage, user=self.viewer, role=GarageMembership.ROLE_VIEWER)
+        self.fleet = Fleet.objects.create(name='Perm Fleet', created_by=self.owner)
+        FleetMembership.objects.create(fleet=self.fleet, user=self.owner, role=FleetMembership.ROLE_OWNER)
+        FleetMembership.objects.create(fleet=self.fleet, user=self.admin, role=FleetMembership.ROLE_ADMIN)
+        FleetMembership.objects.create(fleet=self.fleet, user=self.mechanic, role=FleetMembership.ROLE_MECHANIC)
+        FleetMembership.objects.create(fleet=self.fleet, user=self.viewer, role=FleetMembership.ROLE_VIEWER)
 
     def test_role_hierarchy_enforcement(self):
-        from shop.permissions import GarageSharingPermissions
+        from shop.permissions import FleetSharingPermissions
 
-        owner_perms = GarageSharingPermissions(self.owner, self.garage)
-        self.assertTrue(owner_perms.can_manage_member(GarageMembership.ROLE_ADMIN))
-        self.assertTrue(owner_perms.can_manage_member(GarageMembership.ROLE_VIEWER))
+        owner_perms = FleetSharingPermissions(self.owner, self.fleet)
+        self.assertTrue(owner_perms.can_manage_member(FleetMembership.ROLE_ADMIN))
+        self.assertTrue(owner_perms.can_manage_member(FleetMembership.ROLE_VIEWER))
 
-        admin_perms = GarageSharingPermissions(self.admin, self.garage)
-        self.assertTrue(admin_perms.can_manage_member(GarageMembership.ROLE_MECHANIC))
-        self.assertTrue(admin_perms.can_manage_member(GarageMembership.ROLE_VIEWER))
-        self.assertFalse(admin_perms.can_manage_member(GarageMembership.ROLE_OWNER))
-        self.assertFalse(admin_perms.can_manage_member(GarageMembership.ROLE_ADMIN))
+        admin_perms = FleetSharingPermissions(self.admin, self.fleet)
+        self.assertTrue(admin_perms.can_manage_member(FleetMembership.ROLE_MECHANIC))
+        self.assertTrue(admin_perms.can_manage_member(FleetMembership.ROLE_VIEWER))
+        self.assertFalse(admin_perms.can_manage_member(FleetMembership.ROLE_OWNER))
+        self.assertFalse(admin_perms.can_manage_member(FleetMembership.ROLE_ADMIN))
 
-        mechanic_perms = GarageSharingPermissions(self.mechanic, self.garage)
-        self.assertFalse(mechanic_perms.can_manage_member(GarageMembership.ROLE_VIEWER))
+        mechanic_perms = FleetSharingPermissions(self.mechanic, self.fleet)
+        self.assertFalse(mechanic_perms.can_manage_member(FleetMembership.ROLE_VIEWER))
 
 
-class GarageSharingAcceptDeclineTests(TestCase):
+class FleetSharingAcceptDeclineTests(TestCase):
     def setUp(self) -> None:
         self.owner = ShopUser.objects.create_user(
             username='accept-owner',
@@ -504,89 +504,89 @@ class GarageSharingAcceptDeclineTests(TestCase):
             email='accept-invitee@example.com',
             password='pass1234',
         )
-        self.garage = Garage.objects.create(name='Accept Garage', created_by=self.owner)
-        GarageMembership.objects.create(
-            garage=self.garage,
+        self.fleet = Fleet.objects.create(name='Accept Fleet', created_by=self.owner)
+        FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.owner,
-            role=GarageMembership.ROLE_OWNER,
+            role=FleetMembership.ROLE_OWNER,
         )
 
-    @patch('shop.models.garage.send_mail', return_value=1)
+    @patch('shop.models.fleet.send_mail', return_value=1)
     def test_accept_invitation_uses_invited_role_on_post(self, _mock_send_mail: object):
-        invitation = GarageInvitation.objects.create(
-            garage=self.garage,
+        invitation = FleetInvitation.objects.create(
+            fleet=self.fleet,
             invited_email='accept-invitee@example.com',
             invited_by=self.owner,
-            status=GarageInvitation.STATUS_PENDING,
-            role=GarageMembership.ROLE_MECHANIC,
+            status=FleetInvitation.STATUS_PENDING,
+            role=FleetMembership.ROLE_MECHANIC,
             expires_at=timezone.now() + timezone.timedelta(days=14),
         )
         self.client.force_login(self.invitee)
 
-        response = self.client.post(reverse('shop-garage-invitation-accept', args=[invitation.token]))
+        response = self.client.post(reverse('shop-fleet-invitation-accept', args=[invitation.token]))
 
         self.assertEqual(response.status_code, 302)
-        membership = GarageMembership.objects.get(garage=self.garage, user=self.invitee)
-        self.assertEqual(membership.role, GarageMembership.ROLE_MECHANIC)
+        membership = FleetMembership.objects.get(fleet=self.fleet, user=self.invitee)
+        self.assertEqual(membership.role, FleetMembership.ROLE_MECHANIC)
         invitation.refresh_from_db()
-        self.assertEqual(invitation.status, GarageInvitation.STATUS_ACCEPTED)
+        self.assertEqual(invitation.status, FleetInvitation.STATUS_ACCEPTED)
 
     def test_get_accept_does_not_mutate(self):
-        invitation = GarageInvitation.objects.create(
-            garage=self.garage,
+        invitation = FleetInvitation.objects.create(
+            fleet=self.fleet,
             invited_email='accept-invitee@example.com',
             invited_by=self.owner,
-            status=GarageInvitation.STATUS_PENDING,
-            role=GarageMembership.ROLE_VIEWER,
+            status=FleetInvitation.STATUS_PENDING,
+            role=FleetMembership.ROLE_VIEWER,
             expires_at=timezone.now() + timezone.timedelta(days=14),
         )
         self.client.force_login(self.invitee)
 
-        response = self.client.get(reverse('shop-garage-invitation-accept', args=[invitation.token]))
+        response = self.client.get(reverse('shop-fleet-invitation-accept', args=[invitation.token]))
 
         self.assertEqual(response.status_code, 200)
         invitation.refresh_from_db()
-        self.assertEqual(invitation.status, GarageInvitation.STATUS_PENDING)
-        self.assertFalse(GarageMembership.objects.filter(garage=self.garage, user=self.invitee).exists())
+        self.assertEqual(invitation.status, FleetInvitation.STATUS_PENDING)
+        self.assertFalse(FleetMembership.objects.filter(fleet=self.fleet, user=self.invitee).exists())
 
     def test_decline_invitation_sets_status(self):
-        invitation = GarageInvitation.objects.create(
-            garage=self.garage,
+        invitation = FleetInvitation.objects.create(
+            fleet=self.fleet,
             invited_email='accept-invitee@example.com',
             invited_by=self.owner,
-            status=GarageInvitation.STATUS_PENDING,
-            role=GarageMembership.ROLE_VIEWER,
+            status=FleetInvitation.STATUS_PENDING,
+            role=FleetMembership.ROLE_VIEWER,
             expires_at=timezone.now() + timezone.timedelta(days=14),
         )
         self.client.force_login(self.invitee)
 
-        response = self.client.post(reverse('shop-garage-invitation-decline', args=[invitation.token]))
+        response = self.client.post(reverse('shop-fleet-invitation-decline', args=[invitation.token]))
 
         self.assertEqual(response.status_code, 302)
         invitation.refresh_from_db()
-        self.assertEqual(invitation.status, GarageInvitation.STATUS_DECLINED)
-        self.assertFalse(GarageMembership.objects.filter(garage=self.garage, user=self.invitee).exists())
+        self.assertEqual(invitation.status, FleetInvitation.STATUS_DECLINED)
+        self.assertFalse(FleetMembership.objects.filter(fleet=self.fleet, user=self.invitee).exists())
 
     def test_expired_invitation_is_not_accepted(self):
-        invitation = GarageInvitation.objects.create(
-            garage=self.garage,
+        invitation = FleetInvitation.objects.create(
+            fleet=self.fleet,
             invited_email='accept-invitee@example.com',
             invited_by=self.owner,
-            status=GarageInvitation.STATUS_PENDING,
-            role=GarageMembership.ROLE_VIEWER,
+            status=FleetInvitation.STATUS_PENDING,
+            role=FleetMembership.ROLE_VIEWER,
             expires_at=timezone.now() - timezone.timedelta(days=1),
         )
         self.client.force_login(self.invitee)
 
-        response = self.client.post(reverse('shop-garage-invitation-accept', args=[invitation.token]))
+        response = self.client.post(reverse('shop-fleet-invitation-accept', args=[invitation.token]))
 
         self.assertEqual(response.status_code, 302)
         invitation.refresh_from_db()
-        self.assertEqual(invitation.status, GarageInvitation.STATUS_EXPIRED)
-        self.assertFalse(GarageMembership.objects.filter(garage=self.garage, user=self.invitee).exists())
+        self.assertEqual(invitation.status, FleetInvitation.STATUS_EXPIRED)
+        self.assertFalse(FleetMembership.objects.filter(fleet=self.fleet, user=self.invitee).exists())
 
 
-class GarageInvitationCancelTests(TestCase):
+class FleetInvitationCancelTests(TestCase):
     def setUp(self) -> None:
         self.owner = ShopUser.objects.create_user(
             username='owner',
@@ -598,23 +598,23 @@ class GarageInvitationCancelTests(TestCase):
             email='stranger@example.com',
             password='pass1234',
         )
-        self.garage = Garage.objects.create(name='Cancel Garage', created_by=self.owner)
-        GarageMembership.objects.create(
-            garage=self.garage,
+        self.fleet = Fleet.objects.create(name='Cancel Fleet', created_by=self.owner)
+        FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.owner,
-            role=GarageMembership.ROLE_OWNER,
+            role=FleetMembership.ROLE_OWNER,
         )
-        GarageMembership.objects.create(
-            garage=self.garage,
+        FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.stranger,
-            role=GarageMembership.ROLE_VIEWER,
+            role=FleetMembership.ROLE_VIEWER,
         )
-        self.invitation = GarageInvitation.objects.create(
-            garage=self.garage,
+        self.invitation = FleetInvitation.objects.create(
+            fleet=self.fleet,
             invited_email='pending@example.com',
             invited_by=self.owner,
-            status=GarageInvitation.STATUS_PENDING,
-            role=GarageMembership.ROLE_VIEWER,
+            status=FleetInvitation.STATUS_PENDING,
+            role=FleetMembership.ROLE_VIEWER,
             expires_at=timezone.now() + timezone.timedelta(days=14),
         )
 
@@ -622,44 +622,44 @@ class GarageInvitationCancelTests(TestCase):
         self.client.force_login(self.owner)
 
         response = self.client.post(
-            reverse('shop-garage-invitation-cancel', args=[self.garage.pk, self.invitation.pk])
+            reverse('shop-fleet-invitation-cancel', args=[self.fleet.pk, self.invitation.pk])
         )
 
         self.assertEqual(response.status_code, 302)
         self.invitation.refresh_from_db()
-        self.assertEqual(self.invitation.status, GarageInvitation.STATUS_CANCELLED)
+        self.assertEqual(self.invitation.status, FleetInvitation.STATUS_CANCELLED)
 
     def test_cancelled_invitation_cannot_be_cancelled_again(self):
-        self.invitation.status = GarageInvitation.STATUS_CANCELLED
+        self.invitation.status = FleetInvitation.STATUS_CANCELLED
         self.invitation.save()
         self.client.force_login(self.owner)
 
         response = self.client.post(
-            reverse('shop-garage-invitation-cancel', args=[self.garage.pk, self.invitation.pk])
+            reverse('shop-fleet-invitation-cancel', args=[self.fleet.pk, self.invitation.pk])
         )
 
         self.assertEqual(response.status_code, 302)
         self.invitation.refresh_from_db()
-        self.assertEqual(self.invitation.status, GarageInvitation.STATUS_CANCELLED)
+        self.assertEqual(self.invitation.status, FleetInvitation.STATUS_CANCELLED)
 
     def test_non_manager_cannot_cancel_invitation(self):
         self.client.force_login(self.stranger)
 
         response = self.client.post(
-            reverse('shop-garage-invitation-cancel', args=[self.garage.pk, self.invitation.pk])
+            reverse('shop-fleet-invitation-cancel', args=[self.fleet.pk, self.invitation.pk])
         )
 
         self.assertEqual(response.status_code, 302)
         self.invitation.refresh_from_db()
-        self.assertEqual(self.invitation.status, GarageInvitation.STATUS_PENDING)
+        self.assertEqual(self.invitation.status, FleetInvitation.STATUS_PENDING)
 
     def test_get_request_does_not_cancel(self):
         self.client.force_login(self.owner)
 
         response = self.client.get(
-            reverse('shop-garage-invitation-cancel', args=[self.garage.pk, self.invitation.pk])
+            reverse('shop-fleet-invitation-cancel', args=[self.fleet.pk, self.invitation.pk])
         )
 
         self.assertEqual(response.status_code, 405)
         self.invitation.refresh_from_db()
-        self.assertEqual(self.invitation.status, GarageInvitation.STATUS_PENDING)
+        self.assertEqual(self.invitation.status, FleetInvitation.STATUS_PENDING)

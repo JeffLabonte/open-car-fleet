@@ -1,4 +1,4 @@
-Feature: Garage sharing lifecycle
+Feature: Fleet sharing lifecycle
   Fleet owners and admins can invite collaborators, manage their roles,
   and revoke access. Viewers can only read shared fleet data.
 

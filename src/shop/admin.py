@@ -4,7 +4,7 @@ from django.utils.translation import gettext_lazy as _
 
 from shop.models.attachment import Attachment
 from shop.models.car import Car
-from shop.models.garage import Garage, GarageInvitation, GarageMembership, KnownShop
+from shop.models.fleet import Fleet, FleetInvitation, FleetMembership, KnownShop
 from shop.models.job import WorkJob
 from shop.models.report import Report
 from shop.models.user import ShopUser
@@ -45,24 +45,24 @@ class ShopUserAdmin(admin.ModelAdmin):
     search_fields = ("username", "email", "display_name", "hanko_id")
 
 
-@admin.register(Garage)
-class GarageAdmin(admin.ModelAdmin):
+@admin.register(Fleet)
+class FleetAdmin(admin.ModelAdmin):
     list_display = ("name", "created_by", "created_at")
     search_fields = ("name",)
 
 
-@admin.register(GarageMembership)
-class GarageMembershipAdmin(admin.ModelAdmin):
-    list_display = ("garage", "user", "role", "created_at")
+@admin.register(FleetMembership)
+class FleetMembershipAdmin(admin.ModelAdmin):
+    list_display = ("fleet", "user", "role", "created_at")
     list_filter = ("role",)
-    search_fields = ("garage__name", "user__username", "user__email")
+    search_fields = ("fleet__name", "user__username", "user__email")
 
 
-@admin.register(GarageInvitation)
-class GarageInvitationAdmin(admin.ModelAdmin):
-    list_display = ("garage", "invited_email", "status", "invited_by", "created_at", "expires_at")
+@admin.register(FleetInvitation)
+class FleetInvitationAdmin(admin.ModelAdmin):
+    list_display = ("fleet", "invited_email", "status", "invited_by", "created_at", "expires_at")
     list_filter = ("status",)
-    search_fields = ("garage__name", "invited_email", "invited_by__email")
+    search_fields = ("fleet__name", "invited_email", "invited_by__email")
 
 
 @admin.register(KnownShop)

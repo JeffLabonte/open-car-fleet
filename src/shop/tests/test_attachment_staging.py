@@ -12,7 +12,7 @@ from django.utils import timezone
 from shop.forms.base import AttachmentField
 from shop.models.attachment import Attachment
 from shop.models.car import Car
-from shop.models.garage import Garage, GarageMembership
+from shop.models.fleet import Fleet, FleetMembership
 from shop.models.report import Report
 from shop.models.user import ShopUser
 from shop.tests.helpers import PNG_SIGNATURE
@@ -31,14 +31,14 @@ class AttachmentStagingEndpointTests(TestCase):
             email='staging-stranger@example.com',
             password='pass1234',
         )
-        self.garage = Garage.objects.create(name='Staging Garage', created_by=self.user)
-        GarageMembership.objects.create(
-            garage=self.garage,
+        self.fleet = Fleet.objects.create(name='Staging Fleet', created_by=self.user)
+        FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.user,
-            role=GarageMembership.ROLE_OWNER,
+            role=FleetMembership.ROLE_OWNER,
         )
         self.car = Car.objects.create(
-            garage=self.garage,
+            fleet=self.fleet,
             make='Toyota',
             model='Prius',
             vin='JTDKB20U929483756',
@@ -180,14 +180,14 @@ class StagedAttachmentClaimTests(TestCase):
             email='claim-stranger@example.com',
             password='pass1234',
         )
-        self.garage = Garage.objects.create(name='Claim Garage', created_by=self.user)
-        GarageMembership.objects.create(
-            garage=self.garage,
+        self.fleet = Fleet.objects.create(name='Claim Fleet', created_by=self.user)
+        FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.user,
-            role=GarageMembership.ROLE_OWNER,
+            role=FleetMembership.ROLE_OWNER,
         )
         self.car = Car.objects.create(
-            garage=self.garage,
+            fleet=self.fleet,
             make='Toyota',
             model='Corolla',
             vin='JTDKB20U112233445',

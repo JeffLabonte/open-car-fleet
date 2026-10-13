@@ -5,17 +5,17 @@ from shop.importers import CSVImporter
 from shop.importers import ImportContext
 from shop.models.car import Car
 from shop.models.car import CarPart
-from shop.models.garage import Garage
-from shop.models.garage import GarageMembership
+from shop.models.fleet import Fleet
+from shop.models.fleet import FleetMembership
 from shop.models.job import WorkJob
 from shop.models.user import ShopUser
 
 
 class CarPartStatusTrackingTests(TestCase):
     def setUp(self) -> None:
-        self.garage = Garage.objects.create(name='North Garage')
+        self.fleet = Fleet.objects.create(name='North Fleet')
         self.car = Car.objects.create(
-            garage=self.garage,
+            fleet=self.fleet,
             make='Toyota',
             model='Corolla',
             colour='Blue',
@@ -61,16 +61,16 @@ class ColourFieldTests(TestCase):
             email='colour-owner@example.com',
             password='pass1234',
         )
-        self.garage = Garage.objects.create(name='Colour Garage', created_by=self.user)
-        GarageMembership.objects.create(
-            garage=self.garage,
+        self.fleet = Fleet.objects.create(name='Colour Fleet', created_by=self.user)
+        FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.user,
-            role=GarageMembership.ROLE_OWNER,
+            role=FleetMembership.ROLE_OWNER,
         )
 
     def test_car_persists_colour_field(self):
         car = Car.objects.create(
-            garage=self.garage,
+            fleet=self.fleet,
             make='Toyota',
             model='Yaris',
             colour='Noir',
@@ -94,7 +94,7 @@ class ColourFieldTests(TestCase):
                 'colour': 'Blanc',
                 'vin': 'JTDKB20U793512347',
             }],
-            context=ImportContext(garage=self.garage),
+            context=ImportContext(fleet=self.fleet),
         )
 
         self.assertFalse(result.has_errors)
@@ -105,7 +105,7 @@ class ColourFieldTests(TestCase):
     def test_car_list_renders_colour_label_and_value(self):
         self.client.force_login(self.user)
         Car.objects.create(
-            garage=self.garage,
+            fleet=self.fleet,
             make='Toyota',
             model='Yaris',
             colour='Noir',
@@ -121,7 +121,7 @@ class ColourFieldTests(TestCase):
     def test_car_detail_renders_colour_label_and_value(self):
         self.client.force_login(self.user)
         car = Car.objects.create(
-            garage=self.garage,
+            fleet=self.fleet,
             make='Toyota',
             model='Yaris',
             colour='Noir',
@@ -137,7 +137,7 @@ class ColourFieldTests(TestCase):
     def test_car_detail_hides_done_and_cancelled_work_jobs_by_default(self):
         self.client.force_login(self.user)
         car = Car.objects.create(
-            garage=self.garage,
+            fleet=self.fleet,
             make='Toyota',
             model='Yaris',
             vin='JTDKB20U793512349',
@@ -158,7 +158,7 @@ class ColourFieldTests(TestCase):
     def test_car_detail_show_done_reveals_done_and_cancelled_work_jobs(self):
         self.client.force_login(self.user)
         car = Car.objects.create(
-            garage=self.garage,
+            fleet=self.fleet,
             make='Toyota',
             model='Yaris',
             vin='JTDKB20U793512349',

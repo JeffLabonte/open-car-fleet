@@ -5,21 +5,21 @@
   <header class="page-header">
     {% include 'shop/partials/_page_header.html' with heading=_('My Fleets') subheading=_('Keep an eye on the spaces and vehicles you manage.') %}
     <div class="page-actions">
-      <a class="button is-primary" href="{% url 'shop-garage-create' %}">
+      <a class="button is-primary" href="{% url 'shop-fleet-create' %}">
         {% include 'shop/partials/_icon.html' with name='plus' %}
         <span>{% translate 'Create fleet' %}</span>
       </a>
     </div>
   </header>
 
-  {% if garages %}
+  {% if fleets %}
     <div class="card-grid" data-testid="fleet-grid">
-      {% for garage in garages %}
+      {% for fleet in fleets %}
         {% include 'shop/partials/_fleet_card.html' %}
       {% endfor %}
     </div>
   {% else %}
-    {% url 'shop-garage-create' as create_fleet_url %}
+    {% url 'shop-fleet-create' as create_fleet_url %}
     {% include 'shop/partials/_empty_state.html' with empty_message=_('You are not a member of any fleet yet.') empty_action_url=create_fleet_url empty_action_label=_('Create fleet') %}
   {% endif %}
 {% endblock %}

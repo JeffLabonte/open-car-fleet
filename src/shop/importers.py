@@ -13,7 +13,7 @@ from django.db import IntegrityError, models, transaction
 from django.utils.translation import gettext as _
 
 from shop.models.car import Car
-from shop.models.garage import Garage, KnownShop
+from shop.models.fleet import Fleet, KnownShop
 from shop.models.job import WorkJob
 from shop.models.report import Report
 from shop.services import update_car_odometer_from_report
@@ -53,7 +53,7 @@ class ImportResult:
 
 @dataclass(slots=True)
 class ImportContext:
-    garage: Garage | None = None
+    fleet: Fleet | None = None
     car: Car | None = None
     user: Any = None
 
@@ -260,12 +260,12 @@ class CSVImporter:
         record: dict[str, Any],
         context: ImportContext,
     ) -> tuple[dict[str, Any], list[str]]:
-        garage = context.garage
-        if garage is None:
-            raise ImportValidationError(_("A target garage is required when importing cars."))
+        fleet = context.fleet
+        if fleet is None:
+            raise ImportValidationError(_("A target fleet is required when importing cars."))
 
         data = {
-            "garage": garage,
+            "fleet": fleet,
             "usual_name": self._clean_optional_text(record.get("usual_name")) or "",
             "make": self._require_text(record, "make"),
             "model": self._require_text(record, "model"),
@@ -274,7 +274,7 @@ class CSVImporter:
             "vin": self._normalize_vin(record.get("vin")),
             "license_plate": self._normalize_license_plate(record.get("license_plate")),
         }
-        warnings = self._ignored_field_warnings(record, set(data.keys()) | {"garage"})
+        warnings = self._ignored_field_warnings(record, set(data.keys()) | {"fleet"})
         return data, warnings
 
     def _prepare_workjob_record(
@@ -359,10 +359,10 @@ class CSVImporter:
             if raw_value in (None, ""):
                 return context.car
             queryset = Car.objects.filter(pk=context.car.pk)
-        elif context.garage is not None:
-            queryset = Car.objects.filter(garage=context.garage)
+        elif context.fleet is not None:
+            queryset = Car.objects.filter(fleet=context.fleet)
         else:
-            raise ImportValidationError(_('A target garage or car context is required.'))
+            raise ImportValidationError(_('A target fleet or car context is required.'))
 
         if raw_value in (None, ""):
             raise ImportValidationError(_("Car reference is required."))
@@ -403,10 +403,10 @@ class CSVImporter:
 
         user_model = get_user_model()
         queryset = user_model.objects.filter(is_mechanic=True)
-        if context is not None and context.garage is not None:
+        if context is not None and context.fleet is not None:
             queryset = queryset.filter(
-                garage_memberships__garage=context.garage,
-                garage_memberships__role__in=['owner', 'admin', 'mechanic'],
+                fleet_memberships__fleet=context.fleet,
+                fleet_memberships__role__in=['owner', 'admin', 'mechanic'],
             ).distinct()
         if isinstance(raw_value, str):
             value = raw_value.strip()

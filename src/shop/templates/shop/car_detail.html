@@ -10,11 +10,11 @@
     <div class="page-header mb-0">
       {% include 'shop/partials/_page_header.html' with heading=car.usual_name|default:car.make subheading=_('Vehicle identity, status tracker and maintenance ledger.') %}
       <div class="page-actions">
-        {% if can_edit_garage_data %}
+        {% if can_edit_fleet_data %}
           <a class="button is-link" href="{% url 'shop-car-update' car.pk %}">{% translate 'Edit' %}</a>
           <button class="button is-danger" type="button" data-dialog-open="dialog-car-delete" data-dialog-action="{% url 'shop-car-delete' car.pk %}" data-testid="delete-car-button">{% translate 'Delete' %}</button>
         {% endif %}
-        {% if can_edit_garage_data %}
+        {% if can_edit_fleet_data %}
           <a class="button is-primary" href="{% url 'shop-workjob-create' car.pk %}">
             {% include 'shop/partials/_icon.html' with name='plus' %}
             <span>{% translate 'Add planned work' %}</span>
@@ -44,7 +44,7 @@
     </dl>
   </div>
 
-  {% if can_edit_garage_data %}
+  {% if can_edit_fleet_data %}
     <dialog class="dialog" id="dialog-car-delete">
       <form method="post" action="#" data-dialog-action-form>
         {% csrf_token %}
@@ -61,7 +61,7 @@
   <section class="section-head" data-testid="parts-section">
     <h2 class="title is-4">{% translate 'Part status tracker' %}</h2>
     <div class="section-actions">
-      {% if can_edit_garage_data %}
+      {% if can_edit_fleet_data %}
         <a class="button is-primary is-small" href="{% url 'shop-part-create' car.pk %}">{% translate 'Add part status' %}</a>
       {% endif %}
     </div>
@@ -104,7 +104,7 @@
                   {% endwith %}
                 </td>
                 <td data-label="">
-                  {% if can_edit_garage_data %}
+                  {% if can_edit_fleet_data %}
                     <a class="button is-small is-link" href="{% url 'shop-part-update' car.pk part.pk %}">{% translate 'Edit' %}</a>
                   {% endif %}
                 </td>
@@ -126,7 +126,7 @@
       {% else %}
         <a class="button is-light is-small" href="{% url 'shop-car-detail' car.pk %}?show_done=1">{% translate 'Show done/cancelled' %}</a>
       {% endif %}
-      {% if can_edit_garage_data %}
+      {% if can_edit_fleet_data %}
         <a class="button is-info is-small" href="{% url 'shop-car-import' car.pk %}?type=workjob">
           {% include 'shop/partials/_icon.html' with name='upload' %}
           <span>{% translate 'Import work jobs' %}</span>
@@ -176,7 +176,7 @@
                 </td>
                 <td data-label="{% translate 'Done' %}">{{ job.done_date|date:'M j, Y'|default:'—' }}</td>
                 <td data-label="">
-                  {% if can_edit_garage_data %}
+                  {% if can_edit_fleet_data %}
                     <a class="button is-small is-link" href="{% url 'shop-workjob-update' car.pk job.pk %}">{% translate 'Edit' %}</a>
                   {% endif %}
                 </td>
@@ -199,7 +199,7 @@
   <section class="section-head" data-testid="reports-section">
     <h2 class="title is-4">{% translate 'Maintenance history' %}</h2>
     <div class="section-actions">
-      {% if can_edit_garage_data %}
+      {% if can_edit_fleet_data %}
         <a class="button is-info is-small" href="{% url 'shop-car-import' car.pk %}?type=report">
           {% include 'shop/partials/_icon.html' with name='upload' %}
           <span>{% translate 'Import reports' %}</span>
@@ -214,7 +214,7 @@
       <article class="message is-info" data-testid="report-card">
         <div class="message-header">
           <p>{{ report.job_name }} — {{ report.date_done|date:'F j, Y' }}</p>
-          {% if can_edit_garage_data %}
+          {% if can_edit_fleet_data %}
             <a class="button is-small" href="{% url 'shop-report-update' car.pk report.pk %}">{% translate 'Edit' %}</a>
           {% endif %}
         </div>

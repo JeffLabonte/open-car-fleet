@@ -12,9 +12,8 @@ from shop.forms import (
     CarImportForm,
     CarPartForm,
     FleetForm,
-    GarageCreateForm,
-    GarageInviteForm,
-    GarageMembershipRoleForm,
+    FleetInviteForm,
+    FleetMembershipRoleForm,
     KnownShopForm,
     KnownShopProofForm,
     ReportForm,
@@ -23,10 +22,10 @@ from shop.forms import (
 from shop.middleware import hanko_login_required
 from shop.services.attachments import save_attachments
 from shop.view_helpers import (
-    user_can_manage_garage,
+    user_can_manage_fleet,
     user_can_manage_known_shop,
     user_cars_queryset,
-    user_garages_queryset,
+    user_fleets_queryset,
     user_known_shops_queryset,
 )
 from shop.views.helpers import handle_model_form

@@ -4,12 +4,12 @@ from django.test import TestCase
 from django.test.utils import override_settings
 from django.urls import reverse
 from openpyxl import load_workbook
-from shop.exporters import export_garage_to_excel
+from shop.exporters import export_fleet_to_excel
 from shop.forms import ReportForm
 from shop.models.attachment import Attachment
 from shop.models.car import Car
-from shop.models.garage import Garage
-from shop.models.garage import GarageMembership
+from shop.models.fleet import Fleet
+from shop.models.fleet import FleetMembership
 from shop.models.user import ShopUser
 from shop.tests.helpers import PNG_SIGNATURE
 
@@ -23,14 +23,14 @@ class SecurityHardeningTests(TestCase):
             email='security-owner@example.com',
             password='pass1234',
         )
-        self.garage = Garage.objects.create(name='Security Garage', created_by=self.owner)
-        GarageMembership.objects.create(
-            garage=self.garage,
+        self.fleet = Fleet.objects.create(name='Security Fleet', created_by=self.owner)
+        FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.owner,
-            role=GarageMembership.ROLE_OWNER,
+            role=FleetMembership.ROLE_OWNER,
         )
         self.car = Car.objects.create(
-            garage=self.garage,
+            fleet=self.fleet,
             make='Toyota',
             model='Yaris',
             vin='JTDKB20U793512349',
@@ -137,7 +137,7 @@ class SecurityHardeningTests(TestCase):
                 ),
             },
             user=self.owner,
-            garage=self.garage,
+            fleet=self.fleet,
         )
         self.assertFalse(form.is_valid())
         self.assertIn('attachments', form.errors)
@@ -159,7 +159,7 @@ class SecurityHardeningTests(TestCase):
                 ),
             },
             user=self.owner,
-            garage=self.garage,
+            fleet=self.fleet,
         )
         self.assertFalse(form.is_valid())
         self.assertIn('attachments', form.errors)
@@ -188,7 +188,7 @@ class SecurityHardeningTests(TestCase):
                     ),
                 },
                 user=self.owner,
-                garage=self.garage,
+                fleet=self.fleet,
             )
             self.assertFalse(form.is_valid())
         self.assertIn('attachments', form.errors)
@@ -211,7 +211,7 @@ class SecurityHardeningTests(TestCase):
                 ],
             },
             user=self.owner,
-            garage=self.garage,
+            fleet=self.fleet,
         )
         self.assertFalse(form.is_valid())
         self.assertIn('attachments', form.errors)
@@ -236,12 +236,12 @@ class SecurityHardeningTests(TestCase):
         self.assertEqual(response.status_code, 400)
 
     def test_excel_export_neutralizes_formula_injection(self):
-        self.garage.name = "=cmd|'/c calc'!A0"
-        self.garage.save(update_fields=['name'])
-        workbook_file = export_garage_to_excel(self.garage)
+        self.fleet.name = "=cmd|'/c calc'!A0"
+        self.fleet.save(update_fields=['name'])
+        workbook_file = export_fleet_to_excel(self.fleet)
         workbook = load_workbook(filename=BytesIO(workbook_file.content))
-        garage_name_cell = workbook['garage'].cell(row=2, column=2).value
-        self.assertEqual(garage_name_cell, "'=cmd|'/c calc'!A0")
+        fleet_name_cell = workbook['fleet'].cell(row=2, column=2).value
+        self.assertEqual(fleet_name_cell, "'=cmd|'/c calc'!A0")
 
     def test_known_shop_create_invalid_post_returns_form_not_500(self):
         self.client.force_login(self.owner)
@@ -252,7 +252,7 @@ class SecurityHardeningTests(TestCase):
     def test_fleet_edit_dialog_opens_via_data_attribute_not_inline_script(self):
         self.client.force_login(self.owner)
         response = self.client.post(
-            reverse('shop-garage-update', args=[self.garage.pk]),
+            reverse('shop-fleet-update', args=[self.fleet.pk]),
             data={'name': '', 'description': ''},
         )
         self.assertEqual(response.status_code, 200)
@@ -264,48 +264,48 @@ class SecurityHardeningTests(TestCase):
         self.assertIn("script-src 'self'", response['Content-Security-Policy'])
 
     def test_admin_remove_owner_emits_security_log(self):
-        from shop.models.garage import GarageMembership
+        from shop.models.fleet import FleetMembership
 
         admin = ShopUser.objects.create_user(
             username='security-admin',
             email='security-admin@example.com',
             password='pass1234',
         )
-        GarageMembership.objects.create(
-            garage=self.garage,
+        FleetMembership.objects.create(
+            fleet=self.fleet,
             user=admin,
-            role=GarageMembership.ROLE_ADMIN,
+            role=FleetMembership.ROLE_ADMIN,
         )
-        owner_membership = GarageMembership.objects.get(garage=self.garage, user=self.owner)
+        owner_membership = FleetMembership.objects.get(fleet=self.fleet, user=self.owner)
 
         self.client.force_login(admin)
         with self.assertLogs('security', level='WARNING') as cm:
             self.client.post(
-                reverse('shop-garage-member-remove', args=[self.garage.pk, owner_membership.pk]),
+                reverse('shop-fleet-member-remove', args=[self.fleet.pk, owner_membership.pk]),
             )
         self.assertTrue(
             any('access_denied' in message and 'member_remove_hierarchy_violation' in message for message in cm.output)
         )
 
     def test_successful_role_change_emits_security_log(self):
-        from shop.models.garage import GarageMembership
+        from shop.models.fleet import FleetMembership
 
         viewer = ShopUser.objects.create_user(
             username='security-viewer',
             email='security-viewer@example.com',
             password='pass1234',
         )
-        membership = GarageMembership.objects.create(
-            garage=self.garage,
+        membership = FleetMembership.objects.create(
+            fleet=self.fleet,
             user=viewer,
-            role=GarageMembership.ROLE_VIEWER,
+            role=FleetMembership.ROLE_VIEWER,
         )
 
         self.client.force_login(self.owner)
         with self.assertLogs('security', level='INFO') as cm:
             self.client.post(
-                reverse('shop-garage-member-role', args=[self.garage.pk, membership.pk]),
-                data={'role': GarageMembership.ROLE_MECHANIC},
+                reverse('shop-fleet-member-role', args=[self.fleet.pk, membership.pk]),
+                data={'role': FleetMembership.ROLE_MECHANIC},
             )
         self.assertTrue(
             any('role_changed' in message and 'mechanic' in message for message in cm.output)

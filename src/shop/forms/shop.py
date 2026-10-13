@@ -2,7 +2,7 @@ from django import forms
 from django.utils.translation import gettext_lazy as _
 
 from shop.forms.base import AttachmentField, MultipleFileInput, StagedAttachmentsMixin
-from shop.models.garage import KnownShop, KnownShopProof
+from shop.models.fleet import KnownShop, KnownShopProof
 
 
 class KnownShopForm(forms.ModelForm):

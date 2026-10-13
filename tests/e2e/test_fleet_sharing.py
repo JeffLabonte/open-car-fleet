@@ -11,11 +11,11 @@ from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
 
 from shop.auth import sync_hanko_user
-from shop.models import Car, Garage, GarageMembership
+from shop.models import Car, Fleet, FleetMembership
 from shop.models.user import ShopUser
 
 
-scenarios('features/garage_sharing.feature')
+scenarios('features/fleet_sharing.feature')
 
 FLEET_NAME = 'Shared Fleet'
 
@@ -53,11 +53,11 @@ def _sync_user(email: str):
     )
 
 
-def _ensure_member(garage: Garage, email: str, role: str, blocker) -> None:
+def _ensure_member(fleet: Fleet, email: str, role: str, blocker) -> None:
     with blocker.unblock():
         user = _sync_user(email)
-        membership, _ = GarageMembership.objects.get_or_create(
-            garage=garage,
+        membership, _ = FleetMembership.objects.get_or_create(
+            fleet=fleet,
             user=user,
             defaults={'role': role},
         )
@@ -76,38 +76,38 @@ def fleet_owner_owner():
     pass
 
 
-@given('a fleet "Shared Fleet" owned by "owner@example.com"', target_fixture='shared_garage')
-def shared_fleet(django_db_blocker) -> Garage:
+@given('a fleet "Shared Fleet" owned by "owner@example.com"', target_fixture='shared_fleet')
+def shared_fleet(django_db_blocker) -> Fleet:
     with django_db_blocker.unblock():
         owner = _sync_user('owner@example.com')
-        garage, _ = Garage.objects.get_or_create(
+        fleet, _ = Fleet.objects.get_or_create(
             name=FLEET_NAME,
             defaults={'created_by': owner},
         )
-        GarageMembership.objects.get_or_create(
-            garage=garage,
+        FleetMembership.objects.get_or_create(
+            fleet=fleet,
             user=owner,
-            defaults={'role': GarageMembership.ROLE_OWNER},
+            defaults={'role': FleetMembership.ROLE_OWNER},
         )
-        GarageMembership.objects.filter(garage=garage).exclude(user=owner).delete()
-        return garage
+        FleetMembership.objects.filter(fleet=fleet).exclude(user=owner).delete()
+        return fleet
 
 
 @given('"viewer@example.com" is a viewer of "Shared Fleet"')
-def viewer_of_shared_fleet(shared_garage: Garage, django_db_blocker):
-    _ensure_member(shared_garage, 'viewer@example.com', GarageMembership.ROLE_VIEWER, django_db_blocker)
+def viewer_of_shared_fleet(shared_fleet: Fleet, django_db_blocker):
+    _ensure_member(shared_fleet, 'viewer@example.com', FleetMembership.ROLE_VIEWER, django_db_blocker)
 
 
 @given('"admin@example.com" is an admin of "Shared Fleet"')
-def admin_of_shared_fleet(shared_garage: Garage, django_db_blocker):
-    _ensure_member(shared_garage, 'admin@example.com', GarageMembership.ROLE_ADMIN, django_db_blocker)
+def admin_of_shared_fleet(shared_fleet: Fleet, django_db_blocker):
+    _ensure_member(shared_fleet, 'admin@example.com', FleetMembership.ROLE_ADMIN, django_db_blocker)
 
 
 @given('a car "Daily Driver" exists in "Shared Fleet"')
-def daily_driver_car(shared_garage: Garage, django_db_blocker):
+def daily_driver_car(shared_fleet: Fleet, django_db_blocker):
     with django_db_blocker.unblock():
         Car.objects.get_or_create(
-            garage=shared_garage,
+            fleet=shared_fleet,
             usual_name='Daily Driver',
             defaults={'make': 'Toyota', 'model': 'Corolla'},
         )
@@ -139,8 +139,8 @@ def sign_in_stranger(firefox_driver: webdriver.Firefox):
 
 
 @when('they visit the share page for "Shared Fleet"')
-def visit_share_page(firefox_driver: webdriver.Firefox, shared_garage: Garage):
-    firefox_driver.get(_url(f'/garages/{shared_garage.pk}/share/'))
+def visit_share_page(firefox_driver: webdriver.Firefox, shared_fleet: Fleet):
+    firefox_driver.get(_url(f'/fleets/{shared_fleet.pk}/share/'))
 
 
 @when('they invite "viewer@example.com" with role "Viewer"')
@@ -188,8 +188,8 @@ def redirected_from_share_page(firefox_driver: webdriver.Firefox):
 
 
 @when('they visit the fleet detail page for "Shared Fleet"')
-def visit_fleet_detail(firefox_driver: webdriver.Firefox, shared_garage: Garage):
-    firefox_driver.get(_url(f'/garages/{shared_garage.pk}/'))
+def visit_fleet_detail(firefox_driver: webdriver.Firefox, shared_fleet: Fleet):
+    firefox_driver.get(_url(f'/fleets/{shared_fleet.pk}/'))
 
 
 @then('they see "Daily Driver"')
@@ -203,8 +203,8 @@ def no_add_car_button(firefox_driver: webdriver.Firefox):
 
 
 @when('they change the role of "viewer@example.com" to "Mechanic"')
-def change_role_to_mechanic(firefox_driver: webdriver.Firefox, shared_garage: Garage):
-    firefox_driver.get(_url(f'/garages/{shared_garage.pk}/members/'))
+def change_role_to_mechanic(firefox_driver: webdriver.Firefox, shared_fleet: Fleet):
+    firefox_driver.get(_url(f'/fleets/{shared_fleet.pk}/members/'))
     wait = WebDriverWait(firefox_driver, 10)
     row = wait.until(
         ec.presence_of_element_located((By.XPATH, "//tr[contains(., 'viewer@example.com')]"))
@@ -221,8 +221,8 @@ def viewer_role_is_mechanic(firefox_driver: webdriver.Firefox):
 
 
 @when('they attempt to change the role of "viewer@example.com" to "Owner"')
-def attempt_promote_to_owner(firefox_driver: webdriver.Firefox, shared_garage: Garage):
-    firefox_driver.get(_url(f'/garages/{shared_garage.pk}/members/'))
+def attempt_promote_to_owner(firefox_driver: webdriver.Firefox, shared_fleet: Fleet):
+    firefox_driver.get(_url(f'/fleets/{shared_fleet.pk}/members/'))
     wait = WebDriverWait(firefox_driver, 10)
     row = wait.until(
         ec.presence_of_element_located((By.XPATH, "//tr[contains(., 'viewer@example.com')]"))
@@ -239,8 +239,8 @@ def viewer_role_unchanged(firefox_driver: webdriver.Firefox):
 
 
 @when('they remove "viewer@example.com" from "Shared Fleet"')
-def remove_viewer(firefox_driver: webdriver.Firefox, shared_garage: Garage):
-    firefox_driver.get(_url(f'/garages/{shared_garage.pk}/members/'))
+def remove_viewer(firefox_driver: webdriver.Firefox, shared_fleet: Fleet):
+    firefox_driver.get(_url(f'/fleets/{shared_fleet.pk}/members/'))
     wait = WebDriverWait(firefox_driver, 10)
     row = wait.until(
         ec.presence_of_element_located((By.XPATH, "//tr[contains(., 'viewer@example.com')]"))
@@ -249,8 +249,8 @@ def remove_viewer(firefox_driver: webdriver.Firefox, shared_garage: Garage):
 
 
 @then('"viewer@example.com" is no longer a member of "Shared Fleet"')
-def viewer_removed(firefox_driver: webdriver.Firefox, shared_garage: Garage):
-    firefox_driver.get(_url(f'/garages/{shared_garage.pk}/members/'))
+def viewer_removed(firefox_driver: webdriver.Firefox, shared_fleet: Fleet):
+    firefox_driver.get(_url(f'/fleets/{shared_fleet.pk}/members/'))
     assert 'viewer@example.com' not in firefox_driver.page_source
 
 

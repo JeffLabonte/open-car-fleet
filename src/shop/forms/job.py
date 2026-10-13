@@ -56,9 +56,9 @@ class WorkJobForm(LineListFieldMixin, AssignedToShopFormMixin, forms.ModelForm):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         user = kwargs.pop('user', None)
-        garage = kwargs.pop('garage', None)
+        fleet = kwargs.pop('fleet', None)
         super().__init__(*args, **kwargs)
-        self.configure_assigned_fields(user=user, garage=garage)
+        self.configure_assigned_fields(user=user, fleet=fleet)
         if self.instance and self.instance.pk:
             self.fields['required_items'].initial = '\n'.join(self.instance.required_items or [])
 

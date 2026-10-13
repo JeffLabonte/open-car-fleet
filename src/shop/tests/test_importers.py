@@ -14,9 +14,9 @@ from shop.importers import ImportContext
 from shop.importers import ImportValidationError
 from shop.models.attachment import Attachment
 from shop.models.car import Car
-from shop.models.garage import Garage
-from shop.models.garage import GarageMembership
-from shop.models.garage import KnownShop
+from shop.models.fleet import Fleet
+from shop.models.fleet import FleetMembership
+from shop.models.fleet import KnownShop
 from shop.models.job import WorkJob
 from shop.models.report import Report
 from shop.models.user import ShopUser
@@ -29,19 +29,19 @@ class CSVImporterTests(TestCase):
             email='import-owner@example.com',
             password='pass1234',
         )
-        self.garage = Garage.objects.create(name='Import Garage', created_by=self.user)
-        GarageMembership.objects.create(
-            garage=self.garage,
+        self.fleet = Fleet.objects.create(name='Import Fleet', created_by=self.user)
+        FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.user,
-            role=GarageMembership.ROLE_OWNER,
+            role=FleetMembership.ROLE_OWNER,
         )
         self.importer = CSVImporter()
 
-    def test_car_dry_run_requires_target_garage_and_does_not_persist(self):
+    def test_car_dry_run_requires_target_fleet_and_does_not_persist(self):
         result = self.importer.import_records(
             Car,
             [{'make': 'Toyota', 'model': 'Yaris', 'vin': 'JTDKB20U793512345'}],
-            context=ImportContext(garage=self.garage),
+            context=ImportContext(fleet=self.fleet),
             dry_run=True,
         )
 
@@ -50,7 +50,7 @@ class CSVImporterTests(TestCase):
         self.assertEqual(Car.objects.count(), 0)
 
     def test_report_import_parses_lists_and_persists(self):
-        car = Car.objects.create(garage=self.garage, make='Honda', model='Civic', vin='2HGFG12698H512345')
+        car = Car.objects.create(fleet=self.fleet, make='Honda', model='Civic', vin='2HGFG12698H512345')
 
         result = self.importer.import_records(
             Report,
@@ -62,7 +62,7 @@ class CSVImporterTests(TestCase):
                 'photos': 'before.jpg\nafter.jpg',
                 'mileage': '12345',
             }],
-            context=ImportContext(garage=self.garage),
+            context=ImportContext(fleet=self.fleet),
         )
 
         self.assertFalse(result.has_errors)
@@ -82,7 +82,7 @@ class CSVImporterTests(TestCase):
         self.assertEqual(Attachment.objects.filter(url__gt='').count(), 0)
 
     def test_report_import_maps_url_values_to_external_links(self):
-        car = Car.objects.create(garage=self.garage, make='Honda', model='Fit', vin='JHMGE88478S012345')
+        car = Car.objects.create(fleet=self.fleet, make='Honda', model='Fit', vin='JHMGE88478S012345')
 
         result = self.importer.import_records(
             Report,
@@ -92,7 +92,7 @@ class CSVImporterTests(TestCase):
                 'date_done': '2026-08-02',
                 'documents': 'https://example.com/invoice.pdf',
             }],
-            context=ImportContext(garage=self.garage),
+            context=ImportContext(fleet=self.fleet),
         )
 
         self.assertFalse(result.has_errors)
@@ -103,7 +103,7 @@ class CSVImporterTests(TestCase):
         self.assertEqual(attachment.kind, 'document')
 
     def test_report_import_rejects_unsafe_attachment_links(self):
-        car = Car.objects.create(garage=self.garage, make='Honda', model='Fit', vin='JHMGE88478S012346')
+        car = Car.objects.create(fleet=self.fleet, make='Honda', model='Fit', vin='JHMGE88478S012346')
 
         result = self.importer.import_records(
             Report,
@@ -113,7 +113,7 @@ class CSVImporterTests(TestCase):
                 'date_done': '2026-08-03',
                 'documents': 'javascript:alert(1)',
             }],
-            context=ImportContext(garage=self.garage),
+            context=ImportContext(fleet=self.fleet),
         )
 
         self.assertTrue(result.has_errors)
@@ -123,16 +123,16 @@ class CSVImporterTests(TestCase):
         result = self.importer.import_records(
             WorkJob,
             [{'car': 'missing-car', 'title': 'Oil change'}],
-            context=ImportContext(garage=self.garage),
+            context=ImportContext(fleet=self.fleet),
             dry_run=True,
         )
 
         self.assertTrue(result.has_errors)
         self.assertIn('Car not found', result.errors[0].message)
 
-    def test_workjob_import_requires_garage_scope(self):
+    def test_workjob_import_requires_fleet_scope(self):
         car = Car.objects.create(
-            garage=self.garage,
+            fleet=self.fleet,
             make='Honda',
             model='Civic',
             vin='2HGFG12698H512345',
@@ -146,13 +146,13 @@ class CSVImporterTests(TestCase):
         )
 
         self.assertTrue(result.has_errors)
-        self.assertIn('target garage or car context', result.errors[0].message)
+        self.assertIn('target fleet or car context', result.errors[0].message)
 
     def test_car_resolver_handles_malformed_uuid_without_leaking_validation_error(self):
         result = self.importer.import_records(
             WorkJob,
             [{'car': '00000000-0000-0000-0000-invalid', 'title': 'Oil change'}],
-            context=ImportContext(garage=self.garage),
+            context=ImportContext(fleet=self.fleet),
             dry_run=True,
         )
 
@@ -167,11 +167,11 @@ class ImportCsvCommandTests(TestCase):
             email='command-owner@example.com',
             password='pass1234',
         )
-        self.garage = Garage.objects.create(name='Command Garage', created_by=self.user)
-        GarageMembership.objects.create(
-            garage=self.garage,
+        self.fleet = Fleet.objects.create(name='Command Fleet', created_by=self.user)
+        FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.user,
-            role=GarageMembership.ROLE_OWNER,
+            role=FleetMembership.ROLE_OWNER,
         )
 
     def test_car_import_command_dry_run_validates_without_persisting(self):
@@ -185,8 +185,8 @@ class ImportCsvCommandTests(TestCase):
                 'import_csv',
                 'Car',
                 temp_path,
-                '--garage',
-                str(self.garage.pk),
+                '--fleet',
+                str(self.fleet.pk),
                 '--dry-run',
                 stdout=output,
             )
@@ -196,14 +196,14 @@ class ImportCsvCommandTests(TestCase):
         self.assertIn('Dry run complete', output.getvalue())
         self.assertEqual(Car.objects.count(), 0)
 
-    def test_import_command_rejects_invalid_garage_uuid(self):
+    def test_import_command_rejects_invalid_fleet_uuid(self):
         with tempfile.NamedTemporaryFile('w', suffix='.csv', delete=False) as handle:
             handle.write('make,model,vin\nMazda,3,JM1BK323171512345\n')
             temp_path = handle.name
 
         try:
             with self.assertRaises(CommandError):
-                call_command('import_csv', 'Car', temp_path, '--garage', 'not-a-uuid')
+                call_command('import_csv', 'Car', temp_path, '--fleet', 'not-a-uuid')
         finally:
             Path(temp_path).unlink(missing_ok=True)
 
@@ -218,17 +218,17 @@ class ImportCsvCommandTests(TestCase):
                     'import_csv',
                     'Car',
                     temp_path,
-                    '--garage',
-                    str(self.garage.pk),
+                    '--fleet',
+                    str(self.fleet.pk),
                     '--batch-size',
                     '0',
                 )
         finally:
             Path(temp_path).unlink(missing_ok=True)
 
-    def test_export_garage_command_writes_excel_file(self):
+    def test_export_fleet_command_writes_excel_file(self):
         Car.objects.create(
-            garage=self.garage,
+            fleet=self.fleet,
             usual_name='Command Export Car',
             make='Mazda',
             model='3',
@@ -242,8 +242,8 @@ class ImportCsvCommandTests(TestCase):
 
         try:
             call_command(
-                'export_garage',
-                str(self.garage.pk),
+                'export_fleet',
+                str(self.fleet.pk),
                 '--output',
                 str(output_path),
                 stdout=output,
@@ -258,46 +258,46 @@ class ImportCsvCommandTests(TestCase):
         finally:
             output_path.unlink(missing_ok=True)
 
-    def test_export_garage_command_errors_for_unknown_garage(self):
+    def test_export_fleet_command_errors_for_unknown_fleet(self):
         with self.assertRaises(CommandError):
-            call_command('export_garage', str(uuid.uuid4()))
+            call_command('export_fleet', str(uuid.uuid4()))
 
-    def test_export_garage_command_rejects_invalid_garage_uuid(self):
+    def test_export_fleet_command_rejects_invalid_fleet_uuid(self):
         with self.assertRaises(CommandError):
-            call_command('export_garage', 'not-a-uuid')
+            call_command('export_fleet', 'not-a-uuid')
 
 
-class GarageImportViewTests(TestCase):
+class FleetImportViewTests(TestCase):
     def setUp(self) -> None:
         self.owner = ShopUser.objects.create_user(
-            username='garage-owner',
-            email='garage-owner@example.com',
+            username='fleet-owner',
+            email='fleet-owner@example.com',
             password='pass1234',
         )
         self.member = ShopUser.objects.create_user(
-            username='garage-member',
-            email='garage-member@example.com',
+            username='fleet-member',
+            email='fleet-member@example.com',
             password='pass1234',
         )
-        self.garage = Garage.objects.create(name='Upload Garage', created_by=self.owner)
-        GarageMembership.objects.create(
-            garage=self.garage,
+        self.fleet = Fleet.objects.create(name='Upload Fleet', created_by=self.owner)
+        FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.owner,
-            role=GarageMembership.ROLE_OWNER,
+            role=FleetMembership.ROLE_OWNER,
         )
-        GarageMembership.objects.create(
-            garage=self.garage,
+        FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.member,
-            role=GarageMembership.ROLE_MEMBER,
+            role=FleetMembership.ROLE_MEMBER,
         )
 
-    def test_non_manager_is_redirected_from_garage_import(self):
+    def test_non_manager_is_redirected_from_fleet_import(self):
         self.client.force_login(self.member)
 
-        response = self.client.get(reverse('shop-garage-import', args=[self.garage.pk]))
+        response = self.client.get(reverse('shop-fleet-import', args=[self.fleet.pk]))
 
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response['Location'], reverse('shop-garage-detail', args=[self.garage.pk]))
+        self.assertEqual(response['Location'], reverse('shop-fleet-detail', args=[self.fleet.pk]))
 
     def test_manager_can_dry_run_car_import_from_upload(self):
         self.client.force_login(self.owner)
@@ -308,7 +308,7 @@ class GarageImportViewTests(TestCase):
         )
 
         response = self.client.post(
-            reverse('shop-garage-import', args=[self.garage.pk]),
+            reverse('shop-fleet-import', args=[self.fleet.pk]),
             data={
                 'import_file': upload,
                 'dry_run': 'on',
@@ -321,7 +321,7 @@ class GarageImportViewTests(TestCase):
         self.assertTrue(any('Dry run complete' in str(message) for message in messages))
         self.assertEqual(Car.objects.count(), 0)
 
-    def test_manager_can_import_cars_into_selected_garage(self):
+    def test_manager_can_import_cars_into_selected_fleet(self):
         self.client.force_login(self.owner)
         upload = SimpleUploadedFile(
             'cars.csv',
@@ -330,7 +330,7 @@ class GarageImportViewTests(TestCase):
         )
 
         response = self.client.post(
-            reverse('shop-garage-import', args=[self.garage.pk]),
+            reverse('shop-fleet-import', args=[self.fleet.pk]),
             data={
                 'import_file': upload,
             },
@@ -339,7 +339,7 @@ class GarageImportViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         car = Car.objects.get(vin='1FAHP3F28CL512345')
-        self.assertEqual(car.garage, self.garage)
+        self.assertEqual(car.fleet, self.fleet)
 
 
 class CarImportViewTests(TestCase):
@@ -354,19 +354,19 @@ class CarImportViewTests(TestCase):
             email='car-member@example.com',
             password='pass1234',
         )
-        self.garage = Garage.objects.create(name='Car Import Garage', created_by=self.owner)
-        GarageMembership.objects.create(
-            garage=self.garage,
+        self.fleet = Fleet.objects.create(name='Car Import Fleet', created_by=self.owner)
+        FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.owner,
-            role=GarageMembership.ROLE_OWNER,
+            role=FleetMembership.ROLE_OWNER,
         )
-        GarageMembership.objects.create(
-            garage=self.garage,
+        FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.member,
-            role=GarageMembership.ROLE_MEMBER,
+            role=FleetMembership.ROLE_MEMBER,
         )
         self.car = Car.objects.create(
-            garage=self.garage,
+            fleet=self.fleet,
             usual_name='Daily Driver',
             make='Toyota',
             model='Corolla',
@@ -434,14 +434,14 @@ class ImporterCoverageTests(TestCase):
             password='pass1234',
             is_mechanic=True,
         )
-        self.garage = Garage.objects.create(name='Importer Garage', created_by=self.user)
-        GarageMembership.objects.create(
-            garage=self.garage,
+        self.fleet = Fleet.objects.create(name='Importer Fleet', created_by=self.user)
+        FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.user,
-            role=GarageMembership.ROLE_OWNER,
+            role=FleetMembership.ROLE_OWNER,
         )
         self.car = Car.objects.create(
-            garage=self.garage,
+            fleet=self.fleet,
             make='Honda',
             model='Civic',
             vin='2HGFG12698H512348',
@@ -482,7 +482,7 @@ class ImporterCoverageTests(TestCase):
         result = importer.import_records(
             Car,
             [{'make': 'Honda', 'model': 'Civic', 'vin': 'JTDKB20U793512300'}],
-            context=ImportContext(garage=self.garage),
+            context=ImportContext(fleet=self.fleet),
             dry_run=True,
         )
         self.assertEqual(result.created_count, 1)
@@ -492,7 +492,7 @@ class ImporterCoverageTests(TestCase):
         with self.assertRaises(ImportValidationError):
             importer._prepare_record(KnownShop, {}, ImportContext())
 
-    def test_car_import_requires_garage(self):
+    def test_car_import_requires_fleet(self):
         importer = CSVImporter()
         with self.assertRaises(ImportValidationError):
             importer._prepare_record(Car, {'make': 'Honda', 'model': 'Civic', 'vin': 'JTDKB20U793512301'}, ImportContext())
@@ -511,13 +511,13 @@ class ImporterCoverageTests(TestCase):
         with self.assertRaises(ImportValidationError):
             importer._resolve_car(str(self.car.pk), ImportContext())
 
-    def test_resolve_car_by_garage_only(self):
+    def test_resolve_car_by_fleet_only(self):
         importer = CSVImporter()
-        resolved = importer._resolve_car(str(self.car.pk), ImportContext(garage=self.garage))
+        resolved = importer._resolve_car(str(self.car.pk), ImportContext(fleet=self.fleet))
         self.assertEqual(resolved.pk, self.car.pk)
 
         with self.assertRaises(ImportValidationError):
-            importer._resolve_car('', ImportContext(garage=self.garage))
+            importer._resolve_car('', ImportContext(fleet=self.fleet))
 
     def test_resolve_car_by_vin_and_license_plate_and_usual_name(self):
         importer = CSVImporter()
@@ -525,20 +525,20 @@ class ImporterCoverageTests(TestCase):
         self.car.usual_name = 'Daily Driver'
         self.car.save(update_fields=['license_plate', 'usual_name'])
 
-        context = ImportContext(garage=self.garage)
+        context = ImportContext(fleet=self.fleet)
         self.assertEqual(importer._resolve_car('ABC 123', context).pk, self.car.pk)
         self.assertEqual(importer._resolve_car('Daily Driver', context).pk, self.car.pk)
 
     def test_resolve_car_ambiguous_reference_raises(self):
         Car.objects.create(
-            garage=self.garage,
+            fleet=self.fleet,
             make='Honda',
             model='Civic',
             vin='2HGFG12698H512349',
             usual_name='Same Name',
         )
         Car.objects.create(
-            garage=self.garage,
+            fleet=self.fleet,
             make='Honda',
             model='Accord',
             vin='1HGCM82633A123456',
@@ -547,11 +547,11 @@ class ImporterCoverageTests(TestCase):
 
         importer = CSVImporter()
         with self.assertRaises(ImportValidationError):
-            importer._resolve_car('Same Name', ImportContext(garage=self.garage))
+            importer._resolve_car('Same Name', ImportContext(fleet=self.fleet))
 
     def test_resolve_car_by_non_uuid_pk(self):
         importer = CSVImporter()
-        resolved = importer._resolve_car(self.car.pk, ImportContext(garage=self.garage))
+        resolved = importer._resolve_car(self.car.pk, ImportContext(fleet=self.fleet))
         self.assertEqual(resolved.pk, self.car.pk)
 
     def test_resolve_mechanic_and_shop_branches(self):

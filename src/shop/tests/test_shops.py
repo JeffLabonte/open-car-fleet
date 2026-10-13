@@ -5,11 +5,11 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 from shop.models.attachment import Attachment
-from shop.models.garage import Garage
-from shop.models.garage import GarageInvitation
-from shop.models.garage import GarageMembership
-from shop.models.garage import KnownShop
-from shop.models.garage import KnownShopProof
+from shop.models.fleet import Fleet
+from shop.models.fleet import FleetInvitation
+from shop.models.fleet import FleetMembership
+from shop.models.fleet import KnownShop
+from shop.models.fleet import KnownShopProof
 from shop.models.user import ShopUser
 
 
@@ -76,35 +76,35 @@ class KnownShopTests(TestCase):
         proof = KnownShopProof.objects.create(shop=shop, title='Str Proof')
         self.assertEqual(str(proof), 'Str Proof (Str Shop)')
 
-        garage = Garage.objects.create(name='Str Garage', created_by=self.user)
-        membership = GarageMembership.objects.create(
-            garage=garage,
+        fleet = Fleet.objects.create(name='Str Fleet', created_by=self.user)
+        membership = FleetMembership.objects.create(
+            fleet=fleet,
             user=self.user,
-            role=GarageMembership.ROLE_OWNER,
+            role=FleetMembership.ROLE_OWNER,
         )
         self.assertIn('owner', str(membership))
 
-        invitation = GarageInvitation.objects.create(
-            garage=garage,
+        invitation = FleetInvitation.objects.create(
+            fleet=fleet,
             invited_email='invite@example.com',
             invited_by=self.user,
         )
         self.assertIn('invite@example.com', str(invitation))
 
-        with patch('shop.models.garage.send_mail', return_value=1):
+        with patch('shop.models.fleet.send_mail', return_value=1):
             sent_count = invitation.send_invitation_email(
                 accept_base_url='https://example.com/accept',
                 sender_email='from@example.com',
             )
         self.assertEqual(sent_count, 1)
 
-        invitation_with_message = GarageInvitation.objects.create(
-            garage=garage,
+        invitation_with_message = FleetInvitation.objects.create(
+            fleet=fleet,
             invited_email='invite-message@example.com',
             invited_by=self.user,
             message='Please join our fleet.',
         )
-        with patch('shop.models.garage.send_mail', return_value=1) as mock_send:
+        with patch('shop.models.fleet.send_mail', return_value=1) as mock_send:
             invitation_with_message.send_invitation_email(accept_base_url='https://example.com/accept')
             self.assertIn('Please join our fleet.', mock_send.call_args[1]['message'])
 

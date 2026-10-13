@@ -2,12 +2,12 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
-from shop.models.garage import Garage, GarageMembership
+from shop.models.fleet import Fleet, FleetMembership
 
 
 class FleetForm(forms.ModelForm):
     class Meta:
-        model = Garage
+        model = Fleet
         fields = ['name', 'description']
         labels = {
             'name': _('Fleet name'),
@@ -40,8 +40,8 @@ class FleetInviteForm(forms.Form):
     )
     role = forms.ChoiceField(
         label=_('Role'),
-        choices=GarageMembership.ROLE_CHOICES,
-        initial=GarageMembership.ROLE_VIEWER,
+        choices=FleetMembership.ROLE_CHOICES,
+        initial=FleetMembership.ROLE_VIEWER,
         required=False,
         widget=forms.Select(attrs={'class': 'input'}),
         help_text=_('Role the invited user will receive after accepting.'),
@@ -49,10 +49,10 @@ class FleetInviteForm(forms.Form):
 
     def __init__(self, *args: object, allowed_roles: set[str] | None = None, **kwargs: object) -> None:
         super().__init__(*args, **kwargs)
-        self.allowed_roles = allowed_roles or {GarageMembership.ROLE_VIEWER}
+        self.allowed_roles = allowed_roles or {FleetMembership.ROLE_VIEWER}
         self.fields['role'].choices = [
             (value, label)
-            for value, label in GarageMembership.ROLE_CHOICES
+            for value, label in FleetMembership.ROLE_CHOICES
             if value in self.allowed_roles
         ]
 
@@ -62,16 +62,16 @@ class FleetInviteForm(forms.Form):
     def clean_role(self) -> str:
         role = self.cleaned_data.get('role')
         if role in (None, ''):
-            return GarageMembership.ROLE_VIEWER
+            return FleetMembership.ROLE_VIEWER
         if role not in self.allowed_roles:
             raise ValidationError(_('You cannot assign this role.'))
         return role
 
 
-class GarageMembershipRoleForm(forms.Form):
+class FleetMembershipRoleForm(forms.Form):
     role = forms.ChoiceField(
         label=_('Role'),
-        choices=GarageMembership.ROLE_CHOICES,
+        choices=FleetMembership.ROLE_CHOICES,
         widget=forms.Select(attrs={'class': 'input'}),
     )
 
@@ -80,7 +80,7 @@ class GarageMembershipRoleForm(forms.Form):
         self.allowed_roles = allowed_roles or set()
         self.fields['role'].choices = [
             (value, label)
-            for value, label in GarageMembership.ROLE_CHOICES
+            for value, label in FleetMembership.ROLE_CHOICES
             if value in self.allowed_roles
         ]
 
@@ -89,11 +89,3 @@ class GarageMembershipRoleForm(forms.Form):
         if role not in self.allowed_roles:
             raise ValidationError(_('You cannot assign this role.'))
         return role
-
-
-# Backward-compatible aliases used across existing views/tests.
-FleetCreateForm = FleetForm
-FleetUpdateForm = FleetForm
-GarageCreateForm = FleetForm
-GarageInviteForm = FleetInviteForm
-GarageUpdateForm = FleetForm

@@ -7,7 +7,7 @@ from car_docs.forms import CarDocForm
 from car_docs.models import CarDoc
 from shop.models.attachment import Attachment
 from shop.models.car import Car
-from shop.models.garage import Garage, GarageMembership
+from shop.models.fleet import Fleet, FleetMembership
 from shop.models.user import ShopUser
 
 PDF_SIGNATURE = b'%PDF-1.4'
@@ -73,10 +73,10 @@ class CarDocAttachmentStorageTests(TestCase):
             email='pdf@example.com',
             password='pass1234',
         )
-        self.garage = Garage.objects.create(name='Garage One', created_by=self.owner)
-        GarageMembership.objects.create(garage=self.garage, user=self.owner, role=GarageMembership.ROLE_OWNER)
+        self.fleet = Fleet.objects.create(name='Fleet One', created_by=self.owner)
+        FleetMembership.objects.create(fleet=self.fleet, user=self.owner, role=FleetMembership.ROLE_OWNER)
         self.car = Car.objects.create(
-            garage=self.garage,
+            fleet=self.fleet,
             make='Ford',
             model='Transit',
             colour='Blue',
@@ -130,14 +130,14 @@ class CarDocFileAccessTests(TestCase):
             email='doc-stranger@example.com',
             password='pass1234',
         )
-        self.garage = Garage.objects.create(name='Document Garage', created_by=self.owner)
-        GarageMembership.objects.create(
-            garage=self.garage,
+        self.fleet = Fleet.objects.create(name='Document Fleet', created_by=self.owner)
+        FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.owner,
-            role=GarageMembership.ROLE_OWNER,
+            role=FleetMembership.ROLE_OWNER,
         )
         self.car = Car.objects.create(
-            garage=self.garage,
+            fleet=self.fleet,
             make='Ford',
             model='Focus',
             vin='1FAHP3F28CL512345',
@@ -156,7 +156,7 @@ class CarDocFileAccessTests(TestCase):
     def tearDown(self) -> None:
         self.attachment.file.delete(save=False)
 
-    def test_authenticated_garage_member_can_stream_car_document(self):
+    def test_authenticated_fleet_member_can_stream_car_document(self):
         self.client.force_login(self.owner)
 
         response = self.client.get(reverse('shop-attachment-file', args=[self.attachment.pk]))
@@ -172,7 +172,7 @@ class CarDocFileAccessTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn(reverse('shop-login'), response['Location'])
 
-    def test_user_outside_the_garage_cannot_stream_car_document(self):
+    def test_user_outside_the_fleet_cannot_stream_car_document(self):
         self.client.force_login(self.stranger)
 
         response = self.client.get(reverse('shop-attachment-file', args=[self.attachment.pk]))

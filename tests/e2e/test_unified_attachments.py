@@ -78,20 +78,20 @@ def running_server():
 @given(parsers.parse('"{email}" is signed in'))
 def sign_in(firefox_driver: webdriver.Firefox, state: dict[str, str], email: str):
     state['email'] = email
-    firefox_driver.get(_url(f'/set-test-session/?email={email}&next=/garages/add/'))
-    _wait(firefox_driver).until(ec.url_contains('/garages/add/'))
+    firefox_driver.get(_url(f'/set-test-session/?email={email}&next=/fleets/add/'))
+    _wait(firefox_driver).until(ec.url_contains('/fleets/add/'))
 
 
 @given(parsers.parse('a fleet "{fleet_name}" owned by "{email}"'))
 def create_fleet(firefox_driver: webdriver.Firefox, state: dict[str, str], fleet_name: str, email: str):
     unique_name = _unique(fleet_name)
     state['fleet_name'] = unique_name
-    firefox_driver.get(_url('/garages/add/'))
+    firefox_driver.get(_url('/fleets/add/'))
     name_input = _wait(firefox_driver).until(ec.presence_of_element_located((By.NAME, 'name')))
     name_input.send_keys(unique_name)
     firefox_driver.find_element(By.CSS_SELECTOR, '#main-content form button[type="submit"]').click()
-    _wait(firefox_driver).until(ec.url_contains('/garages/'))
-    state['garage_url'] = firefox_driver.current_url
+    _wait(firefox_driver).until(ec.url_contains('/fleets/'))
+    state['fleet_url'] = firefox_driver.current_url
 
 
 @given(parsers.parse('a car "{car_name}" exists in "{fleet_name}"'))
@@ -103,8 +103,8 @@ def create_car(firefox_driver: webdriver.Firefox, state: dict[str, str], car_nam
     firefox_driver.find_element(By.NAME, 'make').send_keys('Toyota')
     firefox_driver.find_element(By.NAME, 'model').send_keys('Yaris')
     firefox_driver.find_element(By.NAME, 'colour').send_keys('Blue')
-    garage_select = firefox_driver.find_element(By.NAME, 'garage')
-    for option in garage_select.find_elements(By.TAG_NAME, 'option'):
+    fleet_select = firefox_driver.find_element(By.NAME, 'fleet')
+    for option in fleet_select.find_elements(By.TAG_NAME, 'option'):
         if state['fleet_name'] in option.text:
             option.click()
             break

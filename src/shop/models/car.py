@@ -3,7 +3,7 @@ import uuid
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from shop.models.garage import Garage
+from shop.models.fleet import Fleet
 
 
 class CarPart(models.Model):
@@ -97,8 +97,8 @@ class Car(models.Model):
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    garage = models.ForeignKey(
-        Garage,
+    fleet = models.ForeignKey(
+        Fleet,
         on_delete=models.CASCADE,
         related_name="cars",
     )

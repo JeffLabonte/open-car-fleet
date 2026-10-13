@@ -8,7 +8,7 @@ from django.utils.translation import override
 from shop.forms import CarCreateForm, CarUpdateForm, ReportForm
 from shop.importers import CSVImporter, ImportContext
 from shop.models.car import Car
-from shop.models.garage import Garage, GarageMembership
+from shop.models.fleet import Fleet, FleetMembership
 from shop.models.report import Report
 from shop.models.user import ShopUser
 from shop.services import update_car_odometer_from_report
@@ -21,14 +21,14 @@ class OdometerUpdateTests(TestCase):
             email='odometer-owner@example.com',
             password='pass1234',
         )
-        self.garage = Garage.objects.create(name='Odometer Garage', created_by=self.owner)
-        GarageMembership.objects.create(
-            garage=self.garage,
+        self.fleet = Fleet.objects.create(name='Odometer Fleet', created_by=self.owner)
+        FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.owner,
-            role=GarageMembership.ROLE_OWNER,
+            role=FleetMembership.ROLE_OWNER,
         )
         self.car = Car.objects.create(
-            garage=self.garage,
+            fleet=self.fleet,
             make='Honda',
             model='Civic',
             vin='1HGCM82633A004352',
@@ -222,7 +222,7 @@ class OdometerUpdateTests(TestCase):
                 'date_done': '2026-08-20',
                 'mileage': '25000',
             }],
-            context=ImportContext(garage=self.garage, car=self.car),
+            context=ImportContext(fleet=self.fleet, car=self.car),
         )
 
         self.assertFalse(result.has_errors)
@@ -242,7 +242,7 @@ class OdometerUpdateTests(TestCase):
                 'date_done': '2026-08-20',
                 'mileage': '10000',
             }],
-            context=ImportContext(garage=self.garage, car=self.car),
+            context=ImportContext(fleet=self.fleet, car=self.car),
         )
 
         self.assertFalse(result.has_errors)
@@ -260,7 +260,7 @@ class OdometerUpdateTests(TestCase):
                 'vin': 'JTDKB20U793512360',
                 'mileage': '99999',
             }],
-            context=ImportContext(garage=self.garage),
+            context=ImportContext(fleet=self.fleet),
         )
 
         self.assertFalse(result.has_errors)

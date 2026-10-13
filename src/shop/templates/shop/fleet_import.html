@@ -3,7 +3,7 @@
 
 {% block content %}
   <section class="box" data-testid="fleet-import-form">
-    <h1 class="title mb-2">{% translate 'Import cars into' %} {{ garage.name }}</h1>
+    <h1 class="title mb-2">{% translate 'Import cars into' %} {{ fleet.name }}</h1>
     <p class="subtitle mb-4">{% translate 'Use one normalized CSV file per import. Every imported car will be assigned to this fleet.' %}</p>
 
     <form method="post" enctype="multipart/form-data" novalidate>
@@ -29,7 +29,7 @@
           <button class="button is-primary" type="submit">{% translate 'Run import' %}</button>
         </div>
         <div class="control">
-          <a class="button is-light" href="{% url 'shop-garage-detail' garage.pk %}">{% translate 'Cancel' %}</a>
+          <a class="button is-light" href="{% url 'shop-fleet-detail' fleet.pk %}">{% translate 'Cancel' %}</a>
         </div>
       </div>
     </form>

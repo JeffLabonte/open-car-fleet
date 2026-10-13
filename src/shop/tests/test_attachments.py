@@ -5,8 +5,8 @@ from django.urls import reverse
 from shop.forms import ReportForm
 from shop.models.attachment import Attachment
 from shop.models.car import Car
-from shop.models.garage import Garage
-from shop.models.garage import GarageMembership
+from shop.models.fleet import Fleet
+from shop.models.fleet import FleetMembership
 from shop.models.report import Report
 from shop.models.user import ShopUser
 from shop.tests.helpers import MP4_SIGNATURE
@@ -26,14 +26,14 @@ class ReportAttachmentTests(TestCase):
             email='report-stranger@example.com',
             password='pass1234',
         )
-        self.garage = Garage.objects.create(name='Report Garage', created_by=self.user)
-        GarageMembership.objects.create(
-            garage=self.garage,
+        self.fleet = Fleet.objects.create(name='Report Fleet', created_by=self.user)
+        FleetMembership.objects.create(
+            fleet=self.fleet,
             user=self.user,
-            role=GarageMembership.ROLE_OWNER,
+            role=FleetMembership.ROLE_OWNER,
         )
         self.car = Car.objects.create(
-            garage=self.garage,
+            fleet=self.fleet,
             make='Toyota',
             model='Prius',
             vin='JTDKB20U123456789',

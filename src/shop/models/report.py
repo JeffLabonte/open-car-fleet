@@ -5,7 +5,7 @@ from django.utils.translation import gettext_lazy as _
 
 from shop.models.attachment import Attachment
 from shop.models.car import Car
-from shop.models.garage import KnownShop
+from shop.models.fleet import KnownShop
 from shop.models.mixins import AssignedToShopMixin
 
 
