@@ -1,12 +1,9 @@
-from datetime import timedelta
 import logging
 
-from django.conf import settings
 from django.contrib import messages
 from django.http import FileResponse, Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
-from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 
@@ -32,6 +29,10 @@ from shop.middleware import hanko_login_required
 from shop.models.garage import Garage, GarageInvitation, GarageMembership, KnownShop, KnownShopProof
 from shop.permissions import GarageSharingPermissions, get_membership_or_404
 from shop.services.attachments import save_attachments
+from shop.services.invitations import (
+    expire_stale_pending_invitations,
+    invite_to_garage,
+)
 from shop.view_helpers import (
     user_can_manage_garage,
     user_can_manage_known_shop,
@@ -149,20 +150,6 @@ def garage_update(request: HttpRequest, pk: str) -> HttpResponse:
     )
 
 
-def _expire_stale_pending_invitations(garage: Garage) -> None:
-    now = timezone.now()
-    expired_ids = list(
-        garage.invitations.filter(
-            status=GarageInvitation.STATUS_PENDING,
-            expires_at__lte=now,
-        ).values_list('id', flat=True)
-    )
-    if expired_ids:
-        GarageInvitation.objects.filter(id__in=expired_ids).update(
-            status=GarageInvitation.STATUS_EXPIRED
-        )
-
-
 @hanko_login_required
 def garage_share(request: HttpRequest, pk: str) -> HttpResponse:
     garage = get_object_or_404(user_garages_queryset(request.user), pk=pk)
@@ -182,53 +169,35 @@ def garage_share(request: HttpRequest, pk: str) -> HttpResponse:
             if garage.members.filter(email__iexact=invited_email).exists():
                 messages.info(request, _('%(email)s is already a member of this fleet.') % {'email': invited_email})
             else:
-                _expire_stale_pending_invitations(garage)
-                existing_pending = garage.invitations.filter(
-                    invited_email__iexact=invited_email,
-                    status=GarageInvitation.STATUS_PENDING,
-                ).first()
-                if existing_pending:
-                    existing_pending.role = role
-                    existing_pending.expires_at = timezone.now() + timedelta(days=expires_in_days)
-                    existing_pending.save(update_fields=['role', 'expires_at', 'updated_at'])
-                    invitation = existing_pending
-                    messages.info(request, _('Updated pending invitation for %(email)s.') % {'email': invited_email})
-                else:
-                    invitation = GarageInvitation.objects.create(
-                        garage=garage,
-                        invited_email=invited_email,
-                        invited_by=request.user,
-                        message=message,
-                        role=role,
-                        expires_at=timezone.now() + timedelta(days=expires_in_days),
-                    )
-
-                invitation_accept_url = request.build_absolute_uri(
-                    reverse('shop-garage-invitation-accept', args=[invitation.token])
+                result = invite_to_garage(
+                    request,
+                    garage,
+                    invited_email=invited_email,
+                    role=role,
+                    message=message,
+                    invited_by=request.user,
+                    expires_in_days=expires_in_days,
                 )
-                invitation_base_url = invitation_accept_url.rsplit('/', 2)[0]
-                try:
-                    invitation.send_invitation_email(
-                        accept_base_url=invitation_base_url,
-                        sender_email=getattr(settings, 'DEFAULT_FROM_EMAIL', None),
-                    )
-                    if not existing_pending:
+                if result.updated:
+                    messages.info(request, _('Updated pending invitation for %(email)s.') % {'email': invited_email})
+                if result.email_sent:
+                    if result.created:
                         messages.success(request, _('Invitation sent to %(email)s.') % {'email': invited_email})
-                except Exception:
+                else:
                     messages.warning(
                         request,
                         (
                             _('Invitation created for %(email)s, but the email could not be sent. ')
                             % {'email': invited_email}
                         )
-                        + _('Share this link manually: %(url)s') % {'url': invitation_accept_url},
+                        + _('Share this link manually: %(url)s') % {'url': result.accept_url},
                     )
 
             return redirect(reverse('shop-garage-share', args=[garage.pk]))
     else:
         form = GarageInviteForm(allowed_roles=perms.can_invite_with_role)
 
-    _expire_stale_pending_invitations(garage)
+    expire_stale_pending_invitations(garage)
     pending_invitations = garage.invitations.filter(
         status=GarageInvitation.STATUS_PENDING,
     ).order_by('-created_at')

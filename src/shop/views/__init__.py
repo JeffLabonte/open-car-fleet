@@ -9,6 +9,7 @@ from shop.services.attachments import (
     purge_stale_staged_attachments,
     save_attachments,
 )
+from shop.services.invitations import expire_stale_pending_invitations
 
 from shop.views.attachments import (
     _user_can_view_attachment,
@@ -44,7 +45,6 @@ from shop.views.car import (
 )
 
 from shop.views.garage import (
-    _expire_stale_pending_invitations,
     garage_create,
     garage_detail,
     garage_export,
@@ -74,7 +74,6 @@ from shop.views.known_shops import (
 __all__ = [
     'INLINE_SAFE_ATTACHMENT_TYPES',
     'STAGED_ATTACHMENT_MAX_AGE',
-    '_expire_stale_pending_invitations',
     '_render_invitation_response',
     '_user_can_view_attachment',
     'attachment_delete',
@@ -110,6 +109,7 @@ __all__ = [
     'part_create',
     'part_update',
     'profile_view',
+    'expire_stale_pending_invitations',
     'purge_stale_staged_attachments',
     'report_create',
     'report_update',
