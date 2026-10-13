@@ -42,7 +42,7 @@ class Attachment(models.Model):
     parent = GenericForeignKey('content_type', 'object_id')
 
     source_type = models.CharField(max_length=20, choices=SOURCE_CHOICES, default=SOURCE_UPLOAD)
-    kind = models.CharField(max_length=20, choices=KIND_CHOICES, default=KIND_DOCUMENT)
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES, default='', blank=True)
     file = models.FileField(upload_to='attachments/%Y/%m/%d', blank=True, null=True)
     url = models.URLField(blank=True, default='')
     display_name = models.CharField(max_length=255, blank=True)
@@ -68,7 +68,7 @@ class Attachment(models.Model):
             self.kind = self.KIND_LINK
         if self.source_type == self.SOURCE_UPLOAD and self.file and not self.mime_type:
             self.mime_type = getattr(self.file, 'content_type', '') or ''
-        if self.source_type == self.SOURCE_UPLOAD and self.file:
+        if self.source_type == self.SOURCE_UPLOAD and self.file and not self.kind:
             if self.mime_type.startswith('image/'):
                 self.kind = self.KIND_IMAGE
             elif self.mime_type.startswith('video/'):

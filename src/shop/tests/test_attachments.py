@@ -142,6 +142,26 @@ class ReportAttachmentTests(TestCase):
         finally:
             attachment.file.delete(save=False)
 
+    def test_upload_attachment_preserves_explicit_kind(self):
+        """A caller-provided kind should not be overwritten by mime-type inference."""
+        report = Report.objects.create(
+            car=self.car,
+            job_name='Kind override',
+            date_done='2026-08-10',
+        )
+        attachment = Attachment.objects.create(
+            content_type=ContentType.objects.get_for_model(report),
+            object_id=str(report.pk),
+            source_type=Attachment.SOURCE_UPLOAD,
+            kind=Attachment.KIND_DOCUMENT,
+            file=SimpleUploadedFile('image.png', PNG_SIGNATURE, content_type='image/png'),
+        )
+        try:
+            attachment.refresh_from_db()
+            self.assertEqual(attachment.kind, Attachment.KIND_DOCUMENT)
+        finally:
+            attachment.file.delete(save=False)
+
     def test_car_detail_renders_attachment_preview_links(self):
         self.client.force_login(self.user)
         report = Report.objects.create(
