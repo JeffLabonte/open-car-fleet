@@ -3,10 +3,11 @@ from django.conf import settings
 from django.utils.translation import get_language
 
 
+from shop.theme import get_theme_from_request
+
+
 def theme(request: HttpRequest) -> dict:
-    cookie_theme = request.COOKIES.get('theme', '').lower()
-    theme_value = cookie_theme if cookie_theme in {'light', 'dark'} else 'light'
-    return {'theme': theme_value}
+    return {'theme': get_theme_from_request(request)}
 
 
 def language_info(request: HttpRequest) -> dict:

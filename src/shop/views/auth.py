@@ -15,12 +15,7 @@ from django_ratelimit.decorators import ratelimit
 
 from shop.auth import HankoAuthenticationError, complete_hanko_login, fetch_hanko_userinfo
 from shop.middleware import hanko_login_required
-
-def get_theme_from_request(request: HttpRequest) -> str:
-    cookie_theme = request.COOKIES.get('theme', '').lower()
-    if cookie_theme in {'light', 'dark'}:
-        return cookie_theme
-    return 'light'
+from shop.theme import get_theme_from_request, normalize_theme
 
 
 def safe_next_url(request: HttpRequest, default: str = '/') -> str:
@@ -68,9 +63,7 @@ def profile_view(request: HttpRequest) -> HttpResponse:
 
 
 def theme_view(request: HttpRequest, theme: str) -> HttpResponse:
-    normalized_theme = theme.lower() if isinstance(theme, str) else 'light'
-    if normalized_theme not in {'light', 'dark'}:
-        normalized_theme = 'light'
+    normalized_theme = normalize_theme(theme)
 
     response = redirect(safe_next_url(request, default=reverse('shop-index')))
     response.set_cookie('theme', normalized_theme, max_age=60 * 60 * 24 * 365, httponly=False, samesite='Lax')
