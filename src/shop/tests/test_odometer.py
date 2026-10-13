@@ -93,7 +93,7 @@ class OdometerUpdateTests(TestCase):
         self.car.save(update_fields=['mileage'])
         self.client.force_login(self.owner)
 
-        with patch('shop.views.save_attachments', side_effect=RuntimeError('boom')):
+        with patch('shop.views.car.save_attachments', side_effect=RuntimeError('boom')):
             with self.assertRaises(RuntimeError):
                 self.client.post(
                     reverse('shop-report-create', args=[self.car.pk]),

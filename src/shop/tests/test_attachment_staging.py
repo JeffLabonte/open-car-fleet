@@ -95,7 +95,7 @@ class AttachmentStagingEndpointTests(TestCase):
         self.assertIn('no larger than', response.json()['error'])
         self.assertFalse(Attachment.objects.exists())
 
-    @patch('shop.views.ATTACHMENT_USER_STAGED_QUOTA_BYTES', 20)
+    @patch('shop.views.attachments.ATTACHMENT_USER_STAGED_QUOTA_BYTES', 20)
     def test_upload_enforces_per_user_staged_quota(self):
         self.client.force_login(self.user)
         # Use the bare 8-byte PNG magic so the first upload (8 bytes) fits.
