@@ -5,10 +5,14 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.utils.translation import gettext as _
 
+from shop.importers import CSVImporter, ImportContext, ImportResult, ImportValidationError
+
 
 ModelSaver = Callable[[Any, Any], None]
 PostSaver = Callable[[Any, Any], None]
 SuccessUrlResolver = Callable[[Any], str]
+ModelResolver = Callable[[], str]
+ImportMessageResolver = Callable[[ImportResult], str]
 
 
 def handle_model_form(
@@ -62,3 +66,56 @@ def handle_model_form(
     if context:
         ctx.update(context)
     return render(request, template_name, ctx)
+
+
+def process_import_form(
+    request: HttpRequest,
+    form,
+    model_resolver: ModelResolver,
+    context: ImportContext,
+    *,
+    success_url: str,
+    success_message: ImportMessageResolver,
+    dry_run_message: ImportMessageResolver,
+) -> HttpResponse | None:
+    """Run a CSV import from a valid bound import form and surface messages.
+
+    Returns a redirect response on a successful non-dry-run import, otherwise
+    ``None``. The caller should re-render the form in the ``None`` case.
+    """
+    importer = CSVImporter()
+    uploaded_file = form.cleaned_data['import_file']
+    dry_run = form.cleaned_data['dry_run']
+    try:
+        records = importer.parse_csv_bytes(uploaded_file.read(), source_name=uploaded_file.name)
+        result = importer.import_records(
+            importer.resolve_model(model_resolver()),
+            records,
+            context=context,
+            dry_run=dry_run,
+        )
+    except ImportValidationError as exc:
+        form.add_error('import_file', str(exc))
+        return None
+
+    for warning in result.warnings:
+        messages.warning(
+            request,
+            _('Record %(number)s: %(message)s') % {'number': warning.record_number, 'message': warning.message},
+        )
+
+    if result.has_errors:
+        for error in result.errors:
+            messages.error(
+                request,
+                _('Record %(number)s: %(message)s') % {'number': error.record_number, 'message': error.message},
+            )
+        form.add_error('import_file', _('Import validation failed. Fix the file and try again.'))
+        return None
+
+    if dry_run:
+        messages.success(request, dry_run_message(result))
+        return None
+
+    messages.success(request, success_message(result))
+    return redirect(success_url)

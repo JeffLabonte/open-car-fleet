@@ -23,7 +23,7 @@ from shop.forms import (
     ReportForm,
     WorkJobForm,
 )
-from shop.importers import CSVImporter, ImportContext, ImportValidationError
+from shop.importers import ImportContext
 from shop.middleware import hanko_login_required
 from shop.models.car import CarPart
 from shop.models.garage import Garage, GarageInvitation, GarageMembership, KnownShop, KnownShopProof
@@ -39,7 +39,7 @@ from shop.view_helpers import (
     user_garages_queryset,
     user_known_shops_queryset,
 )
-from shop.views.helpers import handle_model_form
+from shop.views.helpers import handle_model_form, process_import_form
 
 security_log = logging.getLogger('security')
 
@@ -53,40 +53,23 @@ def car_import(request: HttpRequest, pk: str) -> HttpResponse:
     if request.method == 'POST':
         form = CarImportForm(request.POST, request.FILES)
         if form.is_valid():
-            importer = CSVImporter()
-            uploaded_file = form.cleaned_data['import_file']
-            dry_run = form.cleaned_data['dry_run']
-            try:
-                model = importer.resolve_model(form.cleaned_data['import_type'])
-                records = importer.parse_csv_bytes(uploaded_file.read(), source_name=uploaded_file.name)
-                result = importer.import_records(
-                    model,
-                    records,
-                    context=ImportContext(garage=car.garage, car=car, user=request.user),
-                    dry_run=dry_run,
-                )
-            except ImportValidationError as exc:
-                form.add_error('import_file', str(exc))
-            else:
-                for warning in result.warnings:
-                    messages.warning(request, _('Record %(number)s: %(message)s') % {'number': warning.record_number, 'message': warning.message})
-
-                if result.has_errors:
-                    for error in result.errors:
-                        messages.error(request, _('Record %(number)s: %(message)s') % {'number': error.record_number, 'message': error.message})
-                    form.add_error('import_file', _('Import validation failed. Fix the file and try again.'))
-                else:
-                    if dry_run:
-                        messages.success(
-                            request,
-                            _('Dry run complete for %(model)s: %(count)s records validated.') % {'model': result.model_label, 'count': result.created_count},
-                        )
-                    else:
-                        messages.success(
-                            request,
-                            _('Imported %(count)s records for %(car)s.') % {'count': result.created_count, 'car': car.usual_name or car.make},
-                        )
-                        return redirect(reverse('shop-car-detail', args=[car.pk]))
+            redirect_response = process_import_form(
+                request,
+                form,
+                lambda: form.cleaned_data['import_type'],
+                ImportContext(garage=car.garage, car=car, user=request.user),
+                success_url=reverse('shop-car-detail', args=[car.pk]),
+                success_message=lambda result: _('Imported %(count)s records for %(car)s.') % {
+                    'count': result.created_count,
+                    'car': car.usual_name or car.make,
+                },
+                dry_run_message=lambda result: _('Dry run complete for %(model)s: %(count)s records validated.') % {
+                    'model': result.model_label,
+                    'count': result.created_count,
+                },
+            )
+            if redirect_response is not None:
+                return redirect_response
     else:
         initial_import_type = request.GET.get('type')
         if initial_import_type not in {'workjob', 'report'}:

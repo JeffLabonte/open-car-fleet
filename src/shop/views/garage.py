@@ -27,7 +27,7 @@ from shop.forms import (
     ReportForm,
     WorkJobForm,
 )
-from shop.importers import CSVImporter, ImportContext, ImportValidationError
+from shop.importers import ImportContext
 from shop.middleware import hanko_login_required
 from shop.models.garage import Garage, GarageInvitation, GarageMembership, KnownShop, KnownShopProof
 from shop.permissions import GarageSharingPermissions, get_membership_or_404
@@ -39,6 +39,7 @@ from shop.view_helpers import (
     user_garages_queryset,
     user_known_shops_queryset,
 )
+from shop.views.helpers import process_import_form
 
 security_log = logging.getLogger('security')
 
@@ -393,39 +394,23 @@ def garage_import(request: HttpRequest, pk: str) -> HttpResponse:
     if request.method == 'POST':
         form = GarageImportForm(request.POST, request.FILES)
         if form.is_valid():
-            importer = CSVImporter()
-            uploaded_file = form.cleaned_data['import_file']
-            dry_run = form.cleaned_data['dry_run']
-            try:
-                records = importer.parse_csv_bytes(uploaded_file.read(), source_name=uploaded_file.name)
-                result = importer.import_records(
-                    importer.resolve_model('car'),
-                    records,
-                    context=ImportContext(garage=garage, user=request.user),
-                    dry_run=dry_run,
-                )
-            except ImportValidationError as exc:
-                form.add_error('import_file', str(exc))
-            else:
-                for warning in result.warnings:
-                    messages.warning(request, f"Record {warning.record_number}: {warning.message}")
-
-                if result.has_errors:
-                    for error in result.errors:
-                        messages.error(request, f"Record {error.record_number}: {error.message}")
-                    form.add_error('import_file', _('Import validation failed. Fix the file and try again.'))
-                else:
-                    if dry_run:
-                        messages.success(
-                            request,
-                            _('Dry run complete for %(model)s: %(count)s records validated.') % {'model': result.model_label, 'count': result.created_count},
-                        )
-                    else:
-                        messages.success(
-                            request,
-                            _('Imported %(count)s records into %(garage)s.') % {'count': result.created_count, 'garage': garage.name},
-                        )
-                        return redirect(reverse('shop-garage-detail', args=[garage.pk]))
+            redirect_response = process_import_form(
+                request,
+                form,
+                lambda: 'car',
+                ImportContext(garage=garage, user=request.user),
+                success_url=reverse('shop-garage-detail', args=[garage.pk]),
+                success_message=lambda result: _('Imported %(count)s records into %(garage)s.') % {
+                    'count': result.created_count,
+                    'garage': garage.name,
+                },
+                dry_run_message=lambda result: _('Dry run complete for %(model)s: %(count)s records validated.') % {
+                    'model': result.model_label,
+                    'count': result.created_count,
+                },
+            )
+            if redirect_response is not None:
+                return redirect_response
     else:
         form = GarageImportForm()
 
