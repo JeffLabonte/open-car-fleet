@@ -117,7 +117,7 @@ def get_garage_membership_or_404(user: Any, garage_pk: Any) -> tuple[Garage, Gar
 
 
 def user_can_manage_garage(user: Any, garage: Garage) -> bool:
-    return GarageSharingPermissions(user, garage).is_manager
+    return GarageSharingPermissions(user, garage).can_manage_members
 
 
 def user_can_edit_garage_data(user: Any, garage: Garage) -> bool:

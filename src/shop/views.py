@@ -46,6 +46,7 @@ from shop.forms import (
 )
 from shop.importers import CSVImporter, ImportContext, ImportValidationError
 from car_docs.models import CarDoc
+from shop.decorators import require_garage_permission
 from shop.middleware import hanko_login_required
 from shop.models.attachment import Attachment
 from shop.models.car import CarPart
@@ -526,13 +527,12 @@ def garage_member_remove(request: HttpRequest, pk: str, membership_pk: int) -> H
 
 @hanko_login_required
 @require_POST
+@require_garage_permission(
+    'can_manage_members',
+    message=_('You do not have permission to manage fleet invitations.'),
+)
 def garage_invitation_cancel(request: HttpRequest, pk: str, invitation_pk: str) -> HttpResponse:
     garage = get_object_or_404(user_garages_queryset(request.user), pk=pk)
-    perms = GarageSharingPermissions(request.user, garage)
-    if not perms.can_manage_members:
-        messages.error(request, _('You do not have permission to manage fleet invitations.'))
-        return redirect(reverse('shop-garage-detail', args=[garage.pk]))
-
     invitation = get_object_or_404(garage.invitations, pk=invitation_pk)
     if invitation.status != GarageInvitation.STATUS_PENDING:
         messages.info(request, _('This invitation is no longer active.'))
@@ -545,17 +545,13 @@ def garage_invitation_cancel(request: HttpRequest, pk: str, invitation_pk: str) 
 
 
 @hanko_login_required
+@require_garage_permission(
+    'can_manage_members',
+    message=_('You do not have permission to import data into this fleet.'),
+    log_reason='garage_import_not_manager',
+)
 def garage_import(request: HttpRequest, pk: str) -> HttpResponse:
     garage = get_object_or_404(user_garages_queryset(request.user), pk=pk)
-    if not user_can_manage_garage(request.user, garage):
-        security_log.warning(
-            'access_denied: user=%s path=%s reason=garage_import_not_manager garage=%s',
-            request.user.pk,
-            request.path,
-            garage.pk,
-        )
-        messages.error(request, _('You do not have permission to import data into this fleet.'))
-        return redirect(reverse('shop-garage-detail', args=[garage.pk]))
 
     if request.method == 'POST':
         form = GarageImportForm(request.POST, request.FILES)
@@ -609,18 +605,13 @@ def garage_import(request: HttpRequest, pk: str) -> HttpResponse:
 
 
 @hanko_login_required
+@require_garage_permission(
+    'can_manage_members',
+    message=_('You do not have permission to export data from this fleet.'),
+    log_reason='garage_export_not_manager',
+)
 def garage_export(request: HttpRequest, pk: str) -> HttpResponse:
     garage = get_object_or_404(user_garages_queryset(request.user), pk=pk)
-    if not user_can_manage_garage(request.user, garage):
-        security_log.warning(
-            'access_denied: user=%s path=%s reason=garage_export_not_manager garage=%s',
-            request.user.pk,
-            request.path,
-            garage.pk,
-        )
-        messages.error(request, _('You do not have permission to export data from this fleet.'))
-        return redirect(reverse('shop-garage-detail', args=[garage.pk]))
-
     workbook = export_garage_to_excel(garage)
     response = HttpResponse(
         workbook.content,
