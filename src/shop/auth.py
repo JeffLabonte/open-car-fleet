@@ -122,75 +122,88 @@ def _build_username(base_name: str, hanko_id: str | None = None) -> str:
         counter += 1
 
 
-def sync_hanko_user(
-    hanko_id: Optional[str] = None,
-    email: Optional[str] = None,
-    username: Optional[str] = None,
-    avatar_url: str = '',
-    provider: str = 'hanko',
+def _find_user_by_hanko_id(hanko_id: str) -> ShopUser | None:
+    if not hanko_id:
+        return None
+    return ShopUser.objects.filter(hanko_id=hanko_id).first()
+
+
+def _find_user_by_email(email: str) -> ShopUser | None:
+    if not email:
+        return None
+    return ShopUser.objects.filter(email__iexact=email).first()
+
+
+def _backfill_empty_profile_fields(
+    user: ShopUser,
+    *,
+    email: str,
+    username: str,
+    avatar_url: str,
+    provider: str,
+) -> None:
+    if email and not user.email:
+        user.email = email
+    if username and not user.display_name:
+        user.display_name = username
+    if avatar_url and not user.avatar_url:
+        user.avatar_url = avatar_url
+    if provider:
+        user.auth_provider = provider
+    user.last_login_at = timezone.now()
+
+
+def _apply_profile_updates(
+    user: ShopUser,
+    *,
+    username: str,
+    avatar_url: str,
+    provider: str,
+) -> None:
+    if username:
+        user.display_name = username
+    if avatar_url:
+        user.avatar_url = avatar_url
+    if provider:
+        user.auth_provider = provider
+    user.last_login_at = timezone.now()
+
+
+def _verify_email_identity_match(user: ShopUser, hanko_id: str) -> None:
+    existing_hanko_id = (user.hanko_id or '').strip()
+    if existing_hanko_id and existing_hanko_id != hanko_id:
+        security_log.warning(
+            'hanko_auth_failed: reason=hanko_id_mismatch email=%s existing_hanko_id=%s attempted_hanko_id=%s',
+            user.email,
+            existing_hanko_id,
+            hanko_id,
+        )
+        raise HankoAuthenticationError(
+            'Hanko identity does not match the account linked to this email.'
+        )
+    if not existing_hanko_id and hanko_id:
+        # A local account with this email exists but has no Hanko identity
+        # attached. Do not silently link identities; require explicit,
+        # verified linking to prevent account takeover.
+        security_log.warning(
+            'hanko_auth_failed: reason=silent_link_prevented email=%s attempted_hanko_id=%s',
+            user.email,
+            hanko_id,
+        )
+        raise HankoAuthenticationError(
+            'An account with this email already exists. '
+            'Please contact an administrator to link Hanko sign-in.'
+        )
+
+
+def _create_hanko_user(
+    *,
+    hanko_id: str,
+    email: str,
+    username: str,
+    avatar_url: str,
+    provider: str,
 ) -> ShopUser:
-    hanko_id = hanko_id or ''
-    email = (email or '').strip().lower()
-    username = (username or '').strip()
-
-    if hanko_id:
-        user = ShopUser.objects.filter(hanko_id=hanko_id).first()
-        if user:
-            if email and not user.email:
-                user.email = email
-            if username and not user.display_name:
-                user.display_name = username
-            if avatar_url and not user.avatar_url:
-                user.avatar_url = avatar_url
-            if provider:
-                user.auth_provider = provider
-            user.last_login_at = timezone.now()
-            user.save(update_fields=[
-                'email',
-                'display_name',
-                'avatar_url',
-                'auth_provider',
-                'last_login_at',
-            ])
-            return user
-
-    if email:
-        user = ShopUser.objects.filter(email__iexact=email).first()
-        if user:
-            existing_hanko_id = (user.hanko_id or '').strip()
-            if existing_hanko_id and existing_hanko_id != hanko_id:
-                security_log.warning(
-                    'hanko_auth_failed: reason=hanko_id_mismatch email=%s existing_hanko_id=%s attempted_hanko_id=%s',
-                    email,
-                    existing_hanko_id,
-                    hanko_id,
-                )
-                raise HankoAuthenticationError(
-                    'Hanko identity does not match the account linked to this email.'
-                )
-            if not existing_hanko_id and hanko_id:
-                # A local account with this email exists but has no Hanko identity
-                # attached. Do not silently link identities; require explicit,
-                # verified linking to prevent account takeover.
-                security_log.warning(
-                    'hanko_auth_failed: reason=silent_link_prevented email=%s attempted_hanko_id=%s',
-                    email,
-                    hanko_id,
-                )
-                raise HankoAuthenticationError(
-                    'An account with this email already exists. '
-                    'Please contact an administrator to link Hanko sign-in.'
-                )
-            if username:
-                user.display_name = username
-            if avatar_url:
-                user.avatar_url = avatar_url
-            if provider:
-                user.auth_provider = provider
-            user.last_login_at = timezone.now()
-            user.save(update_fields=['display_name', 'avatar_url', 'auth_provider', 'last_login_at'])
-            return user
-
     base_username = username or email.split('@')[0] if email else None
     user = ShopUser.objects.create_user(
         username=_build_username(base_username or 'hanko-user', hanko_id),
@@ -205,6 +218,56 @@ def sync_hanko_user(
     user.is_active = True
     user.save()
     return user
+
+
+def sync_hanko_user(
+    hanko_id: Optional[str] = None,
+    email: Optional[str] = None,
+    username: Optional[str] = None,
+    avatar_url: str = '',
+    provider: str = 'hanko',
+) -> ShopUser:
+    hanko_id = hanko_id or ''
+    email = (email or '').strip().lower()
+    username = (username or '').strip()
+
+    user = _find_user_by_hanko_id(hanko_id)
+    if user:
+        _backfill_empty_profile_fields(
+            user,
+            email=email,
+            username=username,
+            avatar_url=avatar_url,
+            provider=provider,
+        )
+        user.save(update_fields=[
+            'email',
+            'display_name',
+            'avatar_url',
+            'auth_provider',
+            'last_login_at',
+        ])
+        return user
+
+    user = _find_user_by_email(email)
+    if user:
+        _verify_email_identity_match(user, hanko_id)
+        _apply_profile_updates(
+            user,
+            username=username,
+            avatar_url=avatar_url,
+            provider=provider,
+        )
+        user.save(update_fields=['display_name', 'avatar_url', 'auth_provider', 'last_login_at'])
+        return user
+
+    return _create_hanko_user(
+        hanko_id=hanko_id,
+        email=email,
+        username=username,
+        avatar_url=avatar_url,
+        provider=provider,
+    )
 
 
 def complete_hanko_login(request: HttpRequest, user_data: dict[str, Any]) -> ShopUser:
