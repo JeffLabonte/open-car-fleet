@@ -137,6 +137,26 @@ class CSVImporter:
             requested_records=len(records),
         )
 
+        objects, attachment_plans = self._validate_records(model, records, normalized_context, result)
+
+        if result.has_errors:
+            return result
+
+        if dry_run:
+            result.created_count = len(objects)
+            return result
+
+        self._persist_records(model, objects, attachment_plans, batch_size=batch_size)
+        result.created_count = len(objects)
+        return result
+
+    def _validate_records(
+        self,
+        model: type[models.Model],
+        records: list[dict[str, Any]],
+        context: ImportContext,
+        result: ImportResult,
+    ) -> tuple[list[models.Model], list[list[dict[str, Any]]]]:
         objects: list[models.Model] = []
         attachment_plans: list[list[dict[str, Any]]] = []
         for index, record in enumerate(records, start=1):
@@ -145,7 +165,7 @@ class CSVImporter:
                 continue
 
             try:
-                instance_data, warnings, attachment_plan = self._prepare_record(model, record, normalized_context)
+                instance_data, warnings, attachment_plan = self._prepare_record(model, record, context)
             except ImportValidationError as exc:
                 result.errors.append(ImportIssue(index, str(exc)))
                 continue
@@ -167,26 +187,29 @@ class CSVImporter:
             objects.append(instance)
             attachment_plans.append(attachment_plan)
 
-        if result.has_errors:
-            return result
+        return objects, attachment_plans
 
-        if dry_run:
-            result.created_count = len(objects)
-            return result
-
+    def _persist_records(
+        self,
+        model: type[models.Model],
+        objects: list[models.Model],
+        attachment_plans: list[list[dict[str, Any]]],
+        *,
+        batch_size: int,
+    ) -> None:
         try:
             with transaction.atomic():
                 model.objects.bulk_create(objects, batch_size=batch_size)
                 for instance, attachment_plan in zip(objects, attachment_plans):
                     self._create_external_attachments(instance, attachment_plan)
-                if model is Report:
-                    for report in objects:
-                        update_car_odometer_from_report(report)
+                self._run_import_hooks(model, objects)
         except IntegrityError as exc:
             raise ImportValidationError(_("Database error while importing data: %(error)s") % {'error': exc}) from exc
 
-        result.created_count = len(objects)
-        return result
+    def _run_import_hooks(self, model: type[models.Model], objects: list[models.Model]) -> None:
+        if model is Report:
+            for report in objects:
+                update_car_odometer_from_report(report)
 
     def _create_external_attachments(self, instance: models.Model, attachment_plan: list[dict[str, Any]]) -> None:
         """Store legacy documents/photos column values as external link attachments."""
