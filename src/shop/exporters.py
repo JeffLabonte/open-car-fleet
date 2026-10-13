@@ -22,25 +22,48 @@ class GarageExportWorkbook:
 
 def export_garage_to_excel(garage: Garage) -> GarageExportWorkbook:
     exported_at = timezone.now()
-    cars = list(Car.objects.filter(garage=garage).order_by("created_at"))
-    jobs = list(
-        WorkJob.objects.filter(car__garage=garage)
-        .select_related("car", "assigned_to", "assigned_shop")
-        .order_by("id")
-    )
-    reports = list(
-        Report.objects.filter(car__garage=garage)
-        .select_related("car", "assigned_to", "assigned_shop")
-        .prefetch_related("attachments")
-        .order_by("id")
-    )
-    memberships = list(garage.memberships.select_related("user").order_by("created_at", "id"))
+    data = _gather_export_data(garage)
 
     workbook = Workbook()
-    meta_sheet = workbook.active
-    meta_sheet.title = "meta"
+    _build_meta_sheet(workbook.active, garage, exported_at, data)
+    _build_garage_sheet(workbook.create_sheet("garage"), garage)
+    _build_memberships_sheet(workbook.create_sheet("memberships"), garage, data["memberships"])
+    _build_cars_sheet(workbook.create_sheet("cars_import"), garage, data["cars"])
+    _build_jobs_sheet(workbook.create_sheet("workjobs_import"), data["jobs"])
+    _build_reports_sheet(workbook.create_sheet("reports_import"), data["reports"])
+
+    content = _serialize_workbook(workbook)
+    filename = _build_filename(garage, exported_at)
+    return GarageExportWorkbook(filename=filename, content=content)
+
+
+def _gather_export_data(garage: Garage) -> dict[str, Any]:
+    return {
+        "cars": list(Car.objects.filter(garage=garage).order_by("created_at")),
+        "jobs": list(
+            WorkJob.objects.filter(car__garage=garage)
+            .select_related("car", "assigned_to", "assigned_shop")
+            .order_by("id")
+        ),
+        "reports": list(
+            Report.objects.filter(car__garage=garage)
+            .select_related("car", "assigned_to", "assigned_shop")
+            .prefetch_related("attachments")
+            .order_by("id")
+        ),
+        "memberships": list(garage.memberships.select_related("user").order_by("created_at", "id")),
+    }
+
+
+def _build_meta_sheet(
+    sheet: Any,
+    garage: Garage,
+    exported_at: datetime,
+    data: dict[str, Any],
+) -> None:
+    sheet.title = "meta"
     _append_rows(
-        meta_sheet,
+        sheet,
         ["key", "value"],
         [
             ["export_version", "1"],
@@ -51,19 +74,20 @@ def export_garage_to_excel(garage: Garage) -> GarageExportWorkbook:
                 "row_counts_json",
                 json.dumps(
                     {
-                        "memberships": len(memberships),
-                        "cars_import": len(cars),
-                        "workjobs_import": len(jobs),
-                        "reports_import": len(reports),
+                        "memberships": len(data["memberships"]),
+                        "cars_import": len(data["cars"]),
+                        "workjobs_import": len(data["jobs"]),
+                        "reports_import": len(data["reports"]),
                     }
                 ),
             ],
         ],
     )
 
-    garage_sheet = workbook.create_sheet("garage")
+
+def _build_garage_sheet(sheet: Any, garage: Garage) -> None:
     _append_rows(
-        garage_sheet,
+        sheet,
         [
             "garage_id",
             "name",
@@ -84,9 +108,10 @@ def export_garage_to_excel(garage: Garage) -> GarageExportWorkbook:
         ],
     )
 
-    memberships_sheet = workbook.create_sheet("memberships")
+
+def _build_memberships_sheet(sheet: Any, garage: Garage, memberships: list[Any]) -> None:
     _append_rows(
-        memberships_sheet,
+        sheet,
         [
             "garage_id",
             "user_id",
@@ -110,9 +135,10 @@ def export_garage_to_excel(garage: Garage) -> GarageExportWorkbook:
         ],
     )
 
-    cars_sheet = workbook.create_sheet("cars_import")
+
+def _build_cars_sheet(sheet: Any, garage: Garage, cars: list[Car]) -> None:
     _append_rows(
-        cars_sheet,
+        sheet,
         [
             "car_id",
             "garage_id",
@@ -146,9 +172,10 @@ def export_garage_to_excel(garage: Garage) -> GarageExportWorkbook:
         ],
     )
 
-    jobs_sheet = workbook.create_sheet("workjobs_import")
+
+def _build_jobs_sheet(sheet: Any, jobs: list[WorkJob]) -> None:
     _append_rows(
-        jobs_sheet,
+        sheet,
         [
             "workjob_id",
             "car_id",
@@ -196,9 +223,10 @@ def export_garage_to_excel(garage: Garage) -> GarageExportWorkbook:
         ],
     )
 
-    reports_sheet = workbook.create_sheet("reports_import")
+
+def _build_reports_sheet(sheet: Any, reports: list[Report]) -> None:
     _append_rows(
-        reports_sheet,
+        sheet,
         [
             "report_id",
             "car_id",
@@ -237,10 +265,6 @@ def export_garage_to_excel(garage: Garage) -> GarageExportWorkbook:
             for report in reports
         ],
     )
-
-    content = _serialize_workbook(workbook)
-    filename = _build_filename(garage, exported_at)
-    return GarageExportWorkbook(filename=filename, content=content)
 
 
 def _append_rows(sheet: Any, header: list[str], rows: list[list[Any]]) -> None:
