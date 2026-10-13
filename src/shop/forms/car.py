@@ -1,4 +1,3 @@
-import re
 from datetime import date
 from typing import Any
 
@@ -7,9 +6,7 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
 from shop.models.car import Car, CarPart
-
-
-VIN_BAD_CHARS = set('IOQ')
+from shop.validators import validate_license_plate, validate_vin
 
 
 class CarPartForm(forms.ModelForm):
@@ -84,14 +81,9 @@ class CarBaseForm(forms.ModelForm):
         return year
 
     def clean_vin(self) -> str | None:
-        vin = self.cleaned_data.get('vin')
+        vin = validate_vin(self.cleaned_data.get('vin'))
         if not vin:
             return vin
-        vin = re.sub(r"\s+", "", vin).upper()
-        if any(ch in VIN_BAD_CHARS for ch in vin):
-            raise ValidationError(_('VIN contains invalid characters (I, O, Q are not allowed).'))
-        if not re.match(r'^[A-HJ-NPR-Z0-9]{11,17}$', vin):
-            raise ValidationError(_('VIN must be 11-17 alphanumeric characters (no I/O/Q).'))
         qs = Car.objects.filter(vin=vin)
         if self.instance and self.instance.pk:
             qs = qs.exclude(pk=self.instance.pk)
@@ -100,15 +92,7 @@ class CarBaseForm(forms.ModelForm):
         return vin
 
     def clean_license_plate(self) -> str:
-        plate = self.cleaned_data.get('license_plate', '')
-        plate = plate.strip().upper()
-        if plate == '':
-            return ''
-        if len(plate) > 20:
-            raise ValidationError(_('License plate must be 20 characters or fewer.'))
-        if not re.match(r'^[A-Z0-9 \-]+$', plate):
-            raise ValidationError(_('License plate contains invalid characters.'))
-        return plate
+        return validate_license_plate(self.cleaned_data.get('license_plate', ''))
 
 
 CarCreateForm = CarBaseForm

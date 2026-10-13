@@ -1,6 +1,5 @@
 import csv
 import io
-import re
 import uuid
 from dataclasses import dataclass, field
 from datetime import date
@@ -18,9 +17,9 @@ from shop.models.garage import Garage, KnownShop
 from shop.models.job import WorkJob
 from shop.models.report import Report
 from shop.services import update_car_odometer_from_report
+from shop.validators import validate_license_plate, validate_vin
 
 
-VIN_BAD_CHARS = set("IOQ")
 UNSAFE_URL_SCHEMES = {'javascript', 'data', 'vbscript', 'blob', 'file'}
 
 
@@ -511,25 +510,17 @@ class CSVImporter:
 
     def _normalize_vin(self, value: Any) -> str | None:
         cleaned = self._clean_optional_text(value)
-        if not cleaned:
-            return None
-        vin = re.sub(r"\s+", "", cleaned).upper()
-        if any(ch in VIN_BAD_CHARS for ch in vin):
-            raise ImportValidationError(_("VIN contains invalid characters (I, O, Q are not allowed)."))
-        if not re.match(r"^[A-HJ-NPR-Z0-9]{11,17}$", vin):
-            raise ImportValidationError(_("VIN must be 11-17 alphanumeric characters (no I/O/Q)."))
-        return vin
+        try:
+            return validate_vin(cleaned)
+        except ValidationError as exc:
+            raise ImportValidationError(exc.messages[0]) from exc
 
     def _normalize_license_plate(self, value: Any) -> str:
         cleaned = self._clean_optional_text(value)
-        if not cleaned:
-            return ""
-        plate = cleaned.upper()
-        if len(plate) > 20:
-            raise ImportValidationError(_("License plate must be 20 characters or fewer."))
-        if not re.match(r"^[A-Z0-9 \-]+$", plate):
-            raise ImportValidationError(_("License plate contains invalid characters."))
-        return plate
+        try:
+            return validate_license_plate(cleaned)
+        except ValidationError as exc:
+            raise ImportValidationError(exc.messages[0]) from exc
 
     def _ignored_field_warnings(self, record: dict[str, Any], used_keys: set[str]) -> list[str]:
         excluded_keys = set(record.keys()) - used_keys

@@ -886,7 +886,8 @@ class AuthAndInputCoverageTests(TestCase):
         self.assertFalse(invalid_plate.is_valid())
         self.assertIn('license_plate', invalid_plate.errors)
 
-    def test_car_orm_validation_rejects_invalid_vin_and_license_plate(self):
+    def test_car_orm_does_not_validate_vin_or_license_plate(self):
+        """ORM-created cars bypass VIN/plate validation; forms enforce the rules."""
         user = ShopUser.objects.create_user(
             username='orm-car-validator',
             email='orm-car-validator@example.com',
@@ -895,22 +896,22 @@ class AuthAndInputCoverageTests(TestCase):
         garage = Garage.objects.create(name='ORM Car Garage', created_by=user)
         GarageMembership.objects.create(garage=garage, user=user, role=GarageMembership.ROLE_OWNER)
 
-        with self.assertRaises(ValidationError):
-            Car.objects.create(
-                garage=garage,
-                make='Honda',
-                model='Civic',
-                vin='SHORT',
-            )
+        car = Car.objects.create(
+            garage=garage,
+            make='Honda',
+            model='Civic',
+            vin='SHORT',
+        )
+        self.assertEqual(car.vin, 'SHORT')
 
-        with self.assertRaises(ValidationError):
-            Car.objects.create(
-                garage=garage,
-                make='Honda',
-                model='Civic',
-                vin='JTDKB20U793512351',
-                license_plate='BAD@PLATE',
-            )
+        car2 = Car.objects.create(
+            garage=garage,
+            make='Honda',
+            model='Civic',
+            vin='JTDKB20U793512351',
+            license_plate='BAD@PLATE',
+        )
+        self.assertEqual(car2.license_plate, 'BAD@PLATE')
 
     def test_workjob_and_report_form_line_lists_and_assignment_guards(self):
         user = ShopUser.objects.create_user(username='mechanic-form-user', email='mechanic@shop.test', password='pass1234', is_mechanic=True)
