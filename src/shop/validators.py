@@ -1,4 +1,5 @@
 import re
+from typing import Any
 
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
@@ -29,6 +30,18 @@ def validate_vin(value: str | None) -> str | None:
         raise ValidationError(_("VIN must be 11-17 alphanumeric characters (no I/O/Q)."))
 
     return vin
+
+
+def validate_single_assignment(assigned_to: Any, assigned_shop: Any) -> None:
+    """Ensure at most one of ``assigned_to`` or ``assigned_shop`` is set."""
+    if assigned_to is not None and assigned_shop is not None:
+        raise ValidationError(_("Assign either a mechanic user or a known shop, not both."))
+
+
+def validate_assigned_mechanic(assigned_to: Any) -> None:
+    """Ensure ``assigned_to`` is a mechanic when set."""
+    if assigned_to is not None and not getattr(assigned_to, "is_mechanic", False):
+        raise ValidationError({"assigned_to": _("Assigned user must be a mechanic.")})
 
 
 def validate_license_plate(value: str | None) -> str:

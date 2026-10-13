@@ -8,6 +8,7 @@ from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 
 from shop.models.garage import KnownShop
+from shop.validators import validate_single_assignment
 
 # Per-file upload ceiling for unified attachments (100 MB). Large enough for
 # phone-recorded mechanic videos while limiting abuse of storage and memory.
@@ -73,8 +74,10 @@ class AssignedToShopFormMixin:
 
     def clean(self) -> dict[str, Any]:
         cleaned_data = super().clean()
-        if cleaned_data.get('assigned_to') and cleaned_data.get('assigned_shop'):
-            raise ValidationError(_('Assign either a mechanic user or a known shop, not both.'))
+        validate_single_assignment(
+            cleaned_data.get('assigned_to'),
+            cleaned_data.get('assigned_shop'),
+        )
         return cleaned_data
 
 

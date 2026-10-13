@@ -6,9 +6,10 @@ from django.utils.translation import gettext_lazy as _
 from shop.models.attachment import Attachment
 from shop.models.car import Car
 from shop.models.garage import KnownShop
+from shop.models.mixins import AssignedToShopMixin
 
 
-class Report(models.Model):
+class Report(AssignedToShopMixin, models.Model):
     """A historical report for work done on a car.
 
     - `job_name`: the name/title of the work performed
@@ -49,17 +50,6 @@ class Report(models.Model):
                 name="report_single_assignment_target",
             )
         ]
-
-    def clean(self) -> None:
-        super().clean()
-        if self.assigned_to and not getattr(self.assigned_to, "is_mechanic", False):
-            from django.core.exceptions import ValidationError
-
-            raise ValidationError({"assigned_to": _("Assigned user must be a mechanic.")})
-
-    def save(self, *args, **kwargs):
-        self.clean()
-        return super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return f"{self.job_name} on {self.date_done} for {self.car}"

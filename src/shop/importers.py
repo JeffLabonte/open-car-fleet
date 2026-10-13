@@ -17,7 +17,11 @@ from shop.models.garage import Garage, KnownShop
 from shop.models.job import WorkJob
 from shop.models.report import Report
 from shop.services import update_car_odometer_from_report
-from shop.validators import validate_license_plate, validate_vin
+from shop.validators import (
+    validate_license_plate,
+    validate_single_assignment,
+    validate_vin,
+)
 
 
 UNSAFE_URL_SCHEMES = {'javascript', 'data', 'vbscript', 'blob', 'file'}
@@ -423,8 +427,10 @@ class CSVImporter:
             raise ImportValidationError(_("Known shop not found for id '%(value)s'.") % {'value': raw_value}) from exc
 
     def _validate_assignment_target(self, assigned_to: Any, assigned_shop: Any) -> None:
-        if assigned_to is not None and assigned_shop is not None:
-            raise ImportValidationError(_("Assign either a mechanic user or a known shop, not both."))
+        try:
+            validate_single_assignment(assigned_to, assigned_shop)
+        except ValidationError as exc:
+            raise ImportValidationError(exc.messages[0]) from exc
 
     def _require_text(self, record: dict[str, Any], field_name: str) -> str:
         value = self._clean_optional_text(record.get(field_name))

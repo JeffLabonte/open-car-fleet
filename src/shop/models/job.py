@@ -4,9 +4,10 @@ from django.utils.translation import gettext_lazy as _
 
 from shop.models.car import Car
 from shop.models.garage import KnownShop
+from shop.models.mixins import AssignedToShopMixin
 
 
-class WorkJob(models.Model):
+class WorkJob(AssignedToShopMixin, models.Model):
     """A planned maintenance or repair job for a car.
 
     Tracks planning, assignment, required items and completion status.
@@ -63,17 +64,6 @@ class WorkJob(models.Model):
                 name="workjob_single_assignment_target",
             )
         ]
-
-    def clean(self) -> None:
-        super().clean()
-        if self.assigned_to and not getattr(self.assigned_to, "is_mechanic", False):
-            from django.core.exceptions import ValidationError
-
-            raise ValidationError({"assigned_to": _("Assigned user must be a mechanic.")})
-
-    def save(self, *args, **kwargs):
-        self.clean()
-        return super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return f"{self.title} [{self.get_urgency_display()}] for {self.car}"
