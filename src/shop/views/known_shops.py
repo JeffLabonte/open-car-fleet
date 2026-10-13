@@ -31,6 +31,7 @@ from shop.view_helpers import (
     user_garages_queryset,
     user_known_shops_queryset,
 )
+from shop.views.helpers import handle_model_form
 
 security_log = logging.getLogger('security')
 
@@ -46,22 +47,21 @@ def known_shop_list(request: HttpRequest) -> HttpResponse:
 
 @hanko_login_required
 def known_shop_create(request: HttpRequest) -> HttpResponse:
-    if request.method == 'POST':
-        form = KnownShopForm(request.POST)
-        if form.is_valid():
-            shop = form.save(commit=False)
-            shop.created_by = request.user
-            shop.save()
-            messages.success(request, _('Shop added successfully.'))
-            return redirect(reverse('shop-known-shop-detail', args=[shop.pk]))
-    else:
-        form = KnownShopForm()
-    return render(request, 'shop/shop_form.html', {
-        'form': form,
-        'is_create': True,
-        'title': _('Add known shop'),
-        'subtitle': _('Save a shop now and add supporting proofs over time'),
-    })
+    def _set_creator(shop: KnownShop, _form) -> None:
+        shop.created_by = request.user
+
+    return handle_model_form(
+        request,
+        KnownShopForm,
+        'shop/shop_form.html',
+        lambda shop: reverse('shop-known-shop-detail', args=[shop.pk]),
+        save_callback=_set_creator,
+        success_message=_('Shop added successfully.'),
+        context={
+            'title': _('Add known shop'),
+            'subtitle': _('Save a shop now and add supporting proofs over time'),
+        },
+    )
 
 
 @hanko_login_required

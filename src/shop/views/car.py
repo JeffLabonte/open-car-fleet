@@ -39,6 +39,7 @@ from shop.view_helpers import (
     user_garages_queryset,
     user_known_shops_queryset,
 )
+from shop.views.helpers import handle_model_form
 
 security_log = logging.getLogger('security')
 
@@ -227,17 +228,19 @@ def part_create(request: HttpRequest, car_pk: str) -> HttpResponse:
     if not GarageSharingPermissions(request.user, car.garage).can_edit_garage_data:
         messages.error(request, _('You do not have permission to add parts to this car.'))
         return redirect(reverse('shop-car-detail', args=[car.pk]))
-    if request.method == 'POST':
-        form = CarPartForm(request.POST)
-        if form.is_valid():
-            part = form.save(commit=False)
-            part.car = car
-            part.save()
-            messages.success(request, _('Part status added successfully.'))
-            return redirect(reverse('shop-car-detail', args=[car.pk]))
-    else:
-        form = CarPartForm()
-    return render(request, 'shop/part_form.html', {'form': form, 'is_create': True, 'car': car})
+
+    def _set_car(part: CarPart, _form) -> None:
+        part.car = car
+
+    return handle_model_form(
+        request,
+        CarPartForm,
+        'shop/part_form.html',
+        reverse('shop-car-detail', args=[car.pk]),
+        save_callback=_set_car,
+        success_message=_('Part status added successfully.'),
+        context={'car': car},
+    )
 
 
 @hanko_login_required
@@ -247,15 +250,15 @@ def part_update(request: HttpRequest, car_pk: str, pk: str) -> HttpResponse:
         messages.error(request, _('You do not have permission to update parts for this car.'))
         return redirect(reverse('shop-car-detail', args=[car.pk]))
     part = get_object_or_404(CarPart, pk=pk, car=car)
-    if request.method == 'POST':
-        form = CarPartForm(request.POST, instance=part)
-        if form.is_valid():
-            form.save()
-            messages.success(request, _('Part status updated successfully.'))
-            return redirect(reverse('shop-car-detail', args=[car.pk]))
-    else:
-        form = CarPartForm(instance=part)
-    return render(request, 'shop/part_form.html', {'form': form, 'is_create': False, 'car': car, 'part': part})
+    return handle_model_form(
+        request,
+        CarPartForm,
+        'shop/part_form.html',
+        reverse('shop-car-detail', args=[car.pk]),
+        instance=part,
+        success_message=_('Part status updated successfully.'),
+        context={'car': car, 'part': part},
+    )
 
 
 @hanko_login_required
