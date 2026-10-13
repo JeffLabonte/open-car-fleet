@@ -93,6 +93,7 @@
 
   {% if can_manage_garage %}
     <dialog class="dialog dialog--fleet-edit" id="dialog-fleet-edit" data-testid="fleet-edit-dialog" data-open-on-error="{{ form.errors|yesno:'true,false' }}">
+      <form method="post" action="{% url 'shop-garage-update' garage.pk %}">
         {% csrf_token %}
         <h2 class="dialog__title">{% translate 'Edit fleet' %}</h2>
 
