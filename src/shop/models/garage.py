@@ -159,15 +159,15 @@ class GarageInvitation(models.Model):
     def send_invitation_email(self, accept_base_url: str, sender_email: str | None = None) -> int:
         """Send invitation email containing a tokenized acceptance URL."""
         tokenized_url = f"{accept_base_url.rstrip('/')}/{self.token}"
-        subject = f"You have been invited to join the fleet '{self.garage.name}'"
-        body = (
+        subject = _("You have been invited to join the fleet '%(name)s'") % {'name': self.garage.name}
+        body = _(
             "You have been invited to join a shared fleet. "
             "Sign in with your social account (Google, Microsoft, or GitHub) to accept the invitation.\n\n"
-            f"Accept invitation: {tokenized_url}\n\n"
-            f"Fleet: {self.garage.name}\n"
-        )
+            "Accept invitation: %(url)s\n\n"
+            "Fleet: %(name)s\n"
+        ) % {'url': tokenized_url, 'name': self.garage.name}
         if self.message:
-            body += f"\nMessage from inviter:\n{self.message}\n"
+            body += _("\nMessage from inviter:\n%(message)s\n") % {'message': self.message}
 
         return send_mail(
             subject=subject,
