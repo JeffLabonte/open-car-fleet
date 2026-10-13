@@ -8,13 +8,11 @@ from django.urls import reverse
 from django.utils.translation import gettext as _
 
 from shop.forms import (
+    CarForm,
     CarImportForm,
-    CarCreateForm,
     CarPartForm,
-    CarUpdateForm,
-    FleetUpdateForm,
+    FleetForm,
     GarageCreateForm,
-    GarageImportForm,
     GarageInviteForm,
     GarageMembershipRoleForm,
     KnownShopForm,

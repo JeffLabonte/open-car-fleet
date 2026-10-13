@@ -1,6 +1,13 @@
-from shop.forms.car import CarCreateForm, CarPartForm, CarUpdateForm
+from shop.forms.car import (
+    CarBaseForm,
+    CarCreateForm,
+    CarForm,
+    CarPartForm,
+    CarUpdateForm,
+)
 from shop.forms.garage import (
     FleetCreateForm,
+    FleetForm,
     FleetInviteForm,
     FleetUpdateForm,
     GarageCreateForm,
@@ -14,16 +21,19 @@ from shop.forms.report import ReportForm
 from shop.forms.shop import KnownShopForm, KnownShopProofForm
 
 __all__ = [
+    'CarBaseForm',
     'CarCreateForm',
+    'CarForm',
     'CarPartForm',
     'CarUpdateForm',
+    'FleetCreateForm',
+    'FleetForm',
+    'FleetInviteForm',
+    'FleetUpdateForm',
     'GarageCreateForm',
     'GarageInviteForm',
     'GarageMembershipRoleForm',
     'GarageUpdateForm',
-    'FleetCreateForm',
-    'FleetInviteForm',
-    'FleetUpdateForm',
     'CarImportForm',
     'GarageImportForm',
     'WorkJobForm',

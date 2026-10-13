@@ -9,13 +9,11 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 
 from shop.forms import (
+    CarForm,
     CarImportForm,
-    CarCreateForm,
     CarPartForm,
-    CarUpdateForm,
-    FleetUpdateForm,
+    FleetForm,
     GarageCreateForm,
-    GarageImportForm,
     GarageInviteForm,
     GarageMembershipRoleForm,
     KnownShopForm,
@@ -168,7 +166,7 @@ def car_detail(request: HttpRequest, pk: str) -> HttpResponse:
 def car_create(request: HttpRequest) -> HttpResponse:
     """Create a new Car. Handles validation and shows errors in form."""
     if request.method == 'POST':
-        form = CarCreateForm(request.POST, user=request.user)
+        form = CarForm(request.POST, user=request.user)
         if form.is_valid():
             garage = form.cleaned_data.get('garage')
             if garage is not None and not GarageSharingPermissions(request.user, garage).can_edit_garage_data:
@@ -178,7 +176,7 @@ def car_create(request: HttpRequest) -> HttpResponse:
             messages.success(request, _('Car created successfully.'))
             return redirect(reverse('shop-car-detail', args=[car.pk]))
     else:
-        form = CarCreateForm(user=request.user)
+        form = CarForm(user=request.user)
     return render(request, 'shop/car_form.html', {'form': form, 'is_create': True})
 
 
@@ -190,7 +188,7 @@ def car_update(request: HttpRequest, pk: str) -> HttpResponse:
         messages.error(request, _('You do not have permission to edit this car.'))
         return redirect(reverse('shop-car-detail', args=[car.pk]))
     if request.method == 'POST':
-        form = CarUpdateForm(request.POST, instance=car, user=request.user)
+        form = CarForm(request.POST, instance=car, user=request.user)
         if form.is_valid():
             garage = form.cleaned_data.get('garage')
             if garage is not None and garage.pk != car.garage_id:
@@ -201,7 +199,7 @@ def car_update(request: HttpRequest, pk: str) -> HttpResponse:
             messages.success(request, _('Car updated successfully.'))
             return redirect(reverse('shop-car-detail', args=[car.pk]))
     else:
-        form = CarUpdateForm(instance=car, user=request.user)
+        form = CarForm(instance=car, user=request.user)
     return render(request, 'shop/car_form.html', {'form': form, 'is_create': False, 'car': car})
 
 

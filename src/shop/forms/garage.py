@@ -5,7 +5,7 @@ from django.utils.translation import gettext_lazy as _
 from shop.models.garage import Garage, GarageMembership
 
 
-class FleetCreateForm(forms.ModelForm):
+class FleetForm(forms.ModelForm):
     class Meta:
         model = Garage
         fields = ['name', 'description']
@@ -91,21 +91,9 @@ class GarageMembershipRoleForm(forms.Form):
         return role
 
 
-class FleetUpdateForm(forms.ModelForm):
-    class Meta:
-        model = Garage
-        fields = ['name', 'description']
-        labels = {
-            'name': _('Fleet name'),
-            'description': _('Description'),
-        }
-        widgets = {
-            'name': forms.TextInput(attrs={'class': 'input', 'placeholder': _('Fleet name')}),
-            'description': forms.Textarea(attrs={'class': 'textarea', 'rows': 4, 'placeholder': _('Optional description')})
-        }
-
-
 # Backward-compatible aliases used across existing views/tests.
-GarageCreateForm = FleetCreateForm
+FleetCreateForm = FleetForm
+FleetUpdateForm = FleetForm
+GarageCreateForm = FleetForm
 GarageInviteForm = FleetInviteForm
-GarageUpdateForm = FleetUpdateForm
+GarageUpdateForm = FleetForm

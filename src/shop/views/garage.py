@@ -10,11 +10,10 @@ from django.views.decorators.http import require_GET, require_POST
 from shop.decorators import require_garage_permission
 from shop.exporters import export_garage_to_excel
 from shop.forms import (
+    CarForm,
     CarImportForm,
-    CarCreateForm,
     CarPartForm,
-    CarUpdateForm,
-    FleetUpdateForm,
+    FleetForm,
     GarageCreateForm,
     GarageImportForm,
     GarageInviteForm,
@@ -77,7 +76,7 @@ def garage_detail(request: HttpRequest, pk: str) -> HttpResponse:
         'shop/fleet_detail.html',
         {
             'garage': garage,
-            'form': FleetUpdateForm(instance=garage) if perms.can_manage_members else None,
+            'form': FleetForm(instance=garage) if perms.can_manage_members else None,
             'can_manage_garage': perms.can_manage_members,
             'can_edit_garage_data': perms.can_edit_garage_data,
             'cars': cars,
@@ -127,13 +126,13 @@ def garage_update(request: HttpRequest, pk: str) -> HttpResponse:
         return redirect(reverse('shop-garage-detail', args=[garage.pk]))
 
     if request.method == 'POST':
-        form = FleetUpdateForm(request.POST, instance=garage)
+        form = FleetForm(request.POST, instance=garage)
         if form.is_valid():
             form.save()
             messages.success(request, _('Fleet updated successfully.'))
             return redirect(reverse('shop-garage-detail', args=[garage.pk]))
     else:
-        form = FleetUpdateForm(instance=garage)
+        form = FleetForm(instance=garage)
 
     return render(
         request,

@@ -31,7 +31,7 @@ class CarPartForm(forms.ModelForm):
         return name
 
 
-class CarBaseForm(forms.ModelForm):
+class CarForm(forms.ModelForm):
     class Meta:
         model = Car
         fields = ['garage', 'usual_name', 'make', 'model', 'colour', 'year', 'vin', 'license_plate']
@@ -95,5 +95,7 @@ class CarBaseForm(forms.ModelForm):
         return validate_license_plate(self.cleaned_data.get('license_plate', ''))
 
 
-CarCreateForm = CarBaseForm
-CarUpdateForm = CarBaseForm
+# Backward-compatible aliases used across existing views/tests.
+CarBaseForm = CarForm
+CarCreateForm = CarForm
+CarUpdateForm = CarForm
