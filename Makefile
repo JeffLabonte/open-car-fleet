@@ -1,4 +1,4 @@
-.PHONY: install install-prereqs db-up db-wait db-stop db-reset db-snapshot migrate run test test-serial test-profile test-fast test-bdd test-coverage test-e2e check-migrations translations check-tailscale ansible-ping ansible-deploy deploy backup backup-media backup-database lint lint-fix format format-check
+.PHONY: install install-prereqs install-hooks db-up db-wait db-stop db-reset db-snapshot migrate run test test-serial test-profile test-fast test-bdd test-coverage test-e2e check-migrations translations check-tailscale ansible-ping ansible-deploy deploy backup backup-media backup-database lint lint-fix format format-check
 
 POETRY ?= poetry
 PYTHON ?= $(POETRY) run python
@@ -34,6 +34,9 @@ install:
 
 install-prereqs:
 	bash scripts/install-prereqs.sh
+
+install-hooks:
+	install -m 755 scripts/pre-push .git/hooks/pre-push
 
 check-tailscale:
 	bash scripts/check-tailscale.sh

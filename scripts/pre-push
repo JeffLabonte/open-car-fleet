@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Git pre-push hook for open-car-fleet.
+# Installed by `make install-hooks`.
+# Runs linting and formatting checks before allowing a push.
+
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+echo "Running pre-push lint/format checks..."
+make lint
+make format-check
+
+echo "Pre-push checks passed."
