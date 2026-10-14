@@ -46,6 +46,20 @@ COPY --from=base /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.
 COPY --from=base /app /app
 COPY --from=base /staticfiles /staticfiles
 
+# Install Docker CLI and Compose plugin so management commands can
+# self-orchestrate the Compose stack. These tools are only usable when the
+# container is explicitly started with the Docker socket and backup directories
+# mounted (e.g. for the restore_db command).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl gnupg lsb-release \
+    && install -m 0755 -d /etc/apt/keyrings \
+    && curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc \
+    && chmod a+r /etc/apt/keyrings/docker.asc \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends docker-ce-cli docker-compose-plugin \
+    && rm -rf /var/lib/apt/lists/* /etc/apt/sources.list.d/docker.list /etc/apt/keyrings/docker.asc
+
 RUN addgroup --system django && adduser --system --ingroup django django \
     && mkdir -p /app/src/media \
     && chown -R django:django /app/src/media

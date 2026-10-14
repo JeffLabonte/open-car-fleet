@@ -28,6 +28,19 @@ poetry run python src/manage.py export_fleet <fleet-uuid> [--output path.xlsx]
 poetry run python src/manage.py convert_user_to_mechanic <email>
 poetry run python src/manage.py send_test_email --to <email> [--from <addr>] [--backend <path>]
 
+# Restore (production) — run in a standalone container with the Docker socket + backups mounted.
+# Use `docker run` (not `docker compose run`) so the restore container is not stopped
+# when the command tears down the Compose project.
+docker run --rm --user root \
+  --env-file /opt/open-car-fleet/src/.env \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v /opt/backups:/opt/backups \
+  -v /opt/open-car-fleet:/opt/open-car-fleet:ro \
+  open-car-fleet-web:latest \
+  python /app/src/manage.py restore_db \
+  --db-snapshot /opt/backups/database/snapshot-YYYYMMDD-HHMMSS.sql.gz \
+  --media-snapshot /opt/backups/media/snapshot-YYYYMMDD-HHMMSS.tar.gz
+
 # Translations (en-ca / fr-ca)
 poetry run python src/manage.py makemessages -l en_CA -l fr_CA
 poetry run python src/manage.py compilemessages
@@ -89,7 +102,7 @@ src/
     view_helpers.py, middleware.py, auth.py
     importers.py    # CSV import logic (import_csv command + web UI)
     exporters.py    # Excel fleet export (export_fleet command + web UI)
-    management/commands/  # import_csv, export_fleet, convert_user_to_mechanic
+    management/commands/  # import_csv, export_fleet, convert_user_to_mechanic, restore_db
   car_docs/         # CarDoc notes/documents; reuses shop's middleware and view_helpers
   imports/          # sample CSVs for import_csv
 ```
