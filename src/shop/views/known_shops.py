@@ -20,6 +20,7 @@ from shop.forms import (
     WorkJobForm,
 )
 from shop.middleware import hanko_login_required
+from shop.models.fleet import KnownShop
 from shop.services.attachments import save_attachments
 from shop.view_helpers import (
     user_can_manage_fleet,
