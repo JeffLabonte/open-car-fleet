@@ -11,77 +11,85 @@ from shop.models.report import Report
 class ReportForm(AssignedToShopFormMixin, StagedAttachmentsMixin, forms.ModelForm):
     attachments = AttachmentField(
         required=False,
-        widget=MultipleFileInput(attrs={
-            'accept': 'image/*,video/*,.pdf,.doc,.docx',
-            'capture': 'environment',
-        }),
-        help_text=_('Upload one or more photos, videos, or documents.'),
+        widget=MultipleFileInput(
+            attrs={
+                "accept": "image/*,video/*,.pdf,.doc,.docx",
+                "capture": "environment",
+            }
+        ),
+        help_text=_("Upload one or more photos, videos, or documents."),
     )
     external_links = forms.CharField(
         required=False,
-        widget=forms.Textarea(attrs={
-            'class': 'textarea',
-            'rows': 3,
-            'placeholder': _('One external link per line (OneDrive, Google Drive, etc.)'),
-        }),
-        help_text=_('Add one external link per line. OneDrive and Google Drive share links work well.'),
+        widget=forms.Textarea(
+            attrs={
+                "class": "textarea",
+                "rows": 3,
+                "placeholder": _("One external link per line (OneDrive, Google Drive, etc.)"),
+            }
+        ),
+        help_text=_("Add one external link per line. OneDrive and Google Drive share links work well."),
     )
 
     class Meta:
         model = Report
         fields = [
-            'mileage',
-            'job_name',
-            'assigned_to',
-            'assigned_shop',
-            'date_done',
-            'note',
-            'additional_information',
+            "mileage",
+            "job_name",
+            "assigned_to",
+            "assigned_shop",
+            "date_done",
+            "note",
+            "additional_information",
         ]
         widgets = {
-            'mileage': forms.NumberInput(attrs={'class': 'input', 'placeholder': _('Mileage at completion')}),
-            'job_name': forms.TextInput(attrs={'class': 'input', 'placeholder': _('Work performed')}),
-            'assigned_to': forms.Select(attrs={'class': 'input'}),
-            'assigned_shop': forms.Select(attrs={'class': 'input'}),
-            'date_done': forms.DateInput(attrs={'class': 'input', 'type': 'date'}),
-            'note': forms.Textarea(attrs={'class': 'textarea', 'rows': 6, 'placeholder': _('Write the maintenance report details here')}),
-            'additional_information': forms.Textarea(
-                attrs={'class': 'textarea', 'rows': 3, 'placeholder': _('Extra information (parts, warranty notes, follow-up, etc.)')}
+            "mileage": forms.NumberInput(attrs={"class": "input", "placeholder": _("Mileage at completion")}),
+            "job_name": forms.TextInput(attrs={"class": "input", "placeholder": _("Work performed")}),
+            "assigned_to": forms.Select(attrs={"class": "input"}),
+            "assigned_shop": forms.Select(attrs={"class": "input"}),
+            "date_done": forms.DateInput(attrs={"class": "input", "type": "date"}),
+            "note": forms.Textarea(
+                attrs={"class": "textarea", "rows": 6, "placeholder": _("Write the maintenance report details here")}
+            ),
+            "additional_information": forms.Textarea(
+                attrs={
+                    "class": "textarea",
+                    "rows": 3,
+                    "placeholder": _("Extra information (parts, warranty notes, follow-up, etc.)"),
+                }
             ),
         }
         labels = {
-            'mileage': _('Mileage'),
-            'job_name': _('Work performed'),
-            'assigned_to': _('Assigned to'),
-            'assigned_shop': _('Known shop'),
-            'date_done': _('Date completed'),
-            'note': _('Maintenance report'),
-            'additional_information': _('Additional information'),
-            'attachments': _('Attachments'),
-            'external_links': _('External links'),
+            "mileage": _("Mileage"),
+            "job_name": _("Work performed"),
+            "assigned_to": _("Assigned to"),
+            "assigned_shop": _("Known shop"),
+            "date_done": _("Date completed"),
+            "note": _("Maintenance report"),
+            "additional_information": _("Additional information"),
+            "attachments": _("Attachments"),
+            "external_links": _("External links"),
         }
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        fleet = kwargs.pop('fleet', None)
-        car = kwargs.pop('car', None)
+        fleet = kwargs.pop("fleet", None)
+        car = kwargs.pop("car", None)
         super().__init__(*args, **kwargs)
         self.configure_assigned_fields(user=self.user, fleet=fleet)
         if car is not None:
-            current = car.mileage if car.mileage is not None else _('unknown')
-            self.fields['mileage'].help_text = _(
-                'Current odometer: %(mileage)s'
-            ) % {'mileage': current}
+            current = car.mileage if car.mileage is not None else _("unknown")
+            self.fields["mileage"].help_text = _("Current odometer: %(mileage)s") % {"mileage": current}
         # The unified attachment mechanism renders at the bottom of the form.
-        self.order_fields([
-            name for name in self.fields
-            if name not in ('external_links', 'attachments')
-        ] + [name for name in ('external_links', 'attachments') if name in self.fields])
+        self.order_fields(
+            [name for name in self.fields if name not in ("external_links", "attachments")]
+            + [name for name in ("external_links", "attachments") if name in self.fields]
+        )
 
     def clean_external_links(self) -> list[str]:
-        raw = self.cleaned_data.get('external_links', '')
+        raw = self.cleaned_data.get("external_links", "")
         links = [item.strip() for item in raw.splitlines() if item.strip()]
         for link in links:
             parsed = urlparse(link)
-            if parsed.scheme not in {'http', 'https'} or not parsed.netloc:
-                raise forms.ValidationError(_('External links must use http:// or https://.'))
+            if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+                raise forms.ValidationError(_("External links must use http:// or https://."))
         return links

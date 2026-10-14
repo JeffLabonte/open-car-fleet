@@ -7,7 +7,6 @@ from django.utils import timezone
 
 from shop.models.attachment import Attachment
 
-
 # Per-user quota for staged (unclaimed) uploads (1 GB). Claimed attachments
 # are counted against the parent object, not this transient quota.
 ATTACHMENT_USER_STAGED_QUOTA_BYTES = 1024 * 1024 * 1024
@@ -15,14 +14,14 @@ ATTACHMENT_USER_STAGED_QUOTA_BYTES = 1024 * 1024 * 1024
 
 # MIME types that may be displayed inline by the attachment file view.
 INLINE_SAFE_ATTACHMENT_TYPES = {
-    'image/jpeg',
-    'image/png',
-    'image/gif',
-    'image/webp',
-    'video/mp4',
-    'video/webm',
-    'video/quicktime',
-    'application/pdf',
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+    "video/mp4",
+    "video/webm",
+    "video/quicktime",
+    "application/pdf",
 }
 
 
@@ -59,8 +58,8 @@ def save_attachments(
             object_id=str(parent.pk),
             source_type=Attachment.SOURCE_UPLOAD,
             file=uploaded_file,
-            display_name=os.path.basename(getattr(uploaded_file, 'name', '') or f'attachment-{index + 1}'),
-            mime_type=getattr(uploaded_file, 'content_type', ''),
+            display_name=os.path.basename(getattr(uploaded_file, "name", "") or f"attachment-{index + 1}"),
+            mime_type=getattr(uploaded_file, "content_type", ""),
         )
 
     for index, attachment in enumerate(staged or []):
@@ -75,6 +74,6 @@ def save_attachments(
             object_id=str(parent.pk),
             source_type=Attachment.SOURCE_EXTERNAL,
             url=external_link,
-            display_name=external_link.rstrip('/').rsplit('/', 1)[-1] or f'link-{index + 1}',
+            display_name=external_link.rstrip("/").rsplit("/", 1)[-1] or f"link-{index + 1}",
             kind=Attachment.KIND_LINK,
         )

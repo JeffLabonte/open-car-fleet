@@ -3,7 +3,7 @@
 
 {% block content %}
   <header class="page-header">
-    {% include 'shop/partials/_page_header.html' with heading=_('My Fleets') subheading=_('Keep an eye on the spaces and vehicles you manage.') %}
+    {% include 'shop/partials/_page_header.html' %}
     <div class="page-actions">
       <a class="button is-primary" href="{% url 'shop-fleet-create' %}">
         {% include 'shop/partials/_icon.html' with name='plus' %}

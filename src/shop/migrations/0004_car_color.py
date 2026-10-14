@@ -4,16 +4,15 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('shop', '0003_alter_car_garage'),
+        ("shop", "0003_alter_car_garage"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='car',
-            name='color',
-            field=models.CharField(max_length=50, default=''),
+            model_name="car",
+            name="color",
+            field=models.CharField(max_length=50, default=""),
             preserve_default=False,
         ),
     ]

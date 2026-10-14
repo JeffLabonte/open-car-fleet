@@ -1,9 +1,10 @@
-.PHONY: install install-prereqs db-up db-wait db-stop db-reset db-snapshot migrate run test test-serial test-profile test-fast test-bdd test-coverage test-e2e check-migrations translations check-tailscale ansible-ping ansible-deploy deploy backup backup-media backup-database
+.PHONY: install install-prereqs db-up db-wait db-stop db-reset db-snapshot migrate run test test-serial test-profile test-fast test-bdd test-coverage test-e2e check-migrations translations check-tailscale ansible-ping ansible-deploy deploy backup backup-media backup-database lint lint-fix format format-check
 
 POETRY ?= poetry
 PYTHON ?= $(POETRY) run python
 PYTEST ?= $(POETRY) run pytest
 PYTEST_ARGS ?= -q
+RUFF ?= $(POETRY) run ruff
 ANSIBLE ?= ansible
 ANSIBLE_PLAYBOOK ?= ansible-playbook
 ANSIBLE_INVENTORY ?= ansible/inventory.yml
@@ -144,3 +145,15 @@ db-snapshot: db-up db-wait
 
 translations: install
 	$(POETRY) run python src/manage.py makemessages -l en_CA -l fr_CA
+
+lint:
+	$(RUFF) check src tests conftest.py
+
+lint-fix:
+	$(RUFF) check --fix src tests conftest.py
+
+format:
+	$(RUFF) format src tests conftest.py
+
+format-check:
+	$(RUFF) format --check src tests conftest.py

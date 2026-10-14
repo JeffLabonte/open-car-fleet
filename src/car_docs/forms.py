@@ -8,26 +8,34 @@ from shop.forms.base import AttachmentField, MultipleFileInput, StagedAttachment
 class CarDocForm(StagedAttachmentsMixin, forms.ModelForm):
     attachments = AttachmentField(
         required=False,
-        widget=MultipleFileInput(attrs={
-            'accept': 'image/*,video/*,.pdf,.doc,.docx',
-        }),
-        help_text=_('Upload one or more photos, videos, or documents.'),
+        widget=MultipleFileInput(
+            attrs={
+                "accept": "image/*,video/*,.pdf,.doc,.docx",
+            }
+        ),
+        help_text=_("Upload one or more photos, videos, or documents."),
     )
 
     class Meta:
         model = CarDoc
-        fields = ['title', 'content']
+        fields = ["title", "content"]
         labels = {
-            'title': _('Document title'),
-            'content': _('Notes'),
-            'attachments': _('Attachments'),
+            "title": _("Document title"),
+            "content": _("Notes"),
+            "attachments": _("Attachments"),
         }
         widgets = {
-            'title': forms.TextInput(attrs={'class': 'input', 'placeholder': _('Document title')}),
-            'content': forms.Textarea(attrs={'class': 'textarea', 'rows': 10, 'placeholder': _('Add notes, instructions, or summary details...')}),
+            "title": forms.TextInput(attrs={"class": "input", "placeholder": _("Document title")}),
+            "content": forms.Textarea(
+                attrs={
+                    "class": "textarea",
+                    "rows": 10,
+                    "placeholder": _("Add notes, instructions, or summary details..."),
+                }
+            ),
         }
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         # The unified attachment mechanism renders at the bottom of the form.
-        self.order_fields([name for name in ('title', 'content') if name in self.fields] + ['attachments'])
+        self.order_fields([name for name in ("title", "content") if name in self.fields] + ["attachments"])

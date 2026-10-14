@@ -1,0 +1,31 @@
+{% extends 'shop/partials/_model_form.html' %}
+{% load i18n %}
+{% comment %}
+Base layout for create/update forms that include the unified attachment section.
+
+In addition to the blocks provided by _model_form.html, callers may override:
+  - form_extra (optional): To provide current_attachments, wrap block.super in a
+    {% with current_attachments=... %} tag. Example:
+
+    {% block form_extra %}
+      {% with current_attachments=report.attachments.all %}
+        {{ block.super }}
+      {% endwith %}
+    {% endblock %}
+
+The caller is also responsible for loading attachments.js in the extra_scripts block.
+{% endcomment %}
+
+{% block form_attrs %}enctype="multipart/form-data" novalidate{% endblock %}
+
+{% block form_fields %}
+  {% for field in form.visible_fields %}
+    {% if field.name != 'attachments' %}
+      {% include 'shop/partials/_form_field.html' %}
+    {% endif %}
+  {% endfor %}
+{% endblock %}
+
+{% block form_extra %}
+  {% include 'shop/partials/_attachments_section.html' with field=form.attachments current_attachments=current_attachments %}
+{% endblock %}

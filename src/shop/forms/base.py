@@ -3,7 +3,6 @@ from typing import Any
 
 from django import forms
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 
@@ -20,29 +19,29 @@ ATTACHMENT_MAX_FILES = 10
 # carry them. Uploads are sniffed so a renamed executable cannot masquerade as
 # an image, video, or document.
 FILE_SIGNATURES: dict[str, tuple[bytes, ...]] = {
-    '.jpg': (b'\xff\xd8\xff',),
-    '.jpeg': (b'\xff\xd8\xff',),
-    '.png': (b'\x89PNG\r\n\x1a\n',),
-    '.gif': (b'GIF87a', b'GIF89a'),
-    '.webp': (b'RIFF',),
-    '.mp4': (b'ftyp',),
-    '.mov': (b'ftyp',),
-    '.webm': (b'\x1a\x45\xdf\xa3',),
-    '.pdf': (b'%PDF-',),
-    '.doc': (b'\xd0\xcf\x11\xe0',),
-    '.docx': (b'PK\x03\x04',),
+    ".jpg": (b"\xff\xd8\xff",),
+    ".jpeg": (b"\xff\xd8\xff",),
+    ".png": (b"\x89PNG\r\n\x1a\n",),
+    ".gif": (b"GIF87a", b"GIF89a"),
+    ".webp": (b"RIFF",),
+    ".mp4": (b"ftyp",),
+    ".mov": (b"ftyp",),
+    ".webm": (b"\x1a\x45\xdf\xa3",),
+    ".pdf": (b"%PDF-",),
+    ".doc": (b"\xd0\xcf\x11\xe0",),
+    ".docx": (b"PK\x03\x04",),
 }
 # Offsets checked in addition to the file start (extension -> (offset, needle)).
 FILE_SIGNATURE_OFFSETS: dict[str, tuple[tuple[int, bytes], ...]] = {
-    '.webp': ((8, b'WEBP'),),
-    '.mp4': ((4, b'ftyp'),),
-    '.mov': ((4, b'ftyp'),),
+    ".webp": ((8, b"WEBP"),),
+    ".mp4": ((4, b"ftyp"),),
+    ".mov": ((4, b"ftyp"),),
 }
 
 
 class LineListFieldMixin:
     def _clean_line_list_field(self, field_name: str) -> list[str]:
-        raw = self.cleaned_data.get(field_name, '')
+        raw = self.cleaned_data.get(field_name, "")
         return [item.strip() for item in raw.splitlines() if item.strip()]
 
 
@@ -59,21 +58,21 @@ class AssignedToShopFormMixin:
         if fleet is not None:
             mechanics = mechanics.filter(
                 fleet_memberships__fleet=fleet,
-                fleet_memberships__role__in=['owner', 'admin', 'mechanic'],
+                fleet_memberships__role__in=["owner", "admin", "mechanic"],
             ).distinct()
-        self.fields['assigned_to'].queryset = mechanics
-        self.fields['assigned_to'].help_text = _('Only users converted to mechanics can be selected.')
+        self.fields["assigned_to"].queryset = mechanics
+        self.fields["assigned_to"].help_text = _("Only users converted to mechanics can be selected.")
         shops = KnownShop.objects.all()
         if user is not None:
             shops = shops.filter(Q(created_by__isnull=True) | Q(created_by=user))
-        self.fields['assigned_shop'].queryset = shops.order_by('name')
-        self.fields['assigned_shop'].help_text = _('Assign to a known shop instead of a mechanic user.')
+        self.fields["assigned_shop"].queryset = shops.order_by("name")
+        self.fields["assigned_shop"].help_text = _("Assign to a known shop instead of a mechanic user.")
 
     def clean(self) -> dict[str, Any]:
         cleaned_data = super().clean()
         validate_single_assignment(
-            cleaned_data.get('assigned_to'),
-            cleaned_data.get('assigned_shop'),
+            cleaned_data.get("assigned_to"),
+            cleaned_data.get("assigned_shop"),
         )
         return cleaned_data
 
@@ -83,7 +82,7 @@ class MultipleFileInput(forms.FileInput):
 
     def __init__(self, attrs: dict[str, Any] | None = None, **kwargs: Any) -> None:
         super().__init__(attrs=attrs, **kwargs)
-        self.attrs['multiple'] = True
+        self.attrs["multiple"] = True
 
 
 def validate_uploaded_file(cleaned_file: Any) -> None:
@@ -97,15 +96,16 @@ def validate_uploaded_file(cleaned_file: Any) -> None:
     """
     if cleaned_file.size > AttachmentField.max_upload_bytes:
         raise forms.ValidationError(
-            _('Uploaded attachments must be no larger than %(limit)s MB.') % {'limit': AttachmentField.max_upload_bytes // (1024 * 1024)}
+            _("Uploaded attachments must be no larger than %(limit)s MB.")
+            % {"limit": AttachmentField.max_upload_bytes // (1024 * 1024)}
         )
     extension = os.path.splitext(os.path.basename(cleaned_file.name))[1].lower()
     if extension not in AttachmentField.allowed_extensions:
-        raise forms.ValidationError(_('Unsupported attachment file type.'))
+        raise forms.ValidationError(_("Unsupported attachment file type."))
     if cleaned_file.content_type not in AttachmentField.allowed_content_types:
-        raise forms.ValidationError(_('Unsupported attachment file type.'))
+        raise forms.ValidationError(_("Unsupported attachment file type."))
     if not file_matches_signature(extension, cleaned_file):
-        raise forms.ValidationError(_('Attachment contents do not match its file type.'))
+        raise forms.ValidationError(_("Attachment contents do not match its file type."))
 
 
 def file_matches_signature(extension: str, cleaned_file: Any) -> bool:
@@ -121,7 +121,7 @@ def file_matches_signature(extension: str, cleaned_file: Any) -> bool:
     offset_checks = FILE_SIGNATURE_OFFSETS.get(extension)
     if offset_checks:
         for offset, needle in offset_checks:
-            if len(head) < offset + len(needle) or head[offset:offset + len(needle)] != needle:
+            if len(head) < offset + len(needle) or head[offset : offset + len(needle)] != needle:
                 return False
         return True
     return any(head.startswith(expected) for expected in expected_starts)
@@ -139,21 +139,29 @@ class AttachmentField(forms.FileField):
     max_upload_bytes = ATTACHMENT_MAX_UPLOAD_BYTES
     max_files = ATTACHMENT_MAX_FILES
     allowed_content_types = {
-        'image/jpeg',
-        'image/png',
-        'image/gif',
-        'image/webp',
-        'video/mp4',
-        'video/webm',
-        'video/quicktime',
-        'application/pdf',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+        "video/mp4",
+        "video/webm",
+        "video/quicktime",
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     }
     allowed_extensions = {
-        '.jpg', '.jpeg', '.png', '.gif', '.webp',
-        '.mp4', '.webm', '.mov',
-        '.pdf', '.doc', '.docx',
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".gif",
+        ".webp",
+        ".mp4",
+        ".webm",
+        ".mov",
+        ".pdf",
+        ".doc",
+        ".docx",
     }
 
     def clean(self, data: Any, initial: Any = None) -> list[Any]:
@@ -166,7 +174,9 @@ class AttachmentField(forms.FileField):
             if item:
                 cleaned_files.append(self._clean_upload(item, initial))
         if len(cleaned_files) > self.max_files:
-            raise forms.ValidationError(_('No more than %(limit)s attachments may be uploaded at once.') % {'limit': self.max_files})
+            raise forms.ValidationError(
+                _("No more than %(limit)s attachments may be uploaded at once.") % {"limit": self.max_files}
+            )
         return cleaned_files
 
     def _clean_upload(self, data: Any, initial: Any = None) -> Any:
@@ -198,22 +208,24 @@ class StagedAttachmentsMixin(forms.Form):
     def clean_staged_attachments(self) -> list[Any]:
         from shop.models.attachment import Attachment
 
-        raw = self.cleaned_data.get('staged_attachments') or ''
-        unique_ids = list(dict.fromkeys(int(part) for part in str(raw).split(',') if part.strip().isdigit()))
+        raw = self.cleaned_data.get("staged_attachments") or ""
+        unique_ids = list(dict.fromkeys(int(part) for part in str(raw).split(",") if part.strip().isdigit()))
         if not unique_ids:
             return []
         user = self.user
-        if user is None or not getattr(user, 'is_authenticated', False):
-            raise forms.ValidationError(_('Uploaded files could not be matched to your session. Upload them again.'))
+        if user is None or not getattr(user, "is_authenticated", False):
+            raise forms.ValidationError(_("Uploaded files could not be matched to your session. Upload them again."))
         staged_by_pk = {
             attachment.pk: attachment
-            for attachment in Attachment.objects.filter(pk__in=unique_ids, object_id='', uploaded_by=user)
+            for attachment in Attachment.objects.filter(pk__in=unique_ids, object_id="", uploaded_by=user)
         }
         if len(staged_by_pk) != len(unique_ids):
-            raise forms.ValidationError(_('Some uploaded files are no longer available. Remove them and upload again.'))
+            raise forms.ValidationError(_("Some uploaded files are no longer available. Remove them and upload again."))
         staged = [staged_by_pk[pk] for pk in unique_ids]
-        direct_uploads = self.files.getlist('attachments')
+        direct_uploads = self.files.getlist("attachments")
         total = len(staged) + len(direct_uploads)
         if total > AttachmentField.max_files:
-            raise forms.ValidationError(_('No more than %(limit)s attachments may be uploaded at once.') % {'limit': AttachmentField.max_files})
+            raise forms.ValidationError(
+                _("No more than %(limit)s attachments may be uploaded at once.") % {"limit": AttachmentField.max_files}
+            )
         return staged

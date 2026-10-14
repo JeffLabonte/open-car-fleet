@@ -1,0 +1,24 @@
+{% load i18n %}
+{% comment %}
+Reusable confirm-delete dialog.
+
+Parameters:
+  - dialog_id (required): HTML id for the <dialog> element.
+  - title (required): Dialog heading.
+  - message (required): Confirmation body text.
+  - form_action (optional): Default form action; callers that set the action via
+    JavaScript should leave this as '#'.
+  - submit_label (optional): Defaults to "Delete".
+  - cancel_label (optional): Defaults to "Cancel".
+{% endcomment %}
+<dialog class="dialog" id="{{ dialog_id }}">
+  <form method="post" action="{{ form_action|default:'#' }}" data-dialog-action-form>
+    {% csrf_token %}
+    <h2 class="dialog__title">{{ title }}</h2>
+    <p>{{ message }}</p>
+    <div class="dialog-actions">
+      <button class="button is-light" type="button" data-dialog-close>{{ cancel_label|default:_('Cancel') }}</button>
+      <button class="button is-danger" type="submit">{{ submit_label|default:_('Delete') }}</button>
+    </div>
+  </form>
+</dialog>

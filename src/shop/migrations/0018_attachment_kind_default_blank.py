@@ -4,15 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('shop', '0017_attachment_uploaded_by_alter_attachment_content_type_and_more'),
+        ("shop", "0017_attachment_uploaded_by_alter_attachment_content_type_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='attachment',
-            name='kind',
-            field=models.CharField(blank=True, choices=[('image', 'Image'), ('video', 'Video'), ('document', 'Document'), ('link', 'Link')], default='', max_length=20),
+            model_name="attachment",
+            name="kind",
+            field=models.CharField(
+                blank=True,
+                choices=[("image", "Image"), ("video", "Video"), ("document", "Document"), ("link", "Link")],
+                default="",
+                max_length=20,
+            ),
         ),
     ]

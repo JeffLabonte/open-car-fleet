@@ -10,8 +10,7 @@ from shop.models.fleet import Fleet
 
 class Command(BaseCommand):
     help = (
-        "Import normalized CSV objects into Car, WorkJob, or Report. "
-        "All command-line imports require a target fleet."
+        "Import normalized CSV objects into Car, WorkJob, or Report. All command-line imports require a target fleet."
     )
 
     def add_arguments(self, parser: Any) -> None:
@@ -47,7 +46,7 @@ class Command(BaseCommand):
             records = importer.parse_csv_file(options["csv_file"])
             fleet = self._resolve_fleet(options.get("fleet"))
             if fleet is None:
-                raise ImportValidationError('A target fleet is required for command-line imports.')
+                raise ImportValidationError("A target fleet is required for command-line imports.")
             context = ImportContext(fleet=fleet, user=fleet.created_by)
             result = importer.import_records(
                 model,
@@ -75,11 +74,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS("Dry run complete. No objects were saved."))
             return
 
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"Imported {result.created_count} objects into {result.model_label}"
-            )
-        )
+        self.stdout.write(self.style.SUCCESS(f"Imported {result.created_count} objects into {result.model_label}"))
 
     def _resolve_fleet(self, raw_value: str | None) -> Fleet | None:
         if raw_value in (None, ""):
@@ -87,4 +82,4 @@ class Command(BaseCommand):
         try:
             return Fleet.objects.get(pk=raw_value)
         except (Fleet.DoesNotExist, ValidationError, ValueError) as exc:
-            raise ImportValidationError(_("Fleet not found for id '%(value)s'.") % {'value': raw_value}) from exc
+            raise ImportValidationError(_("Fleet not found for id '%(value)s'.") % {"value": raw_value}) from exc

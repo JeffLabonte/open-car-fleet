@@ -7,7 +7,6 @@ from django.utils.translation import gettext as _
 
 from shop.importers import CSVImporter, ImportContext, ImportResult, ImportValidationError
 
-
 ModelSaver = Callable[[Any, Any], None]
 PostSaver = Callable[[Any, Any], None]
 SuccessUrlResolver = Callable[[Any], str]
@@ -41,10 +40,10 @@ def handle_model_form(
     """
     form_kwargs = dict(form_kwargs or {})
     if instance is not None:
-        form_kwargs['instance'] = instance
+        form_kwargs["instance"] = instance
     is_create = instance is None
 
-    if request.method == 'POST':
+    if request.method == "POST":
         form = form_class(request.POST, request.FILES, **form_kwargs)
         if form.is_valid():
             obj = form.save(commit=False)
@@ -55,14 +54,14 @@ def handle_model_form(
                 post_save_callback(obj, form)
             messages.success(
                 request,
-                success_message or (_('Created successfully.') if is_create else _('Updated successfully.')),
+                success_message or (_("Created successfully.") if is_create else _("Updated successfully.")),
             )
             resolved_url = success_url(obj) if callable(success_url) else success_url
             return redirect(resolved_url)
     else:
         form = form_class(**form_kwargs)
 
-    ctx: dict[str, Any] = {'form': form, 'is_create': is_create}
+    ctx: dict[str, Any] = {"form": form, "is_create": is_create}
     if context:
         ctx.update(context)
     return render(request, template_name, ctx)
@@ -84,8 +83,8 @@ def process_import_form(
     ``None``. The caller should re-render the form in the ``None`` case.
     """
     importer = CSVImporter()
-    uploaded_file = form.cleaned_data['import_file']
-    dry_run = form.cleaned_data['dry_run']
+    uploaded_file = form.cleaned_data["import_file"]
+    dry_run = form.cleaned_data["dry_run"]
     try:
         records = importer.parse_csv_bytes(uploaded_file.read(), source_name=uploaded_file.name)
         result = importer.import_records(
@@ -95,22 +94,22 @@ def process_import_form(
             dry_run=dry_run,
         )
     except ImportValidationError as exc:
-        form.add_error('import_file', str(exc))
+        form.add_error("import_file", str(exc))
         return None
 
     for warning in result.warnings:
         messages.warning(
             request,
-            _('Record %(number)s: %(message)s') % {'number': warning.record_number, 'message': warning.message},
+            _("Record %(number)s: %(message)s") % {"number": warning.record_number, "message": warning.message},
         )
 
     if result.has_errors:
         for error in result.errors:
             messages.error(
                 request,
-                _('Record %(number)s: %(message)s') % {'number': error.record_number, 'message': error.message},
+                _("Record %(number)s: %(message)s") % {"number": error.record_number, "message": error.message},
             )
-        form.add_error('import_file', _('Import validation failed. Fix the file and try again.'))
+        form.add_error("import_file", _("Import validation failed. Fix the file and try again."))
         return None
 
     if dry_run:

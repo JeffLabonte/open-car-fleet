@@ -1,8 +1,7 @@
 from django.http import HttpRequest
 
-
-VALID_THEMES = {'light', 'dark'}
-DEFAULT_THEME = 'light'
+VALID_THEMES = {"light", "dark"}
+DEFAULT_THEME = "light"
 
 
 def normalize_theme(theme: object) -> str:
@@ -16,4 +15,4 @@ def normalize_theme(theme: object) -> str:
 
 def get_theme_from_request(request: HttpRequest) -> str:
     """Read and validate the theme cookie from a request."""
-    return normalize_theme(request.COOKIES.get('theme'))
+    return normalize_theme(request.COOKIES.get("theme"))

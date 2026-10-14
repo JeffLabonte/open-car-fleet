@@ -7,7 +7,6 @@ from typing import Any
 from django.conf import settings
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.translation import gettext as _
 
 from shop.models.fleet import Fleet, FleetInvitation
 
@@ -19,12 +18,10 @@ def expire_stale_pending_invitations(fleet: Fleet) -> int:
         fleet.invitations.filter(
             status=FleetInvitation.STATUS_PENDING,
             expires_at__lte=now,
-        ).values_list('id', flat=True)
+        ).values_list("id", flat=True)
     )
     if expired_ids:
-        FleetInvitation.objects.filter(id__in=expired_ids).update(
-            status=FleetInvitation.STATUS_EXPIRED
-        )
+        FleetInvitation.objects.filter(id__in=expired_ids).update(status=FleetInvitation.STATUS_EXPIRED)
     return len(expired_ids)
 
 
@@ -57,7 +54,7 @@ def create_or_update_fleet_invitation(
     if existing_pending:
         existing_pending.role = role
         existing_pending.expires_at = timezone.now() + timedelta(days=expires_in_days)
-        existing_pending.save(update_fields=['role', 'expires_at', 'updated_at'])
+        existing_pending.save(update_fields=["role", "expires_at", "updated_at"])
         return existing_pending, False, True
 
     invitation = FleetInvitation.objects.create(
@@ -73,9 +70,7 @@ def create_or_update_fleet_invitation(
 
 def build_invitation_accept_url(request: Any, invitation: FleetInvitation) -> str:
     """Return the absolute URL a recipient uses to accept the invitation."""
-    return request.build_absolute_uri(
-        reverse('shop-fleet-invitation-accept', args=[invitation.token])
-    )
+    return request.build_absolute_uri(reverse("shop-fleet-invitation-accept", args=[invitation.token]))
 
 
 def send_fleet_invitation_email(
@@ -85,7 +80,7 @@ def send_fleet_invitation_email(
     """Send the invitation email and return the number of messages sent."""
     return invitation.send_invitation_email(
         accept_base_url=accept_base_url,
-        sender_email=getattr(settings, 'DEFAULT_FROM_EMAIL', None),
+        sender_email=getattr(settings, "DEFAULT_FROM_EMAIL", None),
     )
 
 
@@ -110,7 +105,7 @@ def invite_to_fleet(
         expires_in_days=expires_in_days,
     )
     accept_url = build_invitation_accept_url(request, invitation)
-    base_url = accept_url.rsplit('/', 2)[0]
+    base_url = accept_url.rsplit("/", 2)[0]
     try:
         send_fleet_invitation_email(invitation, base_url)
         email_sent = True

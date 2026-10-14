@@ -1,32 +1,6 @@
-{% extends 'shop/base.html' %}
+{% extends 'shop/partials/_model_form.html' %}
 {% load i18n %}
 
-{% block content %}
-  <section class="box" data-testid="fleet-form">
-    <h1 class="title mb-4">{% if is_create %}{% translate 'Create Fleet' %}{% else %}{% translate 'Edit Fleet' %}{% endif %}</h1>
-
-    <form method="post" novalidate>
-      {% csrf_token %}
-      {% if form.non_field_errors %}
-        <div class="notification is-danger mb-4">
-          {{ form.non_field_errors }}
-        </div>
-      {% endif %}
-
-      <div class="form-grid">
-        {% for field in form.visible_fields %}
-          {% include 'shop/partials/_form_field.html' %}
-        {% endfor %}
-      </div>
-
-      <div class="field is-grouped">
-        <div class="control">
-          <button class="button is-primary" type="submit">{% if is_create %}{% translate 'Create' %}{% else %}{% translate 'Update' %}{% endif %}</button>
-        </div>
-        <div class="control">
-          <a class="button is-light" href="{% url 'shop-index' %}">{% translate 'Cancel' %}</a>
-        </div>
-      </div>
-    </form>
-  </section>
-{% endblock %}
+{% block testid %}fleet-form{% endblock %}
+{% block form_title %}{% if is_create %}{% translate 'Create Fleet' %}{% else %}{% translate 'Edit Fleet' %}{% endif %}{% endblock %}
+{% block cancel_url %}{% url 'shop-index' %}{% endblock %}

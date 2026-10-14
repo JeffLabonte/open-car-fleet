@@ -1,15 +1,16 @@
 from io import BytesIO
+
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.test.utils import override_settings
 from django.urls import reverse
 from openpyxl import load_workbook
+
 from shop.exporters import export_fleet_to_excel
 from shop.forms import ReportForm
 from shop.models.attachment import Attachment
 from shop.models.car import Car
-from shop.models.fleet import Fleet
-from shop.models.fleet import FleetMembership
+from shop.models.fleet import Fleet, FleetMembership
 from shop.models.user import ShopUser
 from shop.tests.helpers import PNG_SIGNATURE
 
@@ -19,11 +20,11 @@ class SecurityHardeningTests(TestCase):
 
     def setUp(self) -> None:
         self.owner = ShopUser.objects.create_user(
-            username='security-owner',
-            email='security-owner@example.com',
-            password='pass1234',
+            username="security-owner",
+            email="security-owner@example.com",
+            password="pass1234",
         )
-        self.fleet = Fleet.objects.create(name='Security Fleet', created_by=self.owner)
+        self.fleet = Fleet.objects.create(name="Security Fleet", created_by=self.owner)
         FleetMembership.objects.create(
             fleet=self.fleet,
             user=self.owner,
@@ -31,67 +32,67 @@ class SecurityHardeningTests(TestCase):
         )
         self.car = Car.objects.create(
             fleet=self.fleet,
-            make='Toyota',
-            model='Yaris',
-            vin='JTDKB20U793512349',
+            make="Toyota",
+            model="Yaris",
+            vin="JTDKB20U793512349",
         )
 
     def test_login_page_rejects_javascript_next_url(self):
-        response = self.client.get(reverse('shop-login'), {'next': 'javascript:alert(document.cookie)'})
+        response = self.client.get(reverse("shop-login"), {"next": "javascript:alert(document.cookie)"})
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, 'javascript:alert')
+        self.assertNotContains(response, "javascript:alert")
         # next_url is now delivered via json_script, not inline JS.
         self.assertContains(response, 'id="hanko-next-url"')
         self.assertContains(response, '"/"')
 
     @override_settings(SECURE_SSL_REDIRECT=True)
     def test_ssl_redirect_middleware_redirects_http_to_https(self):
-        response = self.client.get(reverse('shop-login'))
+        response = self.client.get(reverse("shop-login"))
         self.assertEqual(response.status_code, 301)
-        self.assertTrue(response['Location'].startswith('https://'))
+        self.assertTrue(response["Location"].startswith("https://"))
 
     @override_settings(SECURE_HSTS_SECONDS=31536000, SECURE_HSTS_INCLUDE_SUBDOMAINS=True)
     def test_hsts_header_present_on_https_when_configured(self):
-        response = self.client.get(reverse('shop-login'), secure=True)
-        self.assertEqual(response['Strict-Transport-Security'], 'max-age=31536000; includeSubDomains')
+        response = self.client.get(reverse("shop-login"), secure=True)
+        self.assertEqual(response["Strict-Transport-Security"], "max-age=31536000; includeSubDomains")
 
     def test_admin_requires_authentication(self):
-        response = self.client.get('/admin/')
+        response = self.client.get("/admin/")
         self.assertEqual(response.status_code, 302)
-        self.assertTrue(response['Location'].startswith(reverse('shop-login')))
+        self.assertTrue(response["Location"].startswith(reverse("shop-login")))
 
     def test_admin_accessible_to_authenticated_staff(self):
         staff_user = ShopUser.objects.create_user(
-            username='staff-user',
-            email='staff@example.com',
-            password='pass1234',
+            username="staff-user",
+            email="staff@example.com",
+            password="pass1234",
             is_staff=True,
         )
         self.client.force_login(staff_user)
-        response = self.client.get('/admin/')
+        response = self.client.get("/admin/")
         self.assertEqual(response.status_code, 200)
 
     def test_responses_include_csp_header(self):
-        response = self.client.get(reverse('shop-login'))
-        self.assertIn('Content-Security-Policy', response)
-        csp = response['Content-Security-Policy']
+        response = self.client.get(reverse("shop-login"))
+        self.assertIn("Content-Security-Policy", response)
+        csp = response["Content-Security-Policy"]
         self.assertIn("default-src 'self'", csp)
         self.assertIn("script-src 'self'", csp)
         self.assertIn("frame-ancestors 'none'", csp)
 
-    @override_settings(HANKO_API_URL='https://hanko.example.com')
+    @override_settings(HANKO_API_URL="https://hanko.example.com")
     def test_csp_connect_src_includes_hanko_api(self):
-        response = self.client.get(reverse('shop-login'))
-        self.assertIn('Content-Security-Policy', response)
-        self.assertIn('https://hanko.example.com', response['Content-Security-Policy'])
+        response = self.client.get(reverse("shop-login"))
+        self.assertIn("Content-Security-Policy", response)
+        self.assertIn("https://hanko.example.com", response["Content-Security-Policy"])
 
     @override_settings(RATELIMIT_ENABLE=True)
     def test_hanko_callback_rate_limited_after_many_requests(self):
         for index in range(11):
             response = self.client.post(
-                reverse('shop-hanko-callback'),
-                data='{}',
-                content_type='application/json',
+                reverse("shop-hanko-callback"),
+                data="{}",
+                content_type="application/json",
             )
             if response.status_code == 429:
                 break
@@ -102,8 +103,8 @@ class SecurityHardeningTests(TestCase):
         self.client.force_login(self.owner)
         for index in range(31):
             response = self.client.post(
-                reverse('shop-attachment-upload'),
-                data={'file': SimpleUploadedFile('photo.png', PNG_SIGNATURE, content_type='image/png')},
+                reverse("shop-attachment-upload"),
+                data={"file": SimpleUploadedFile("photo.png", PNG_SIGNATURE, content_type="image/png")},
             )
             if response.status_code == 429:
                 break
@@ -111,58 +112,58 @@ class SecurityHardeningTests(TestCase):
         Attachment.objects.filter(uploaded_by=self.owner).delete()
 
     def test_theme_view_rejects_absolute_next_url(self):
-        response = self.client.get(reverse('shop-theme', args=['light']), {'next': 'https://evil.example.com'})
+        response = self.client.get(reverse("shop-theme", args=["light"]), {"next": "https://evil.example.com"})
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, reverse('shop-index'))
+        self.assertEqual(response.url, reverse("shop-index"))
 
     def test_theme_view_allows_local_next_url(self):
-        response = self.client.get(reverse('shop-theme', args=['dark']), {'next': '/cars/'})
+        response = self.client.get(reverse("shop-theme", args=["dark"]), {"next": "/cars/"})
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, '/cars/')
+        self.assertEqual(response.url, "/cars/")
 
     def test_report_attachment_rejects_disallowed_extension(self):
         form = ReportForm(
             data={
-                'mileage': '',
-                'job_name': 'Oil change',
-                'date_done': '2026-01-15',
-                'note': '',
-                'additional_information': '',
+                "mileage": "",
+                "job_name": "Oil change",
+                "date_done": "2026-01-15",
+                "note": "",
+                "additional_information": "",
             },
             files={
-                'attachments': SimpleUploadedFile(
-                    'payload.html',
-                    b'<html></html>',
-                    content_type='image/jpeg',
+                "attachments": SimpleUploadedFile(
+                    "payload.html",
+                    b"<html></html>",
+                    content_type="image/jpeg",
                 ),
             },
             user=self.owner,
             fleet=self.fleet,
         )
         self.assertFalse(form.is_valid())
-        self.assertIn('attachments', form.errors)
+        self.assertIn("attachments", form.errors)
 
     def test_report_attachment_rejects_spoofed_magic_bytes(self):
         form = ReportForm(
             data={
-                'mileage': '',
-                'job_name': 'Oil change',
-                'date_done': '2026-01-15',
-                'note': '',
-                'additional_information': '',
+                "mileage": "",
+                "job_name": "Oil change",
+                "date_done": "2026-01-15",
+                "note": "",
+                "additional_information": "",
             },
             files={
-                'attachments': SimpleUploadedFile(
-                    'payload.png',
-                    b'<html><script>alert(1)</script></html>',
-                    content_type='image/png',
+                "attachments": SimpleUploadedFile(
+                    "payload.png",
+                    b"<html><script>alert(1)</script></html>",
+                    content_type="image/png",
                 ),
             },
             user=self.owner,
             fleet=self.fleet,
         )
         self.assertFalse(form.is_valid())
-        self.assertIn('attachments', form.errors)
+        self.assertIn("attachments", form.errors)
 
     def test_report_attachment_rejects_oversized_upload(self):
         from unittest.mock import patch
@@ -171,42 +172,42 @@ class SecurityHardeningTests(TestCase):
 
         # Patching the shared limit keeps this test cheap regardless of the
         # production ceiling (500 MB).
-        with patch.object(AttachmentField, 'max_upload_bytes', 10):
+        with patch.object(AttachmentField, "max_upload_bytes", 10):
             form = ReportForm(
                 data={
-                    'mileage': '',
-                    'job_name': 'Oil change',
-                    'date_done': '2026-01-15',
-                    'note': '',
-                    'additional_information': '',
+                    "mileage": "",
+                    "job_name": "Oil change",
+                    "date_done": "2026-01-15",
+                    "note": "",
+                    "additional_information": "",
                 },
                 files={
-                    'attachments': SimpleUploadedFile(
-                        'large.png',
-                        PNG_SIGNATURE + b'0' * 11,
-                        content_type='image/png',
+                    "attachments": SimpleUploadedFile(
+                        "large.png",
+                        PNG_SIGNATURE + b"0" * 11,
+                        content_type="image/png",
                     ),
                 },
                 user=self.owner,
                 fleet=self.fleet,
             )
             self.assertFalse(form.is_valid())
-        self.assertIn('attachments', form.errors)
+        self.assertIn("attachments", form.errors)
 
     def test_report_attachment_rejects_too_many_files(self):
         from shop.forms.base import ATTACHMENT_MAX_FILES
 
         form = ReportForm(
             data={
-                'mileage': '',
-                'job_name': 'Oil change',
-                'date_done': '2026-01-15',
-                'note': '',
-                'additional_information': '',
+                "mileage": "",
+                "job_name": "Oil change",
+                "date_done": "2026-01-15",
+                "note": "",
+                "additional_information": "",
             },
             files={
-                'attachments': [
-                    SimpleUploadedFile(f'photo-{index}.png', PNG_SIGNATURE, content_type='image/png')
+                "attachments": [
+                    SimpleUploadedFile(f"photo-{index}.png", PNG_SIGNATURE, content_type="image/png")
                     for index in range(ATTACHMENT_MAX_FILES + 1)
                 ],
             },
@@ -214,62 +215,62 @@ class SecurityHardeningTests(TestCase):
             fleet=self.fleet,
         )
         self.assertFalse(form.is_valid())
-        self.assertIn('attachments', form.errors)
+        self.assertIn("attachments", form.errors)
 
     def test_set_test_session_is_disabled_in_production(self):
-        response = self.client.get(reverse('shop-set-test-session'), {'email': 'e2e@example.com'})
+        response = self.client.get(reverse("shop-set-test-session"), {"email": "e2e@example.com"})
         self.assertEqual(response.status_code, 404)
 
     @override_settings(DEBUG=True)
     def test_set_test_session_signs_user_in_when_debug(self):
         response = self.client.get(
-            reverse('shop-set-test-session'),
-            {'email': 'e2e-user@example.com', 'next': '/cars/'},
+            reverse("shop-set-test-session"),
+            {"email": "e2e-user@example.com", "next": "/cars/"},
         )
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, '/cars/')
-        self.assertTrue(self.client.session.get('_auth_user_id'))
+        self.assertEqual(response.url, "/cars/")
+        self.assertTrue(self.client.session.get("_auth_user_id"))
 
     @override_settings(DEBUG=True)
     def test_set_test_session_requires_email(self):
-        response = self.client.get(reverse('shop-set-test-session'), {'next': '/cars/'})
+        response = self.client.get(reverse("shop-set-test-session"), {"next": "/cars/"})
         self.assertEqual(response.status_code, 400)
 
     def test_excel_export_neutralizes_formula_injection(self):
         self.fleet.name = "=cmd|'/c calc'!A0"
-        self.fleet.save(update_fields=['name'])
+        self.fleet.save(update_fields=["name"])
         workbook_file = export_fleet_to_excel(self.fleet)
         workbook = load_workbook(filename=BytesIO(workbook_file.content))
-        fleet_name_cell = workbook['fleet'].cell(row=2, column=2).value
+        fleet_name_cell = workbook["fleet"].cell(row=2, column=2).value
         self.assertEqual(fleet_name_cell, "'=cmd|'/c calc'!A0")
 
     def test_known_shop_create_invalid_post_returns_form_not_500(self):
         self.client.force_login(self.owner)
-        response = self.client.post(reverse('shop-known-shop-create'), data={'name': ''})
+        response = self.client.post(reverse("shop-known-shop-create"), data={"name": ""})
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Add shop')
+        self.assertContains(response, "Add shop")
 
     def test_fleet_edit_dialog_opens_via_data_attribute_not_inline_script(self):
         self.client.force_login(self.owner)
         response = self.client.post(
-            reverse('shop-fleet-update', args=[self.fleet.pk]),
-            data={'name': '', 'description': ''},
+            reverse("shop-fleet-update", args=[self.fleet.pk]),
+            data={"name": "", "description": ""},
         )
         self.assertEqual(response.status_code, 200)
         # The dialog should be marked to reopen on validation errors, without
         # relying on an inline <script> that the CSP would block.
         self.assertContains(response, 'data-open-on-error="true"')
-        self.assertNotContains(response, '<script>')
-        self.assertIn('Content-Security-Policy', response)
-        self.assertIn("script-src 'self'", response['Content-Security-Policy'])
+        self.assertNotContains(response, "<script>")
+        self.assertIn("Content-Security-Policy", response)
+        self.assertIn("script-src 'self'", response["Content-Security-Policy"])
 
     def test_admin_remove_owner_emits_security_log(self):
         from shop.models.fleet import FleetMembership
 
         admin = ShopUser.objects.create_user(
-            username='security-admin',
-            email='security-admin@example.com',
-            password='pass1234',
+            username="security-admin",
+            email="security-admin@example.com",
+            password="pass1234",
         )
         FleetMembership.objects.create(
             fleet=self.fleet,
@@ -279,21 +280,21 @@ class SecurityHardeningTests(TestCase):
         owner_membership = FleetMembership.objects.get(fleet=self.fleet, user=self.owner)
 
         self.client.force_login(admin)
-        with self.assertLogs('security', level='WARNING') as cm:
+        with self.assertLogs("security", level="WARNING") as cm:
             self.client.post(
-                reverse('shop-fleet-member-remove', args=[self.fleet.pk, owner_membership.pk]),
+                reverse("shop-fleet-member-remove", args=[self.fleet.pk, owner_membership.pk]),
             )
         self.assertTrue(
-            any('access_denied' in message and 'member_remove_hierarchy_violation' in message for message in cm.output)
+            any("access_denied" in message and "member_remove_hierarchy_violation" in message for message in cm.output)
         )
 
     def test_successful_role_change_emits_security_log(self):
         from shop.models.fleet import FleetMembership
 
         viewer = ShopUser.objects.create_user(
-            username='security-viewer',
-            email='security-viewer@example.com',
-            password='pass1234',
+            username="security-viewer",
+            email="security-viewer@example.com",
+            password="pass1234",
         )
         membership = FleetMembership.objects.create(
             fleet=self.fleet,
@@ -302,11 +303,9 @@ class SecurityHardeningTests(TestCase):
         )
 
         self.client.force_login(self.owner)
-        with self.assertLogs('security', level='INFO') as cm:
+        with self.assertLogs("security", level="INFO") as cm:
             self.client.post(
-                reverse('shop-fleet-member-role', args=[self.fleet.pk, membership.pk]),
-                data={'role': FleetMembership.ROLE_MECHANIC},
+                reverse("shop-fleet-member-role", args=[self.fleet.pk, membership.pk]),
+                data={"role": FleetMembership.ROLE_MECHANIC},
             )
-        self.assertTrue(
-            any('role_changed' in message and 'mechanic' in message for message in cm.output)
-        )
+        self.assertTrue(any("role_changed" in message and "mechanic" in message for message in cm.output))

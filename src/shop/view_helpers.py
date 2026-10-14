@@ -7,9 +7,9 @@ from shop.models.car import Car
 from shop.models.fleet import Fleet, KnownShop
 from shop.permissions import (
     FleetSharingPermissions,
-    user_can_edit_fleet_data,
-    user_can_manage_fleet,
-    user_can_view_fleet,
+    user_can_edit_fleet_data,  # noqa: F401
+    user_can_manage_fleet,  # noqa: F401
+    user_can_view_fleet,  # noqa: F401
 )
 from shop.services.attachments import save_attachments  # noqa: F401
 
@@ -58,6 +58,7 @@ def get_selected_fleet(request: Any) -> Fleet | None:
 
 def user_car_docs_queryset(user: Any):
     from car_docs.models import CarDoc
+
     return CarDoc.objects.filter(car__fleet__members=user).distinct()
 
 
@@ -67,4 +68,4 @@ def user_known_shops_queryset(user: Any):
 
 
 def user_can_manage_known_shop(user: Any, shop: KnownShop) -> bool:
-    return bool(getattr(user, 'is_staff', False) or shop.created_by_id == getattr(user, 'pk', None))
+    return bool(getattr(user, "is_staff", False) or shop.created_by_id == getattr(user, "pk", None))

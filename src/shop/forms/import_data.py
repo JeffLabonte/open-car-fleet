@@ -44,5 +44,7 @@ class CarImportForm(BaseImportForm):
         label=_("Import type"),
         choices=IMPORT_CHOICES,
         widget=forms.Select(attrs={"class": "input"}),
-        help_text=_("Choose whether this file contains work jobs or reports for this car. The selected car is applied automatically."),
+        help_text=_(
+            "Choose whether this file contains work jobs or reports for this car. The selected car is applied automatically."
+        ),
     )

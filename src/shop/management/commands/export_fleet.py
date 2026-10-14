@@ -27,11 +27,7 @@ class Command(BaseCommand):
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_bytes(workbook.content)
 
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"Exported fleet '{fleet.name}' ({fleet.pk}) to {output_path}"
-            )
-        )
+        self.stdout.write(self.style.SUCCESS(f"Exported fleet '{fleet.name}' ({fleet.pk}) to {output_path}"))
 
     def _resolve_fleet(self, raw_value: str) -> Fleet:
         try:

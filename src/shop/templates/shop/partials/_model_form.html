@@ -1,0 +1,51 @@
+{% extends 'shop/base.html' %}
+{% load i18n %}
+{% comment %}
+Base layout for create/update model forms.
+
+Callers should extend this template and override the following blocks:
+  - testid (optional): data-testid value for the wrapper.
+  - form_title (required): Page heading.
+  - form_attrs (optional): Attributes for the <form> tag. Defaults to "novalidate".
+  - form_extra (optional): Extra content between the form fields and the buttons.
+  - submit_label (optional): Button text. Defaults to "Create"/"Update".
+  - cancel_url (required): URL for the Cancel link.
+
+The caller template receives the same context as the original view,
+including `form` and `is_create`.
+{% endcomment %}
+
+{% block content %}
+  <section class="box" data-testid="{% block testid %}{% endblock %}">
+    <h1 class="title mb-4">{% block form_title %}{% if is_create %}{% translate 'Create' %}{% else %}{% translate 'Update' %}{% endif %}{% endblock %}</h1>
+    {% block form_subtitle %}{% endblock %}
+
+    <form method="post" {% block form_attrs %}novalidate{% endblock %}>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="notification is-danger mb-4">
+          {{ form.non_field_errors }}
+        </div>
+      {% endif %}
+
+      <div class="form-grid">
+        {% block form_fields %}
+          {% for field in form.visible_fields %}
+            {% include 'shop/partials/_form_field.html' %}
+          {% endfor %}
+        {% endblock %}
+      </div>
+
+      {% block form_extra %}{% endblock %}
+
+      <div class="field is-grouped">
+        <div class="control">
+          <button class="button is-primary" type="submit">{% block submit_label %}{% if is_create %}{% translate 'Create' %}{% else %}{% translate 'Update' %}{% endif %}{% endblock %}</button>
+        </div>
+        <div class="control">
+          <a class="button is-light" href="{% block cancel_url %}{% endblock %}">{% translate 'Cancel' %}</a>
+        </div>
+      </div>
+    </form>
+  </section>
+{% endblock %}

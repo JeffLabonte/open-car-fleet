@@ -5,7 +5,6 @@ from io import BytesIO
 from typing import Any
 
 from django.utils import timezone
-
 from openpyxl import Workbook
 
 from shop.models.car import Car
@@ -274,7 +273,7 @@ def _append_rows(sheet: Any, header: list[str], rows: list[list[Any]]) -> None:
 
 
 # Characters that spreadsheet applications interpret as formula prefixes.
-FORMULA_PREFIXES = ('=', '+', '-', '@', '\t', '\r')
+FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
 
 
 def _sanitize_cell(value: Any) -> Any:

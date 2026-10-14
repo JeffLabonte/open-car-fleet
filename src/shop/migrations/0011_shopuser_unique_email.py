@@ -5,18 +5,17 @@ from django.db.models.functions import Lower
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('shop', '0010_knownshopproof'),
+        ("shop", "0010_knownshopproof"),
     ]
 
     operations = [
         migrations.AddConstraint(
-            model_name='shopuser',
+            model_name="shopuser",
             constraint=models.UniqueConstraint(
-                Lower('email'),
-                condition=~models.Q(email=''),
-                name='shop_user_unique_nonempty_email_ci',
+                Lower("email"),
+                condition=~models.Q(email=""),
+                name="shop_user_unique_nonempty_email_ci",
             ),
         ),
     ]

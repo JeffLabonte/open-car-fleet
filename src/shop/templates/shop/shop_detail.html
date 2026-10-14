@@ -3,7 +3,7 @@
 
 {% block content %}
   <header class="page-header">
-    {% include 'shop/partials/_page_header.html' with heading=title subheading=subtitle %}
+    {% include 'shop/partials/_page_header.html' %}
     <div class="page-actions">
       <a class="button is-primary" href="{% url 'shop-known-shop-proof-create' shop.pk %}">
         {% include 'shop/partials/_icon.html' with name='plus' %}
@@ -38,6 +38,12 @@
       <article class="message" data-testid="proof-card">
         <div class="message-header">
           <p>{{ proof.title }}</p>
+          {% if can_manage_known_shop %}
+            <a class="button is-small is-light" href="{% url 'shop-known-shop-proof-update' shop.pk proof.pk %}">
+              {% include 'shop/partials/_icon.html' with name='edit' %}
+              <span>{% translate 'Edit' %}</span>
+            </a>
+          {% endif %}
         </div>
         <div class="message-body">
           {% if proof.content %}<p>{{ proof.content|linebreaksbr }}</p>{% endif %}

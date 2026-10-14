@@ -5,15 +5,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('shop', '0002_report_assigned_to_shopuser_is_mechanic_and_more'),
+        ("shop", "0002_report_assigned_to_shopuser_is_mechanic_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='car',
-            name='garage',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='cars', to='shop.garage'),
+            model_name="car",
+            name="garage",
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="cars", to="shop.garage"),
         ),
     ]

@@ -10,57 +10,57 @@ from shop.models.job import WorkJob
 class WorkJobForm(LineListFieldMixin, AssignedToShopFormMixin, forms.ModelForm):
     required_items = forms.CharField(
         required=False,
-        widget=forms.Textarea(attrs={'class': 'textarea', 'rows': 3, 'placeholder': _('One item per line')}),
-        help_text=_('Add one required item per line.'),
+        widget=forms.Textarea(attrs={"class": "textarea", "rows": 3, "placeholder": _("One item per line")}),
+        help_text=_("Add one required item per line."),
     )
 
     class Meta:
         model = WorkJob
         fields = [
-            'title',
-            'maintenance_type',
-            'assigned_to',
-            'assigned_shop',
-            'planned_date',
-            'status',
-            'is_done',
-            'done_date',
-            'urgency',
-            'required_items',
-            'notes',
+            "title",
+            "maintenance_type",
+            "assigned_to",
+            "assigned_shop",
+            "planned_date",
+            "status",
+            "is_done",
+            "done_date",
+            "urgency",
+            "required_items",
+            "notes",
         ]
         widgets = {
-            'title': forms.TextInput(attrs={'class': 'input', 'placeholder': _('Work title')}),
-            'maintenance_type': forms.TextInput(attrs={'class': 'input', 'placeholder': _('Maintenance type')}),
-            'assigned_to': forms.Select(attrs={'class': 'input'}),
-            'assigned_shop': forms.Select(attrs={'class': 'input'}),
-            'planned_date': forms.DateInput(attrs={'class': 'input', 'type': 'date'}),
-            'done_date': forms.DateInput(attrs={'class': 'input', 'type': 'date'}),
-            'status': forms.Select(attrs={'class': 'input'}),
-            'urgency': forms.Select(attrs={'class': 'input'}),
-            'notes': forms.Textarea(attrs={'class': 'textarea', 'rows': 4, 'placeholder': _('Additional notes')}),
+            "title": forms.TextInput(attrs={"class": "input", "placeholder": _("Work title")}),
+            "maintenance_type": forms.TextInput(attrs={"class": "input", "placeholder": _("Maintenance type")}),
+            "assigned_to": forms.Select(attrs={"class": "input"}),
+            "assigned_shop": forms.Select(attrs={"class": "input"}),
+            "planned_date": forms.DateInput(attrs={"class": "input", "type": "date"}),
+            "done_date": forms.DateInput(attrs={"class": "input", "type": "date"}),
+            "status": forms.Select(attrs={"class": "input"}),
+            "urgency": forms.Select(attrs={"class": "input"}),
+            "notes": forms.Textarea(attrs={"class": "textarea", "rows": 4, "placeholder": _("Additional notes")}),
         }
         labels = {
-            'title': _('Work title'),
-            'maintenance_type': _('Maintenance type'),
-            'assigned_to': _('Assigned to'),
-            'assigned_shop': _('Known shop'),
-            'planned_date': _('Planned date'),
-            'done_date': _('Completion date'),
-            'status': _('Status'),
-            'is_done': _('Completed'),
-            'urgency': _('Urgency'),
-            'required_items': _('Required items'),
-            'notes': _('Notes'),
+            "title": _("Work title"),
+            "maintenance_type": _("Maintenance type"),
+            "assigned_to": _("Assigned to"),
+            "assigned_shop": _("Known shop"),
+            "planned_date": _("Planned date"),
+            "done_date": _("Completion date"),
+            "status": _("Status"),
+            "is_done": _("Completed"),
+            "urgency": _("Urgency"),
+            "required_items": _("Required items"),
+            "notes": _("Notes"),
         }
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        user = kwargs.pop('user', None)
-        fleet = kwargs.pop('fleet', None)
+        user = kwargs.pop("user", None)
+        fleet = kwargs.pop("fleet", None)
         super().__init__(*args, **kwargs)
         self.configure_assigned_fields(user=user, fleet=fleet)
         if self.instance and self.instance.pk:
-            self.fields['required_items'].initial = '\n'.join(self.instance.required_items or [])
+            self.fields["required_items"].initial = "\n".join(self.instance.required_items or [])
 
     def clean_required_items(self) -> list[str]:
-        return self._clean_line_list_field('required_items')
+        return self._clean_line_list_field("required_items")

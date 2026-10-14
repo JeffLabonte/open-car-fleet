@@ -3,7 +3,7 @@
 
 {% block content %}
   <header class="page-header">
-    {% include 'shop/partials/_page_header.html' with heading=fleet.name subheading=_('Review the vehicles in this fleet and manage access.') %}
+    {% include 'shop/partials/_page_header.html' %}
     <div class="page-actions">
       <a class="button is-light" href="{% url 'shop-index' %}">{% translate 'Back to fleets' %}</a>
       {% if can_manage_fleet %}

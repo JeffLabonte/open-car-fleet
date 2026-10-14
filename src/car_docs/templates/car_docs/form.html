@@ -1,38 +1,14 @@
-{% extends 'shop/base.html' %}
+{% extends 'shop/partials/_attachment_form.html' %}
 {% load static i18n %}
 
-{% block content %}
-  <section class="box" data-testid="doc-form">
-    <h1 class="title mb-4">{{ title }}</h1>
+{% block testid %}doc-form{% endblock %}
+{% block form_title %}{{ title }}{% endblock %}
+{% block cancel_url %}{% url 'shop-car-doc-list' car.pk %}{% endblock %}
 
-    <form method="post" enctype="multipart/form-data" novalidate>
-      {% csrf_token %}
-      {% if form.non_field_errors %}
-        <div class="notification is-danger mb-4">
-          {{ form.non_field_errors }}
-        </div>
-      {% endif %}
-
-      <div class="form-grid">
-        {% for field in form.visible_fields %}
-          {% if field.name != 'attachments' %}
-            {% include 'shop/partials/_form_field.html' %}
-          {% endif %}
-        {% endfor %}
-      </div>
-
-      {% include 'shop/partials/_attachments_section.html' with field=form.attachments current_attachments=doc.attachments.all %}
-
-      <div class="field is-grouped">
-        <div class="control">
-          <button class="button is-primary" type="submit">{% if is_create %}{% translate 'Create' %}{% else %}{% translate 'Update' %}{% endif %}</button>
-        </div>
-        <div class="control">
-          <a class="button is-light" href="{% url 'shop-car-doc-list' car.pk %}">{% translate 'Cancel' %}</a>
-        </div>
-      </div>
-    </form>
-  </section>
+{% block form_extra %}
+  {% with current_attachments=doc.attachments.all %}
+    {{ block.super }}
+  {% endwith %}
 {% endblock %}
 
 {% block extra_scripts %}

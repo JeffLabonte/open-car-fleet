@@ -5,25 +5,29 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('shop', '0009_carpart_carpartstatushistory'),
+        ("shop", "0009_carpart_carpartstatushistory"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='KnownShopProof',
+            name="KnownShopProof",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('title', models.CharField(max_length=255)),
-                ('content', models.TextField(blank=True)),
-                ('file', models.FileField(blank=True, null=True, upload_to='known_shop_proofs/')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('shop', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='proofs', to='shop.knownshop')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("title", models.CharField(max_length=255)),
+                ("content", models.TextField(blank=True)),
+                ("file", models.FileField(blank=True, null=True, upload_to="known_shop_proofs/")),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "shop",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, related_name="proofs", to="shop.knownshop"
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-updated_at', '-created_at'],
+                "ordering": ["-updated_at", "-created_at"],
             },
         ),
     ]

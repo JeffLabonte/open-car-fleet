@@ -10,13 +10,13 @@ from django.utils.translation import gettext as _
 
 from shop.permissions import FleetSharingPermissions
 
-security_log = logging.getLogger('security')
+security_log = logging.getLogger("security")
 
 
 def require_fleet_permission(
     permission: str,
     *,
-    fallback_url_name: str = 'shop-fleet-detail',
+    fallback_url_name: str = "shop-fleet-detail",
     message: str | None = None,
     log_reason: str | None = None,
 ) -> Callable[..., Callable[..., HttpResponse]]:
@@ -37,14 +37,14 @@ def require_fleet_permission(
             # view_helpers (which imports from shop.permissions).
             from shop.view_helpers import user_fleets_queryset
 
-            pk = kwargs.get('pk')
+            pk = kwargs.get("pk")
             fleet = get_object_or_404(user_fleets_queryset(request.user), pk=pk)
             perms = FleetSharingPermissions(request.user, fleet)
 
             if not getattr(perms, permission, False):
                 if log_reason:
                     security_log.warning(
-                        'access_denied: user=%s path=%s reason=%s fleet=%s',
+                        "access_denied: user=%s path=%s reason=%s fleet=%s",
                         request.user.pk,
                         request.path,
                         log_reason,
@@ -52,7 +52,7 @@ def require_fleet_permission(
                     )
                 messages.error(
                     request,
-                    message or _('You do not have permission to access this page.'),
+                    message or _("You do not have permission to access this page."),
                 )
                 return redirect(reverse(fallback_url_name, args=[fleet.pk]))
 

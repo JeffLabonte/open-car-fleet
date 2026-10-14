@@ -4,7 +4,7 @@
 {% block content %}
   <article class="box" data-testid="doc-detail">
     <header class="page-header mb-0">
-      {% include 'shop/partials/_page_header.html' with heading=title subheading=subtitle %}
+      {% include 'shop/partials/_page_header.html' %}
       <div class="page-actions">
         <a class="button is-primary" href="{% url 'shop-car-doc-update' car.pk doc.pk %}">{% translate 'Edit' %}</a>
         <a class="button is-danger" href="{% url 'shop-car-doc-delete' car.pk doc.pk %}">{% translate 'Delete' %}</a>

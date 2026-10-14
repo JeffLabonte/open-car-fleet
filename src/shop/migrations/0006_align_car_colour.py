@@ -5,15 +5,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('shop', '0005_rename_car_color_to_colour'),
+        ("shop", "0005_rename_car_color_to_colour"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='car',
-            name='colour',
+            model_name="car",
+            name="colour",
             field=models.CharField(max_length=50, validators=[django.core.validators.MinLengthValidator(1)]),
         ),
     ]

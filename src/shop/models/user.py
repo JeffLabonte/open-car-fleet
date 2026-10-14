@@ -10,17 +10,17 @@ class ShopUser(AbstractUser):
     hanko_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
     display_name = models.CharField(max_length=255, blank=True)
     avatar_url = models.URLField(max_length=500, blank=True)
-    auth_provider = models.CharField(max_length=50, default='local')
+    auth_provider = models.CharField(max_length=50, default="local")
     last_login_at = models.DateTimeField(null=True, blank=True)
     is_mechanic = models.BooleanField(default=False)
     mechanic_promoted_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        db_table = 'shop_user'
+        db_table = "shop_user"
         constraints = [
             models.UniqueConstraint(
-                models.functions.Lower('email'),
-                condition=~models.Q(email=''),
-                name='shop_user_unique_nonempty_email_ci',
+                models.functions.Lower("email"),
+                condition=~models.Q(email=""),
+                name="shop_user_unique_nonempty_email_ci",
             ),
         ]

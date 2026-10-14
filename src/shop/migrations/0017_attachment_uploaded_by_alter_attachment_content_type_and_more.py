@@ -6,26 +6,33 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('contenttypes', '0002_remove_content_type_name'),
-        ('shop', '0016_unified_attachments'),
+        ("contenttypes", "0002_remove_content_type_name"),
+        ("shop", "0016_unified_attachments"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='attachment',
-            name='uploaded_by',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='staged_attachments', to=settings.AUTH_USER_MODEL),
+            model_name="attachment",
+            name="uploaded_by",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="staged_attachments",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AlterField(
-            model_name='attachment',
-            name='content_type',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='contenttypes.contenttype'),
+            model_name="attachment",
+            name="content_type",
+            field=models.ForeignKey(
+                blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to="contenttypes.contenttype"
+            ),
         ),
         migrations.AlterField(
-            model_name='attachment',
-            name='object_id',
-            field=models.CharField(blank=True, db_index=True, default='', max_length=64),
+            model_name="attachment",
+            name="object_id",
+            field=models.CharField(blank=True, db_index=True, default="", max_length=64),
         ),
     ]

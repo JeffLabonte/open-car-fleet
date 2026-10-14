@@ -1,5 +1,5 @@
-from collections.abc import Iterator
 import os
+from collections.abc import Iterator
 from urllib.parse import urlparse
 
 import pytest
@@ -11,8 +11,8 @@ from selenium.webdriver.firefox.options import Options
 @pytest.fixture
 def firefox_driver() -> Iterator[webdriver.Firefox]:
     options = Options()
-    options.add_argument('-headless')
-    firefox_binary = os.environ.get('FIREFOX_BIN')
+    options.add_argument("-headless")
+    firefox_binary = os.environ.get("FIREFOX_BIN")
     if firefox_binary:
         options.binary_location = firefox_binary
 
@@ -25,20 +25,20 @@ def firefox_driver() -> Iterator[webdriver.Firefox]:
 
 
 def _base_url() -> str:
-    return os.environ.get('E2E_BASE_URL', 'http://127.0.0.1:8000').rstrip('/')
+    return os.environ.get("E2E_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
 
 
 def test_anonymous_protected_page_redirects_to_login(firefox_driver: webdriver.Firefox) -> None:
-    firefox_driver.get(f'{_base_url()}/cars/')
+    firefox_driver.get(f"{_base_url()}/cars/")
 
     parsed_url = urlparse(firefox_driver.current_url)
-    assert parsed_url.path == '/login/'
-    assert parsed_url.query.startswith('next=')
+    assert parsed_url.path == "/login/"
+    assert parsed_url.query.startswith("next=")
 
 
 def test_login_page_renders_in_firefox(firefox_driver: webdriver.Firefox) -> None:
-    firefox_driver.get(f'{_base_url()}/login/')
+    firefox_driver.get(f"{_base_url()}/login/")
 
-    headings = [element.text for element in firefox_driver.find_elements(By.TAG_NAME, 'h1')]
-    assert 'Sign in' in headings
-    assert 'Missing HANKO_API_URL' in firefox_driver.find_element(By.ID, 'hanko-auth-container').text
+    headings = [element.text for element in firefox_driver.find_elements(By.TAG_NAME, "h1")]
+    assert "Sign in" in headings
+    assert "Missing HANKO_API_URL" in firefox_driver.find_element(By.ID, "hanko-auth-container").text

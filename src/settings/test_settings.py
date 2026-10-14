@@ -22,26 +22,22 @@ from pathlib import Path
 
 from settings.settings import *  # noqa: F401,F403
 
-_e2e_db_path = os.environ.get('E2E_DB_PATH', '').strip()
+_e2e_db_path = os.environ.get("E2E_DB_PATH", "").strip()
 if _e2e_db_path:
-    DATABASES['default']['NAME'] = _e2e_db_path
+    DATABASES["default"]["NAME"] = _e2e_db_path  # noqa: F405
 
 # Never let the pytest suite or the e2e live server reach the real
 # MailerSend API; locmem delivers into django.core.mail.outbox.
-EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
+EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 
 # Disable django-ratelimit by default in tests so existing suites are not
 # throttled. Targeted tests can re-enable it with override_settings.
 RATELIMIT_ENABLE = False
 
 PASSWORD_HASHERS = [
-    'django.contrib.auth.hashers.MD5PasswordHasher',
-    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    "django.contrib.auth.hashers.MD5PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
 ]
 
-MEDIA_ROOT = Path(
-    tempfile.mkdtemp(
-        prefix=f'open-car-fleet-media-{os.environ.get("PYTEST_XDIST_WORKER") or "main"}-'
-    )
-)
+MEDIA_ROOT = Path(tempfile.mkdtemp(prefix=f"open-car-fleet-media-{os.environ.get('PYTEST_XDIST_WORKER') or 'main'}-"))
 atexit.register(shutil.rmtree, MEDIA_ROOT, ignore_errors=True)

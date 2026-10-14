@@ -3,7 +3,7 @@
 
 {% block content %}
   <header class="page-header">
-    {% include 'shop/partials/_page_header.html' with heading=title subheading=subtitle %}
+    {% include 'shop/partials/_page_header.html' %}
     <div class="page-actions">
       <a class="button is-light" href="{% url 'shop-car-detail' car.pk %}">{% translate 'Back to car' %}</a>
       <a class="button is-primary" href="{% url 'shop-car-doc-create' car.pk %}">

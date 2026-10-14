@@ -71,7 +71,7 @@ class FleetMembership(models.Model):
         unique_together = ("fleet", "user")
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(role__in=['owner', 'admin', 'mechanic', 'viewer']),
+                condition=models.Q(role__in=["owner", "admin", "mechanic", "viewer"]),
                 name="fleet_membership_valid_role",
             ),
         ]
@@ -159,15 +159,15 @@ class FleetInvitation(models.Model):
     def send_invitation_email(self, accept_base_url: str, sender_email: str | None = None) -> int:
         """Send invitation email containing a tokenized acceptance URL."""
         tokenized_url = f"{accept_base_url.rstrip('/')}/{self.token}"
-        subject = _("You have been invited to join the fleet '%(name)s'") % {'name': self.fleet.name}
+        subject = _("You have been invited to join the fleet '%(name)s'") % {"name": self.fleet.name}
         body = _(
             "You have been invited to join a shared fleet. "
             "Sign in with your social account (Google, Microsoft, or GitHub) to accept the invitation.\n\n"
             "Accept invitation: %(url)s\n\n"
             "Fleet: %(name)s\n"
-        ) % {'url': tokenized_url, 'name': self.fleet.name}
+        ) % {"url": tokenized_url, "name": self.fleet.name}
         if self.message:
-            body += _("\nMessage from inviter:\n%(message)s\n") % {'message': self.message}
+            body += _("\nMessage from inviter:\n%(message)s\n") % {"message": self.message}
 
         return send_mail(
             subject=subject,
@@ -186,7 +186,7 @@ class KnownShop(models.Model):
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name='created_known_shops',
+        related_name="created_known_shops",
     )
     name = models.CharField(max_length=200)
     email = models.EmailField(blank=True, db_index=True)
@@ -205,15 +205,15 @@ class KnownShop(models.Model):
 class KnownShopProof(models.Model):
     """A document or note supporting a known shop record."""
 
-    shop = models.ForeignKey(KnownShop, on_delete=models.CASCADE, related_name='proofs')
+    shop = models.ForeignKey(KnownShop, on_delete=models.CASCADE, related_name="proofs")
     title = models.CharField(max_length=255)
     content = models.TextField(blank=True)
-    attachments = GenericRelation('shop.Attachment')
+    attachments = GenericRelation("shop.Attachment")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-updated_at', '-created_at']
+        ordering = ["-updated_at", "-created_at"]
 
     def __str__(self) -> str:
         return f"{self.title} ({self.shop})"

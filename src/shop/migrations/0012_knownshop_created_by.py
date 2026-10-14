@@ -6,20 +6,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('shop', '0011_shopuser_unique_email'),
+        ("shop", "0011_shopuser_unique_email"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='knownshop',
-            name='created_by',
+            model_name="knownshop",
+            name="created_by",
             field=models.ForeignKey(
                 blank=True,
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
-                related_name='created_known_shops',
+                related_name="created_known_shops",
                 to=settings.AUTH_USER_MODEL,
             ),
         ),

@@ -18,33 +18,33 @@ class Attachment(models.Model):
     claimed (re-parented) when its form saves.
     """
 
-    SOURCE_UPLOAD = 'upload'
-    SOURCE_EXTERNAL = 'external'
+    SOURCE_UPLOAD = "upload"
+    SOURCE_EXTERNAL = "external"
 
-    KIND_IMAGE = 'image'
-    KIND_VIDEO = 'video'
-    KIND_DOCUMENT = 'document'
-    KIND_LINK = 'link'
+    KIND_IMAGE = "image"
+    KIND_VIDEO = "video"
+    KIND_DOCUMENT = "document"
+    KIND_LINK = "link"
 
     SOURCE_CHOICES = [
-        (SOURCE_UPLOAD, 'Uploaded file'),
-        (SOURCE_EXTERNAL, 'External link'),
+        (SOURCE_UPLOAD, "Uploaded file"),
+        (SOURCE_EXTERNAL, "External link"),
     ]
     KIND_CHOICES = [
-        (KIND_IMAGE, 'Image'),
-        (KIND_VIDEO, 'Video'),
-        (KIND_DOCUMENT, 'Document'),
-        (KIND_LINK, 'Link'),
+        (KIND_IMAGE, "Image"),
+        (KIND_VIDEO, "Video"),
+        (KIND_DOCUMENT, "Document"),
+        (KIND_LINK, "Link"),
     ]
 
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
-    object_id = models.CharField(max_length=64, db_index=True, blank=True, default='')
-    parent = GenericForeignKey('content_type', 'object_id')
+    object_id = models.CharField(max_length=64, db_index=True, blank=True, default="")
+    parent = GenericForeignKey("content_type", "object_id")
 
     source_type = models.CharField(max_length=20, choices=SOURCE_CHOICES, default=SOURCE_UPLOAD)
-    kind = models.CharField(max_length=20, choices=KIND_CHOICES, default='', blank=True)
-    file = models.FileField(upload_to='attachments/%Y/%m/%d', blank=True, null=True)
-    url = models.URLField(blank=True, default='')
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES, default="", blank=True)
+    file = models.FileField(upload_to="attachments/%Y/%m/%d", blank=True, null=True)
+    url = models.URLField(blank=True, default="")
     display_name = models.CharField(max_length=255, blank=True)
     mime_type = models.CharField(max_length=100, blank=True)
     order = models.PositiveIntegerField(default=0)
@@ -54,24 +54,24 @@ class Attachment(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='staged_attachments',
+        related_name="staged_attachments",
     )
 
     class Meta:
-        ordering = ['order', 'created_at']
-        indexes = [models.Index(fields=['content_type', 'object_id'], name='attachment_parent_idx')]
+        ordering = ["order", "created_at"]
+        indexes = [models.Index(fields=["content_type", "object_id"], name="attachment_parent_idx")]
 
     def save(self, *args, **kwargs) -> None:
         if self.source_type == self.SOURCE_UPLOAD and self.file and not self.display_name:
-            self.display_name = self.file.name.rsplit('/', 1)[-1]
+            self.display_name = self.file.name.rsplit("/", 1)[-1]
         if self.source_type == self.SOURCE_EXTERNAL and not self.kind:
             self.kind = self.KIND_LINK
         if self.source_type == self.SOURCE_UPLOAD and self.file and not self.mime_type:
-            self.mime_type = getattr(self.file, 'content_type', '') or ''
+            self.mime_type = getattr(self.file, "content_type", "") or ""
         if self.source_type == self.SOURCE_UPLOAD and self.file and not self.kind:
-            if self.mime_type.startswith('image/'):
+            if self.mime_type.startswith("image/"):
                 self.kind = self.KIND_IMAGE
-            elif self.mime_type.startswith('video/'):
+            elif self.mime_type.startswith("video/"):
                 self.kind = self.KIND_VIDEO
             else:
                 self.kind = self.KIND_DOCUMENT

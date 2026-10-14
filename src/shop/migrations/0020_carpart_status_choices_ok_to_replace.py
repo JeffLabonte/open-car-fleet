@@ -4,15 +4,27 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('shop', '0019_rename_garage_to_fleet'),
+        ("shop", "0019_rename_garage_to_fleet"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='carpart',
-            name='status',
-            field=models.CharField(choices=[('new', 'New'), ('ok', 'OK'), ('ordered', 'Ordered'), ('pending', 'Pending'), ('to_be_replaced', 'To be replaced'), ('repaired', 'Repaired'), ('replaced', 'Replaced'), ('available', 'Available')], default='new', max_length=30),
+            model_name="carpart",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("new", "New"),
+                    ("ok", "OK"),
+                    ("ordered", "Ordered"),
+                    ("pending", "Pending"),
+                    ("to_be_replaced", "To be replaced"),
+                    ("repaired", "Repaired"),
+                    ("replaced", "Replaced"),
+                    ("available", "Available"),
+                ],
+                default="new",
+                max_length=30,
+            ),
         ),
     ]

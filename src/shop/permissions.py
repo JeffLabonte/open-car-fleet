@@ -6,7 +6,6 @@ from django.utils.translation import gettext as _
 
 from shop.models.fleet import Fleet, FleetMembership
 
-
 # Strict role hierarchy used for membership-management authorization.
 # Higher number = more privilege. A member may only modify or remove members
 # whose role is strictly lower than their own.
@@ -105,7 +104,7 @@ def get_membership_or_404(user: Any, fleet: Fleet) -> FleetMembership:
     """Return the user's active membership or raise Http404 for IDOR protection."""
     membership = fleet.memberships.filter(user=user).first()
     if membership is None:
-        raise Http404(_('Membership not found.'))
+        raise Http404(_("Membership not found."))
     return membership
 
 

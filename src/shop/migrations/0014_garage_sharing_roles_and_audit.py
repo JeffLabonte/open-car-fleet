@@ -6,40 +6,49 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('shop', '0013_alter_car_colour'),
+        ("shop", "0013_alter_car_colour"),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='garagemembership',
-            old_name='joined_at',
-            new_name='created_at',
+            model_name="garagemembership",
+            old_name="joined_at",
+            new_name="created_at",
         ),
         migrations.AddField(
-            model_name='garageinvitation',
-            name='declined_at',
+            model_name="garageinvitation",
+            name="declined_at",
             field=models.DateTimeField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='garageinvitation',
-            name='declined_by',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='declined_garage_invitations', to=settings.AUTH_USER_MODEL),
+            model_name="garageinvitation",
+            name="declined_by",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="declined_garage_invitations",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AddField(
-            model_name='garageinvitation',
-            name='role',
-            field=models.CharField(choices=[('owner', 'Owner'), ('admin', 'Admin'), ('mechanic', 'Mechanic'), ('viewer', 'Viewer')], default='viewer', max_length=20),
+            model_name="garageinvitation",
+            name="role",
+            field=models.CharField(
+                choices=[("owner", "Owner"), ("admin", "Admin"), ("mechanic", "Mechanic"), ("viewer", "Viewer")],
+                default="viewer",
+                max_length=20,
+            ),
         ),
         migrations.AddField(
-            model_name='garageinvitation',
-            name='updated_at',
+            model_name="garageinvitation",
+            name="updated_at",
             field=models.DateTimeField(auto_now=True),
         ),
         migrations.AddField(
-            model_name='garagemembership',
-            name='updated_at',
+            model_name="garagemembership",
+            name="updated_at",
             field=models.DateTimeField(auto_now=True),
         ),
         migrations.RunSQL(
@@ -63,17 +72,34 @@ class Migration(migrations.Migration):
             """,
         ),
         migrations.AlterField(
-            model_name='garageinvitation',
-            name='status',
-            field=models.CharField(choices=[('pending', 'Pending'), ('accepted', 'Accepted'), ('declined', 'Declined'), ('cancelled', 'Cancelled'), ('expired', 'Expired')], default='pending', max_length=20),
+            model_name="garageinvitation",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("pending", "Pending"),
+                    ("accepted", "Accepted"),
+                    ("declined", "Declined"),
+                    ("cancelled", "Cancelled"),
+                    ("expired", "Expired"),
+                ],
+                default="pending",
+                max_length=20,
+            ),
         ),
         migrations.AlterField(
-            model_name='garagemembership',
-            name='role',
-            field=models.CharField(choices=[('owner', 'Owner'), ('admin', 'Admin'), ('mechanic', 'Mechanic'), ('viewer', 'Viewer')], default='viewer', max_length=20),
+            model_name="garagemembership",
+            name="role",
+            field=models.CharField(
+                choices=[("owner", "Owner"), ("admin", "Admin"), ("mechanic", "Mechanic"), ("viewer", "Viewer")],
+                default="viewer",
+                max_length=20,
+            ),
         ),
         migrations.AddConstraint(
-            model_name='garagemembership',
-            constraint=models.CheckConstraint(condition=models.Q(('role__in', ['owner', 'admin', 'mechanic', 'viewer'])), name='garage_membership_valid_role'),
+            model_name="garagemembership",
+            constraint=models.CheckConstraint(
+                condition=models.Q(("role__in", ["owner", "admin", "mechanic", "viewer"])),
+                name="garage_membership_valid_role",
+            ),
         ),
     ]

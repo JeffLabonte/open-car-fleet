@@ -13,8 +13,8 @@ from shop.models.user import ShopUser
 class AttachmentInline(GenericTabularInline):
     model = Attachment
     extra = 0
-    fields = ('source_type', 'kind', 'file', 'url', 'display_name', 'mime_type', 'order')
-    readonly_fields = ('created_at',)
+    fields = ("source_type", "kind", "file", "url", "display_name", "mime_type", "order")
+    readonly_fields = ("created_at",)
 
 
 @admin.register(Car)
@@ -78,8 +78,8 @@ class AttachmentAdmin(admin.ModelAdmin):
     list_filter = ("kind", "source_type")
     search_fields = ("display_name", "url")
 
-    @admin.display(description='Parent')
+    @admin.display(description="Parent")
     def parent_label(self, obj):
         if obj.content_type is None:
-            return _('Staged upload')
-        return f'{obj.content_type.name}: {obj.object_id}'
+            return _("Staged upload")
+        return f"{obj.content_type.name}: {obj.object_id}"

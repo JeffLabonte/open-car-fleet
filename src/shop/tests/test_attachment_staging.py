@@ -15,23 +15,23 @@ from shop.models.car import Car
 from shop.models.fleet import Fleet, FleetMembership
 from shop.models.report import Report
 from shop.models.user import ShopUser
-from shop.tests.helpers import PNG_SIGNATURE
 from shop.services.attachments import purge_stale_staged_attachments
+from shop.tests.helpers import PNG_SIGNATURE
 
 
 class AttachmentStagingEndpointTests(TestCase):
     def setUp(self) -> None:
         self.user = ShopUser.objects.create_user(
-            username='staging-owner',
-            email='staging-owner@example.com',
-            password='pass1234',
+            username="staging-owner",
+            email="staging-owner@example.com",
+            password="pass1234",
         )
         self.stranger = ShopUser.objects.create_user(
-            username='staging-stranger',
-            email='staging-stranger@example.com',
-            password='pass1234',
+            username="staging-stranger",
+            email="staging-stranger@example.com",
+            password="pass1234",
         )
-        self.fleet = Fleet.objects.create(name='Staging Fleet', created_by=self.user)
+        self.fleet = Fleet.objects.create(name="Staging Fleet", created_by=self.user)
         FleetMembership.objects.create(
             fleet=self.fleet,
             user=self.user,
@@ -39,15 +39,15 @@ class AttachmentStagingEndpointTests(TestCase):
         )
         self.car = Car.objects.create(
             fleet=self.fleet,
-            make='Toyota',
-            model='Prius',
-            vin='JTDKB20U929483756',
+            make="Toyota",
+            model="Prius",
+            vin="JTDKB20U929483756",
         )
 
-    def _upload(self, client, name='photo.png', content=PNG_SIGNATURE, content_type='image/png'):
+    def _upload(self, client, name="photo.png", content=PNG_SIGNATURE, content_type="image/png"):
         return client.post(
-            reverse('shop-attachment-upload'),
-            data={'file': SimpleUploadedFile(name, content, content_type=content_type)},
+            reverse("shop-attachment-upload"),
+            data={"file": SimpleUploadedFile(name, content, content_type=content_type)},
         )
 
     def test_upload_requires_authentication(self):
@@ -59,10 +59,10 @@ class AttachmentStagingEndpointTests(TestCase):
         response = self._upload(self.client)
         self.assertEqual(response.status_code, 201)
         payload = response.json()
-        self.assertEqual(payload['name'], 'photo.png')
-        self.assertEqual(payload['kind'], 'image')
-        attachment = Attachment.objects.get(pk=payload['id'])
-        self.assertEqual(attachment.object_id, '')
+        self.assertEqual(payload["name"], "photo.png")
+        self.assertEqual(payload["kind"], "image")
+        attachment = Attachment.objects.get(pk=payload["id"])
+        self.assertEqual(attachment.object_id, "")
         self.assertIsNone(attachment.content_type)
         self.assertEqual(attachment.uploaded_by, self.user)
         self.assertTrue(attachment.file)
@@ -70,51 +70,51 @@ class AttachmentStagingEndpointTests(TestCase):
 
     def test_upload_without_file_returns_400(self):
         self.client.force_login(self.user)
-        response = self.client.post(reverse('shop-attachment-upload'), data={})
+        response = self.client.post(reverse("shop-attachment-upload"), data={})
         self.assertEqual(response.status_code, 400)
 
     def test_upload_rejects_disallowed_extension(self):
         self.client.force_login(self.user)
-        response = self._upload(self.client, name='payload.exe', content=b'MZ', content_type='application/x-msdownload')
+        response = self._upload(self.client, name="payload.exe", content=b"MZ", content_type="application/x-msdownload")
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Unsupported attachment file type.')
+        self.assertEqual(response.json()["error"], "Unsupported attachment file type.")
         self.assertFalse(Attachment.objects.exists())
 
     def test_upload_rejects_spoofed_magic_bytes(self):
         self.client.force_login(self.user)
-        response = self._upload(self.client, content=b'<html><script>alert(1)</script></html>')
+        response = self._upload(self.client, content=b"<html><script>alert(1)</script></html>")
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Attachment contents do not match its file type.')
+        self.assertEqual(response.json()["error"], "Attachment contents do not match its file type.")
         self.assertFalse(Attachment.objects.exists())
 
     def test_upload_rejects_oversized_file(self):
         self.client.force_login(self.user)
-        with patch.object(AttachmentField, 'max_upload_bytes', 10):
-            response = self._upload(self.client, content=PNG_SIGNATURE + b'0' * 11)
+        with patch.object(AttachmentField, "max_upload_bytes", 10):
+            response = self._upload(self.client, content=PNG_SIGNATURE + b"0" * 11)
         self.assertEqual(response.status_code, 400)
-        self.assertIn('no larger than', response.json()['error'])
+        self.assertIn("no larger than", response.json()["error"])
         self.assertFalse(Attachment.objects.exists())
 
-    @patch('shop.views.attachments.ATTACHMENT_USER_STAGED_QUOTA_BYTES', 20)
+    @patch("shop.views.attachments.ATTACHMENT_USER_STAGED_QUOTA_BYTES", 20)
     def test_upload_enforces_per_user_staged_quota(self):
         self.client.force_login(self.user)
         # Use the bare 8-byte PNG magic so the first upload (8 bytes) fits.
-        minimal_png = b'\x89PNG\r\n\x1a\n'
+        minimal_png = b"\x89PNG\r\n\x1a\n"
         response = self._upload(self.client, content=minimal_png)
         self.assertEqual(response.status_code, 201)
 
         # A second upload would exceed the 20-byte quota (8 + 13 > 20).
-        response = self._upload(self.client, name='second.png', content=minimal_png + b'0' * 13)
+        response = self._upload(self.client, name="second.png", content=minimal_png + b"0" * 13)
         self.assertEqual(response.status_code, 413)
-        self.assertIn('quota', response.json()['error'].lower())
+        self.assertIn("quota", response.json()["error"].lower())
 
     def test_upload_opportunistically_purges_stale_staged(self):
         stale = Attachment.objects.create(
             source_type=Attachment.SOURCE_UPLOAD,
             uploaded_by=self.user,
-            file=SimpleUploadedFile('stale.png', PNG_SIGNATURE, content_type='image/png'),
-            display_name='stale.png',
-            mime_type='image/png',
+            file=SimpleUploadedFile("stale.png", PNG_SIGNATURE, content_type="image/png"),
+            display_name="stale.png",
+            mime_type="image/png",
         )
         Attachment.objects.filter(pk=stale.pk).update(created_at=timezone.now() - timedelta(hours=13))
 
@@ -127,9 +127,9 @@ class AttachmentStagingEndpointTests(TestCase):
     def test_delete_staged_by_owner(self):
         self.client.force_login(self.user)
         upload_response = self._upload(self.client)
-        attachment_id = upload_response.json()['id']
+        attachment_id = upload_response.json()["id"]
 
-        response = self.client.post(reverse('shop-attachment-delete', args=[attachment_id]))
+        response = self.client.post(reverse("shop-attachment-delete", args=[attachment_id]))
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Attachment.objects.filter(pk=attachment_id).exists())
@@ -138,30 +138,30 @@ class AttachmentStagingEndpointTests(TestCase):
         attachment = Attachment.objects.create(
             source_type=Attachment.SOURCE_UPLOAD,
             uploaded_by=self.user,
-            file=SimpleUploadedFile('mine.png', PNG_SIGNATURE, content_type='image/png'),
-            display_name='mine.png',
-            mime_type='image/png',
+            file=SimpleUploadedFile("mine.png", PNG_SIGNATURE, content_type="image/png"),
+            display_name="mine.png",
+            mime_type="image/png",
         )
         self.client.force_login(self.stranger)
-        response = self.client.post(reverse('shop-attachment-delete', args=[attachment.pk]))
+        response = self.client.post(reverse("shop-attachment-delete", args=[attachment.pk]))
 
         self.assertEqual(response.status_code, 404)
         self.assertTrue(Attachment.objects.filter(pk=attachment.pk).exists())
         attachment.file.delete(save=False)
 
     def test_delete_rejects_claimed_attachments(self):
-        report = Report.objects.create(car=self.car, job_name='Claimed', date_done='2026-09-14')
+        report = Report.objects.create(car=self.car, job_name="Claimed", date_done="2026-09-14")
         attachment = Attachment.objects.create(
             content_type=ContentType.objects.get_for_model(report),
             object_id=str(report.pk),
             source_type=Attachment.SOURCE_UPLOAD,
             uploaded_by=self.user,
-            file=SimpleUploadedFile('claimed.png', PNG_SIGNATURE, content_type='image/png'),
-            display_name='claimed.png',
-            mime_type='image/png',
+            file=SimpleUploadedFile("claimed.png", PNG_SIGNATURE, content_type="image/png"),
+            display_name="claimed.png",
+            mime_type="image/png",
         )
         self.client.force_login(self.user)
-        response = self.client.post(reverse('shop-attachment-delete', args=[attachment.pk]))
+        response = self.client.post(reverse("shop-attachment-delete", args=[attachment.pk]))
 
         self.assertEqual(response.status_code, 404)
         self.assertTrue(Attachment.objects.filter(pk=attachment.pk).exists())
@@ -171,16 +171,16 @@ class AttachmentStagingEndpointTests(TestCase):
 class StagedAttachmentClaimTests(TestCase):
     def setUp(self) -> None:
         self.user = ShopUser.objects.create_user(
-            username='claim-owner',
-            email='claim-owner@example.com',
-            password='pass1234',
+            username="claim-owner",
+            email="claim-owner@example.com",
+            password="pass1234",
         )
         self.stranger = ShopUser.objects.create_user(
-            username='claim-stranger',
-            email='claim-stranger@example.com',
-            password='pass1234',
+            username="claim-stranger",
+            email="claim-stranger@example.com",
+            password="pass1234",
         )
-        self.fleet = Fleet.objects.create(name='Claim Fleet', created_by=self.user)
+        self.fleet = Fleet.objects.create(name="Claim Fleet", created_by=self.user)
         FleetMembership.objects.create(
             fleet=self.fleet,
             user=self.user,
@@ -188,44 +188,44 @@ class StagedAttachmentClaimTests(TestCase):
         )
         self.car = Car.objects.create(
             fleet=self.fleet,
-            make='Toyota',
-            model='Corolla',
-            vin='JTDKB20U112233445',
+            make="Toyota",
+            model="Corolla",
+            vin="JTDKB20U112233445",
         )
         self.client.force_login(self.user)
 
-    def _stage(self, name, content=PNG_SIGNATURE, content_type='image/png'):
+    def _stage(self, name, content=PNG_SIGNATURE, content_type="image/png"):
         response = self.client.post(
-            reverse('shop-attachment-upload'),
-            data={'file': SimpleUploadedFile(name, content, content_type=content_type)},
+            reverse("shop-attachment-upload"),
+            data={"file": SimpleUploadedFile(name, content, content_type=content_type)},
         )
         self.assertEqual(response.status_code, 201)
-        return response.json()['id']
+        return response.json()["id"]
 
     def _report_payload(self, **overrides):
         payload = {
-            'mileage': '100000',
-            'job_name': 'Brake service',
-            'date_done': '2026-09-14',
-            'note': 'Replaced pads',
-            'additional_information': '',
+            "mileage": "100000",
+            "job_name": "Brake service",
+            "date_done": "2026-09-14",
+            "note": "Replaced pads",
+            "additional_information": "",
         }
         payload.update(overrides)
         return payload
 
     def test_report_create_claims_staged_attachments_in_order(self):
-        first = self._stage('first.png')
-        second = self._stage('second.png')
+        first = self._stage("first.png")
+        second = self._stage("second.png")
 
         response = self.client.post(
-            reverse('shop-report-create', args=[self.car.pk]),
-            data=self._report_payload(staged_attachments=f'{second},{first}'),
+            reverse("shop-report-create", args=[self.car.pk]),
+            data=self._report_payload(staged_attachments=f"{second},{first}"),
         )
 
         self.assertEqual(response.status_code, 302)
-        report = Report.objects.get(job_name='Brake service')
-        attachments = list(report.attachments.filter(source_type='upload').order_by('order'))
-        self.assertEqual([item.display_name for item in attachments], ['second.png', 'first.png'])
+        report = Report.objects.get(job_name="Brake service")
+        attachments = list(report.attachments.filter(source_type="upload").order_by("order"))
+        self.assertEqual([item.display_name for item in attachments], ["second.png", "first.png"])
         self.assertEqual([item.pk for item in attachments], [second, first])
         for item in attachments:
             self.assertEqual(item.content_type, ContentType.objects.get_for_model(report))
@@ -233,87 +233,87 @@ class StagedAttachmentClaimTests(TestCase):
 
     def test_report_create_rejects_foreign_staged_ids(self):
         self.client.force_login(self.stranger)
-        foreign_id = self._stage('theirs.png')
+        foreign_id = self._stage("theirs.png")
         self.client.force_login(self.user)
 
         response = self.client.post(
-            reverse('shop-report-create', args=[self.car.pk]),
+            reverse("shop-report-create", args=[self.car.pk]),
             data=self._report_payload(staged_attachments=str(foreign_id)),
         )
 
         self.assertEqual(response.status_code, 200)
-        form = response.context['form']
+        form = response.context["form"]
         self.assertFalse(form.is_valid())
-        self.assertIn('staged_attachments', form.errors)
-        self.assertFalse(Report.objects.filter(job_name='Brake service').exists())
+        self.assertIn("staged_attachments", form.errors)
+        self.assertFalse(Report.objects.filter(job_name="Brake service").exists())
 
     def test_report_create_rejects_already_claimed_ids(self):
-        report = Report.objects.create(car=self.car, job_name='Existing', date_done='2026-09-14')
+        report = Report.objects.create(car=self.car, job_name="Existing", date_done="2026-09-14")
         claimed = Attachment.objects.create(
             content_type=ContentType.objects.get_for_model(report),
             object_id=str(report.pk),
             source_type=Attachment.SOURCE_UPLOAD,
             uploaded_by=self.user,
-            file=SimpleUploadedFile('claimed.png', PNG_SIGNATURE, content_type='image/png'),
-            display_name='claimed.png',
-            mime_type='image/png',
+            file=SimpleUploadedFile("claimed.png", PNG_SIGNATURE, content_type="image/png"),
+            display_name="claimed.png",
+            mime_type="image/png",
         )
 
         response = self.client.post(
-            reverse('shop-report-create', args=[self.car.pk]),
-            data=self._report_payload(job_name='Second report', staged_attachments=str(claimed.pk)),
+            reverse("shop-report-create", args=[self.car.pk]),
+            data=self._report_payload(job_name="Second report", staged_attachments=str(claimed.pk)),
         )
 
         self.assertEqual(response.status_code, 200)
-        form = response.context['form']
+        form = response.context["form"]
         self.assertFalse(form.is_valid())
-        self.assertIn('staged_attachments', form.errors)
+        self.assertIn("staged_attachments", form.errors)
         claimed.file.delete(save=False)
 
     def test_direct_uploads_and_staged_together_exceed_limit(self):
-        staged_id = self._stage('staged.png')
+        staged_id = self._stage("staged.png")
         files = [
-            SimpleUploadedFile(f'photo-{index}.png', PNG_SIGNATURE, content_type='image/png')
+            SimpleUploadedFile(f"photo-{index}.png", PNG_SIGNATURE, content_type="image/png")
             for index in range(AttachmentField.max_files)
         ]
         response = self.client.post(
-            reverse('shop-report-create', args=[self.car.pk]),
+            reverse("shop-report-create", args=[self.car.pk]),
             data={
                 **self._report_payload(staged_attachments=str(staged_id)),
-                'attachments': files,
+                "attachments": files,
             },
         )
 
         self.assertEqual(response.status_code, 200)
-        form = response.context['form']
+        form = response.context["form"]
         self.assertFalse(form.is_valid())
-        self.assertIn('staged_attachments', form.errors)
+        self.assertIn("staged_attachments", form.errors)
 
     def test_purge_keeps_claimed_attachments_older_than_window(self):
-        report = Report.objects.create(car=self.car, job_name='Old claim', date_done='2026-09-14')
+        report = Report.objects.create(car=self.car, job_name="Old claim", date_done="2026-09-14")
         claimed = Attachment.objects.create(
             content_type=ContentType.objects.get_for_model(report),
             object_id=str(report.pk),
             source_type=Attachment.SOURCE_UPLOAD,
             uploaded_by=self.user,
-            file=SimpleUploadedFile('old-claim.png', PNG_SIGNATURE, content_type='image/png'),
-            display_name='old-claim.png',
-            mime_type='image/png',
+            file=SimpleUploadedFile("old-claim.png", PNG_SIGNATURE, content_type="image/png"),
+            display_name="old-claim.png",
+            mime_type="image/png",
         )
         Attachment.objects.filter(pk=claimed.pk).update(created_at=timezone.now() - timedelta(hours=13))
         stale = Attachment.objects.create(
             source_type=Attachment.SOURCE_UPLOAD,
             uploaded_by=self.user,
-            file=SimpleUploadedFile('stale.png', PNG_SIGNATURE, content_type='image/png'),
-            display_name='stale.png',
-            mime_type='image/png',
+            file=SimpleUploadedFile("stale.png", PNG_SIGNATURE, content_type="image/png"),
+            display_name="stale.png",
+            mime_type="image/png",
         )
         fresh = Attachment.objects.create(
             source_type=Attachment.SOURCE_UPLOAD,
             uploaded_by=self.user,
-            file=SimpleUploadedFile('fresh.png', PNG_SIGNATURE, content_type='image/png'),
-            display_name='fresh.png',
-            mime_type='image/png',
+            file=SimpleUploadedFile("fresh.png", PNG_SIGNATURE, content_type="image/png"),
+            display_name="fresh.png",
+            mime_type="image/png",
         )
         Attachment.objects.filter(pk=stale.pk).update(created_at=timezone.now() - timedelta(hours=13))
 
@@ -329,14 +329,14 @@ class StagedAttachmentClaimTests(TestCase):
         stale = Attachment.objects.create(
             source_type=Attachment.SOURCE_UPLOAD,
             uploaded_by=self.user,
-            file=SimpleUploadedFile('stale.png', PNG_SIGNATURE, content_type='image/png'),
-            display_name='stale.png',
-            mime_type='image/png',
+            file=SimpleUploadedFile("stale.png", PNG_SIGNATURE, content_type="image/png"),
+            display_name="stale.png",
+            mime_type="image/png",
         )
         Attachment.objects.filter(pk=stale.pk).update(created_at=timezone.now() - timedelta(hours=13))
 
         buffer = io.StringIO()
-        call_command('purge_staged_attachments', stdout=buffer)
+        call_command("purge_staged_attachments", stdout=buffer)
 
-        self.assertIn('Purged 1', buffer.getvalue())
+        self.assertIn("Purged 1", buffer.getvalue())
         self.assertFalse(Attachment.objects.filter(pk=stale.pk).exists())

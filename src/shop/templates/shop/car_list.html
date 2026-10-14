@@ -3,7 +3,7 @@
 
 {% block content %}
   <header class="page-header">
-    {% include 'shop/partials/_page_header.html' with heading=_('Cars') subheading=_('Browse the vehicles in your shared fleets.') %}
+    {% include 'shop/partials/_page_header.html' %}
     <div class="page-actions">
       {% if can_edit_fleet_data %}
         <a class="button is-primary" href="{% url 'shop-car-create' %}">
@@ -67,16 +67,6 @@
   {% endif %}
 
   {% if can_edit_fleet_data %}
-    <dialog class="dialog" id="dialog-car-delete">
-      <form method="post" action="#" data-dialog-action-form>
-        {% csrf_token %}
-        <h2 class="dialog__title">{% translate 'Delete this car?' %}</h2>
-        <p>{% translate 'This will permanently remove the vehicle and all of its parts, work jobs and reports.' %}</p>
-        <div class="dialog-actions">
-          <button class="button is-light" type="button" data-dialog-close>{% translate 'Cancel' %}</button>
-          <button class="button is-danger" type="submit">{% translate 'Delete' %}</button>
-        </div>
-      </form>
-    </dialog>
+    {% include 'shop/partials/_confirm_delete_dialog.html' with dialog_id='dialog-car-delete' title=_('Delete this car?') message=_('This will permanently remove the vehicle and all of its parts, work jobs and reports.') %}
   {% endif %}
 {% endblock %}

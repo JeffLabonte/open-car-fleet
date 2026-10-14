@@ -1,7 +1,6 @@
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
 from django.db import models
-from django.utils.translation import gettext_lazy as _
 
 from shop.models.attachment import Attachment
 from shop.models.car import Car

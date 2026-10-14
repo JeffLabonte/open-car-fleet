@@ -14,14 +14,17 @@ import os
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
+from django.utils.translation import gettext_lazy as _
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-def load_dotenv(path: Path) -> None:
+def load_dotenv(path: Path) -> dict[str, str]:
+    """Read key/value pairs from a .env-style file without mutating os.environ."""
+    values: dict[str, str] = {}
     if not path.exists():
-        return
+        return values
 
     try:
         text = path.read_text()
@@ -29,166 +32,181 @@ def load_dotenv(path: Path) -> None:
         # The env file may be mounted with restrictive permissions that the
         # container user cannot read. If the required variables are already
         # injected via environment or env_file, skip silently.
-        return
+        return values
 
     for raw_line in text.splitlines():
         line = raw_line.strip()
-        if not line or line.startswith('#') or '=' not in line:
+        if not line or line.startswith("#") or "=" not in line:
             continue
 
-        name, value = line.split('=', 1)
+        name, value = line.split("=", 1)
         name = name.strip()
         value = value.strip().strip('"').strip("'")
 
-        if name and name not in os.environ:
-            os.environ[name] = value
+        if name:
+            values[name] = value
+
+    return values
+
 
 # Load environment settings from .env first, then fall back to the checked-in template.
+# Real process environment variables always take precedence over file values.
 env_paths = [
-    BASE_DIR / '.env',
-    BASE_DIR / '.env.template',
-    BASE_DIR.parent / '.env',
-    BASE_DIR.parent / '.env.template',
+    BASE_DIR / ".env",
+    BASE_DIR / ".env.template",
+    BASE_DIR.parent / ".env",
+    BASE_DIR.parent / ".env.template",
 ]
+_file_env: dict[str, str] = {}
 for env_path in env_paths:
-    load_dotenv(env_path)
+    _file_env.update(load_dotenv(env_path))
+
+
+def _env(name: str, default: str = "") -> str:
+    """Return a setting value from the process environment, falling back to .env files."""
+    return os.environ.get(name, _file_env.get(name, default))
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'False').strip().lower() in ('1', 'true', 'yes')
+DEBUG = _env("DEBUG", "False").strip().lower() in ("1", "true", "yes")
 
 
 # SECURITY WARNING: keep the secret key out of source control.
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '').strip()
+SECRET_KEY = _env("DJANGO_SECRET_KEY", "").strip()
 if not SECRET_KEY:
-    raise ImproperlyConfigured('DJANGO_SECRET_KEY must be configured.')
-if not DEBUG and SECRET_KEY in {'django-insecure-change-me', 'change-me'}:
-    raise ImproperlyConfigured('DJANGO_SECRET_KEY must not use a development placeholder.')
+    raise ImproperlyConfigured("DJANGO_SECRET_KEY must be configured.")
+if not DEBUG and SECRET_KEY in {"django-insecure-change-me", "change-me"}:
+    raise ImproperlyConfigured("DJANGO_SECRET_KEY must not use a development placeholder.")
 
-HANKO_API_URL = os.environ.get('HANKO_API_URL', '').strip()
+HANKO_API_URL = _env("HANKO_API_URL", "").strip()
 
-allowed_hosts_raw = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost 127.0.0.1 [::1]').strip()
-ALLOWED_HOSTS = allowed_hosts_raw.split() if allowed_hosts_raw else ['localhost', '127.0.0.1', '[::1]']
-if '*' in ALLOWED_HOSTS and not DEBUG:
-    raise ImproperlyConfigured('DJANGO_ALLOWED_HOSTS must not contain * when DEBUG is disabled.')
+allowed_hosts_raw = _env("DJANGO_ALLOWED_HOSTS", "localhost 127.0.0.1 [::1]").strip()
+ALLOWED_HOSTS = allowed_hosts_raw.split() if allowed_hosts_raw else ["localhost", "127.0.0.1", "[::1]"]
+if "*" in ALLOWED_HOSTS and not DEBUG:
+    raise ImproperlyConfigured("DJANGO_ALLOWED_HOSTS must not contain * when DEBUG is disabled.")
 
-csrf_trusted_origins_raw = os.environ.get(
-    'CSRF_TRUSTED_ORIGINS',
-    os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS', '')
-)
+csrf_trusted_origins_raw = _env("CSRF_TRUSTED_ORIGINS", _env("DJANGO_CSRF_TRUSTED_ORIGINS", ""))
 if csrf_trusted_origins_raw:
     origins = []
-    for item in csrf_trusted_origins_raw.replace(',', ' ').split():
+    for item in csrf_trusted_origins_raw.replace(",", " ").split():
         item = item.strip()
         if not item:
             continue
-        if item.startswith('http://') or item.startswith('https://'):
+        if item.startswith("http://") or item.startswith("https://"):
             origins.append(item)
         else:
-            origins.append(f'https://{item}')
-            if item.startswith(('localhost', '127.0.0.1', '[::1]')):
-                origins.append(f'http://{item}')
+            origins.append(f"https://{item}")
+            if item.startswith(("localhost", "127.0.0.1", "[::1]")):
+                origins.append(f"http://{item}")
     CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(origins))
 else:
     CSRF_TRUSTED_ORIGINS = []
 
-trusted_proxy = os.environ.get('DJANGO_TRUSTED_PROXY', 'False').strip().lower() in ('1', 'true', 'yes')
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https') if trusted_proxy else None
-USE_X_FORWARDED_HOST = trusted_proxy and os.environ.get('DJANGO_USE_X_FORWARDED_HOST', 'False').strip().lower() in ('1', 'true', 'yes')
-USE_X_FORWARDED_PORT = trusted_proxy and os.environ.get('DJANGO_USE_X_FORWARDED_PORT', 'False').strip().lower() in ('1', 'true', 'yes')
+trusted_proxy = _env("DJANGO_TRUSTED_PROXY", "False").strip().lower() in ("1", "true", "yes")
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https") if trusted_proxy else None
+USE_X_FORWARDED_HOST = trusted_proxy and _env("DJANGO_USE_X_FORWARDED_HOST", "False").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+)
+USE_X_FORWARDED_PORT = trusted_proxy and _env("DJANGO_USE_X_FORWARDED_PORT", "False").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+)
 
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = 'Lax'
-SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', str(not DEBUG)).strip().lower() in ('1', 'true', 'yes')
-CSRF_COOKIE_SAMESITE = 'Lax'
-CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', str(not DEBUG)).strip().lower() in ('1', 'true', 'yes')
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SECURE = _env("SESSION_COOKIE_SECURE", str(not DEBUG)).strip().lower() in ("1", "true", "yes")
+CSRF_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SECURE = _env("CSRF_COOKIE_SECURE", str(not DEBUG)).strip().lower() in ("1", "true", "yes")
 SECURE_CONTENT_TYPE_NOSNIFF = True
-SECURE_REFERRER_POLICY = 'same-origin'
+SECURE_REFERRER_POLICY = "same-origin"
 # HTTPS enforcement: default to secure behavior in production (DEBUG=False).
 # Override via environment variables when running behind a proxy or on plain HTTP.
-SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', str(not DEBUG)).strip().lower() in ('1', 'true', 'yes')
-SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', '31536000' if not DEBUG else '0'))
+SECURE_SSL_REDIRECT = _env("SECURE_SSL_REDIRECT", str(not DEBUG)).strip().lower() in ("1", "true", "yes")
+SECURE_HSTS_SECONDS = int(_env("SECURE_HSTS_SECONDS", "31536000" if not DEBUG else "0"))
 
 # SECURE_SSL_REDIRECT without a trusted proxy causes an infinite redirect loop
 # when Django is behind a reverse proxy (the proxy sees HTTPS, Django sees HTTP).
 if SECURE_SSL_REDIRECT and not trusted_proxy:
     raise ImproperlyConfigured(
-        'SECURE_SSL_REDIRECT is enabled but DJANGO_TRUSTED_PROXY is not set. '
-        'Set DJANGO_TRUSTED_PROXY=True when running behind a reverse proxy, '
-        'or explicitly disable SECURE_SSL_REDIRECT.'
+        "SECURE_SSL_REDIRECT is enabled but DJANGO_TRUSTED_PROXY is not set. "
+        "Set DJANGO_TRUSTED_PROXY=True when running behind a reverse proxy, "
+        "or explicitly disable SECURE_SSL_REDIRECT."
     )
 SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_HSTS_SECONDS > 0
 SECURE_HSTS_PRELOAD = SECURE_HSTS_SECONDS > 0
-X_FRAME_OPTIONS = 'DENY'
+X_FRAME_OPTIONS = "DENY"
 
 CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
     }
 }
 
 # Return 429 Too Many Requests instead of the default 403 when a limit is hit.
-RATELIMIT_VIEW = 'django_ratelimit.views.ratelimited_error'
+RATELIMIT_VIEW = "django_ratelimit.views.ratelimited_error"
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'anymail',
-    'shop',
-    'car_docs',
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "anymail",
+    "shop",
+    "car_docs",
 ]
 
-AUTH_USER_MODEL = 'shop.ShopUser'
+AUTH_USER_MODEL = "shop.ShopUser"
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.middleware.locale.LocaleMiddleware',
-    'shop.middleware.HankoAuthenticationMiddleware',
-    'shop.middleware.RatelimitMiddleware',
-    'shop.middleware.ContentSecurityPolicyMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.middleware.locale.LocaleMiddleware",
+    "shop.middleware.HankoAuthenticationMiddleware",
+    "shop.middleware.RatelimitMiddleware",
+    "shop.middleware.ContentSecurityPolicyMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = 'settings.urls'
+ROOT_URLCONF = "settings.urls"
 
-LOGIN_URL = '/login/'
-LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/login/'
+LOGIN_URL = "/login/"
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/login/"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-                'shop.context_processors.theme',
-                'shop.context_processors.language_info',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+                "shop.context_processors.theme",
+                "shop.context_processors.language_info",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'settings.wsgi.application'
+WSGI_APPLICATION = "settings.wsgi.application"
 
 
 # File uploads. Large unified attachments (photos, mechanic videos up to
@@ -201,22 +219,22 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 MB (non-file fields)
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-if os.environ.get('POSTGRES_DB'):
+if _env("POSTGRES_DB"):
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.environ.get('POSTGRES_DB'),
-            'USER': os.environ.get('POSTGRES_USER', 'open_garage_user'),
-            'PASSWORD': os.environ.get('POSTGRES_PASSWORD', ''),
-            'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
-            'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": _env("POSTGRES_DB"),
+            "USER": _env("POSTGRES_USER", "open_garage_user"),
+            "PASSWORD": _env("POSTGRES_PASSWORD", ""),
+            "HOST": _env("POSTGRES_HOST", "localhost"),
+            "PORT": _env("POSTGRES_PORT", "5432"),
         }
     }
 else:
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
         }
     }
 
@@ -226,16 +244,16 @@ else:
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
@@ -243,20 +261,18 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
-from django.utils.translation import gettext_lazy as _
-
-LANGUAGE_CODE = 'en-ca'
+LANGUAGE_CODE = "en-ca"
 
 LANGUAGES = [
-    ('en-ca', _('English')),
-    ('fr-ca', _('Français')),
+    ("en-ca", _("English")),
+    ("fr-ca", _("Français")),
 ]
 
 LOCALE_PATHS = [
-    BASE_DIR / 'locale',
+    BASE_DIR / "locale",
 ]
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "UTC"
 
 USE_I18N = True
 
@@ -268,55 +284,55 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
-STATIC_ROOT = Path(os.environ.get('DJANGO_STATIC_ROOT', str(BASE_DIR / 'staticfiles')))
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATIC_URL = "static/"
+STATIC_ROOT = Path(_env("DJANGO_STATIC_ROOT", str(BASE_DIR / "staticfiles")))
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 STATICFILES_DIRS = [
-    BASE_DIR / 'public',
+    BASE_DIR / "public",
 ]
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 
 # Email (MailerSend API via django-anymail)
 # https://anymail.dev/en/stable/esps/mailersend/
 
-EMAIL_BACKEND = 'anymail.backends.mailersend.EmailBackend'
+EMAIL_BACKEND = "anymail.backends.mailersend.EmailBackend"
 ANYMAIL = {
-    'MAILERSEND_API_TOKEN': os.environ.get('MAILERSEND_API_TOKEN', ''),
+    "MAILERSEND_API_TOKEN": _env("MAILERSEND_API_TOKEN", ""),
 }
-DEFAULT_FROM_EMAIL = os.environ.get(
-    'DEFAULT_FROM_EMAIL',
-    'Open Car Fleet <noreply@localhost>',
+DEFAULT_FROM_EMAIL = _env(
+    "DEFAULT_FROM_EMAIL",
+    "Open Car Fleet <noreply@localhost>",
 )
-SERVER_EMAIL = os.environ.get('SERVER_EMAIL', DEFAULT_FROM_EMAIL)
+SERVER_EMAIL = _env("SERVER_EMAIL", DEFAULT_FROM_EMAIL)
 
 
 # Logging configuration. The 'security' logger is reserved for auditable events
 # (logins, access-control decisions, membership changes, etc.) and can be
 # routed to a separate, append-only destination in production.
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'security': {
-            'format': '{levelname} {asctime} {name} {message}',
-            'style': '{',
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "security": {
+            "format": "{levelname} {asctime} {name} {message}",
+            "style": "{",
         },
     },
-    'handlers': {
-        'security_console': {
-            'level': 'INFO',
-            'class': 'logging.StreamHandler',
-            'formatter': 'security',
+    "handlers": {
+        "security_console": {
+            "level": "INFO",
+            "class": "logging.StreamHandler",
+            "formatter": "security",
         },
     },
-    'loggers': {
-        'security': {
-            'handlers': ['security_console'],
-            'level': 'INFO',
-            'propagate': False,
+    "loggers": {
+        "security": {
+            "handlers": ["security_console"],
+            "level": "INFO",
+            "propagate": False,
         },
     },
 }

@@ -3,12 +3,10 @@ import gzip
 import os
 import shutil
 import subprocess
-import sys
 import time
 from pathlib import Path
 from typing import Any
 
-from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 
@@ -158,9 +156,7 @@ class Command(BaseCommand):
                     check=False,
                 )
                 if result.returncode != 0:
-                    self.stdout.write(
-                        self.style.WARNING("Current DB backup failed (DB may be empty).")
-                    )
+                    self.stdout.write(self.style.WARNING("Current DB backup failed (DB may be empty)."))
                     db_backup_path.unlink(missing_ok=True)
         except Exception as exc:  # noqa: BLE001
             self.stdout.write(self.style.WARNING(f"Current DB backup failed: {exc}"))
