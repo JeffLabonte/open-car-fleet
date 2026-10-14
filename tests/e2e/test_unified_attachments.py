@@ -75,11 +75,18 @@ def _wait_for_element(driver: webdriver.Firefox, by: By, value: str, label: str)
         return _wait(driver).until(ec.presence_of_element_located((by, value)))
     except Exception as exc:
         current_url = getattr(driver, 'current_url', 'unknown')
-        page_source = getattr(driver, 'page_source', '')[:2000]
+        page_source = getattr(driver, 'page_source', '')
+        # Try to extract the Django debug exception summary when present.
+        summary = page_source
+        if '<summary>' in page_source:
+            start = page_source.find('<summary>')
+            end = page_source.find('</summary>', start)
+            if end != -1:
+                summary = page_source[start:end + 10]
         raise AssertionError(
             f"Could not locate {label} ({by}={value!r}).\n"
             f"Current URL: {current_url}\n"
-            f"Page source snippet:\n{page_source}"
+            f"Page source snippet:\n{summary[:6000]}"
         ) from exc
 
 
