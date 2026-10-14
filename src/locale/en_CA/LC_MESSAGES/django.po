@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Open Car Fleet\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-13 22:58+0000\n"
+"POT-Creation-Date: 2026-10-14 01:05+0000\n"
 "PO-Revision-Date: 2026-09-13 02:13+0000\n"
 "Last-Translator: Open Car Fleet <noreply@opencarfleet.ca>\n"
 "Language-Team: en_CA <LL@li.org>\n"
@@ -728,27 +728,35 @@ msgstr ""
 msgid "Fleet not found for id '%(value)s'."
 msgstr ""
 
-#: src/shop/models/car.py:20
+#: src/shop/models/car.py:22
 msgid "New"
 msgstr ""
 
-#: src/shop/models/car.py:21
-msgid "Ordered"
-msgstr ""
-
-#: src/shop/models/car.py:22 src/shop/models/job.py:27
-msgid "Pending"
-msgstr ""
-
 #: src/shop/models/car.py:23
-msgid "Repaired"
+msgid "OK"
 msgstr ""
 
 #: src/shop/models/car.py:24
+msgid "Ordered"
+msgstr ""
+
+#: src/shop/models/car.py:25 src/shop/models/job.py:27
+msgid "Pending"
+msgstr ""
+
+#: src/shop/models/car.py:26
+msgid "To be replaced"
+msgstr ""
+
+#: src/shop/models/car.py:27
+msgid "Repaired"
+msgstr ""
+
+#: src/shop/models/car.py:28
 msgid "Replaced"
 msgstr ""
 
-#: src/shop/models/car.py:25
+#: src/shop/models/car.py:29
 msgid "Available"
 msgstr ""
 

@@ -10,16 +10,20 @@ class CarPart(models.Model):
     """A tracked part or component on a car with a current status."""
 
     STATUS_NEW = "new"
+    STATUS_OK = "ok"
     STATUS_ORDERED = "ordered"
     STATUS_PENDING = "pending"
+    STATUS_TO_BE_REPLACED = "to_be_replaced"
     STATUS_REPAIRED = "repaired"
     STATUS_REPLACED = "replaced"
     STATUS_AVAILABLE = "available"
 
     STATUS_CHOICES = [
         (STATUS_NEW, _("New")),
+        (STATUS_OK, _("OK")),
         (STATUS_ORDERED, _("Ordered")),
         (STATUS_PENDING, _("Pending")),
+        (STATUS_TO_BE_REPLACED, _("To be replaced")),
         (STATUS_REPAIRED, _("Repaired")),
         (STATUS_REPLACED, _("Replaced")),
         (STATUS_AVAILABLE, _("Available")),

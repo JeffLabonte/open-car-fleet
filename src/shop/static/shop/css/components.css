@@ -549,7 +549,8 @@
 }
 
 .badge--pending,
-.badge--soon {
+.badge--soon,
+.badge--to_be_replaced {
   background: var(--warning-soft);
   color: var(--warning);
 }
@@ -562,6 +563,7 @@
 }
 
 .badge--done,
+.badge--ok,
 .badge--repaired,
 .badge--replaced,
 .badge--available,

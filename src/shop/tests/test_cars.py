@@ -53,6 +53,28 @@ class CarPartStatusTrackingTests(TestCase):
         self.assertEqual(second_event.note, 'Ordered replacement set from supplier.')
         self.assertIsNotNone(second_event.changed_at)
 
+    def test_new_status_choices_ok_and_to_be_replaced_are_valid(self):
+        part = CarPart.objects.create(
+            car=self.car,
+            name='Windshield wipers',
+            status=CarPart.STATUS_OK,
+            notes='Inspected and in good condition.',
+        )
+
+        self.assertEqual(part.status, CarPart.STATUS_OK)
+        self.assertEqual(part.status_history.count(), 1)
+
+        part.update_status(CarPart.STATUS_TO_BE_REPLACED, note='Worn, schedule replacement.')
+        part.refresh_from_db()
+
+        self.assertEqual(part.status, CarPart.STATUS_TO_BE_REPLACED)
+        self.assertEqual(part.status_history.count(), 2)
+
+        latest_event = part.status_history.order_by('changed_at').last()
+        self.assertEqual(latest_event.previous_status, CarPart.STATUS_OK)
+        self.assertEqual(latest_event.new_status, CarPart.STATUS_TO_BE_REPLACED)
+        self.assertEqual(latest_event.note, 'Worn, schedule replacement.')
+
 
 class ColourFieldTests(TestCase):
     def setUp(self) -> None:
