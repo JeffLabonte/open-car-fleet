@@ -32,6 +32,7 @@ from shop.services.invitations import (
     invite_to_fleet,
 )
 from shop.view_helpers import (
+    set_selected_fleet,
     user_can_manage_fleet,
     user_can_manage_known_shop,
     user_cars_queryset,
@@ -68,6 +69,7 @@ def index(request: HttpRequest) -> HttpResponse:
 def fleet_detail(request: HttpRequest, pk: str) -> HttpResponse:
     """Show one fleet and its cars for a member."""
     fleet = get_object_or_404(user_fleets_queryset(request.user).prefetch_related('cars'), pk=pk)
+    set_selected_fleet(request, fleet)
     perms = FleetSharingPermissions(request.user, fleet)
     cars = fleet.cars.order_by('-created_at')
     return render(

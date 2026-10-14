@@ -30,6 +30,8 @@ from shop.permissions import FleetSharingPermissions, get_membership_or_404
 from shop.services import update_car_odometer_from_report
 from shop.services.attachments import save_attachments
 from shop.view_helpers import (
+    get_selected_fleet,
+    set_selected_fleet,
     user_can_manage_fleet,
     user_can_manage_known_shop,
     user_cars_queryset,
@@ -134,6 +136,7 @@ def car_detail(request: HttpRequest, pk: str) -> HttpResponse:
         user_cars_queryset(request.user).select_related('fleet').prefetch_related('work_jobs', 'reports', 'parts__status_history'),
         pk=pk,
     )
+    set_selected_fleet(request, car.fleet)
     show_done = request.GET.get('show_done') == '1'
     work_jobs_qs = car.work_jobs.order_by('status', 'planned_date', 'created_at')
     if not show_done:
@@ -175,7 +178,9 @@ def car_create(request: HttpRequest) -> HttpResponse:
             messages.success(request, _('Car created successfully.'))
             return redirect(reverse('shop-car-detail', args=[car.pk]))
     else:
-        form = CarForm(user=request.user)
+        selected_fleet = get_selected_fleet(request)
+        initial = {'fleet': selected_fleet.pk} if selected_fleet is not None else None
+        form = CarForm(user=request.user, initial=initial)
     return render(request, 'shop/car_form.html', {'form': form, 'is_create': True})
 
 

@@ -22,6 +22,7 @@ from shop.models.job import WorkJob
 from shop.models.report import Report
 from shop.models.user import ShopUser
 from shop.tests.helpers import FakeHankoResponse
+from shop.view_helpers import SELECTED_FLEET_ID_SESSION_KEY, get_selected_fleet
 
 
 class AdditionalCoverageRegressionTests(TestCase):
@@ -710,3 +711,97 @@ class ViewCoverageTests(TestCase):
             data={'make': '', 'model': ''},
         )
         self.assertEqual(invalid_update.status_code, 200)
+
+
+class SelectedFleetSessionTests(TestCase):
+    def setUp(self) -> None:
+        self.owner = ShopUser.objects.create_user(
+            username='fleet-session-owner',
+            email='fleet-session-owner@example.com',
+            password='pass1234',
+            is_mechanic=True,
+        )
+        self.viewer = ShopUser.objects.create_user(
+            username='fleet-session-viewer',
+            email='fleet-session-viewer@example.com',
+            password='pass1234',
+        )
+        self.fleet = Fleet.objects.create(name='Session Fleet', created_by=self.owner)
+        self.other_fleet = Fleet.objects.create(name='Other Fleet', created_by=self.owner)
+        FleetMembership.objects.create(fleet=self.fleet, user=self.owner, role=FleetMembership.ROLE_OWNER)
+        FleetMembership.objects.create(fleet=self.other_fleet, user=self.owner, role=FleetMembership.ROLE_OWNER)
+        FleetMembership.objects.create(fleet=self.fleet, user=self.viewer, role=FleetMembership.ROLE_VIEWER)
+        self.car = Car.objects.create(
+            fleet=self.fleet,
+            make='Honda',
+            model='Accord',
+            vin='1HGCM82633A004352',
+        )
+
+    def test_fleet_detail_sets_selected_fleet_in_session(self):
+        self.client.force_login(self.owner)
+        self.client.get(reverse('shop-fleet-detail', args=[self.fleet.pk]))
+        self.assertEqual(self.client.session[SELECTED_FLEET_ID_SESSION_KEY], str(self.fleet.pk))
+
+    def test_car_detail_sets_selected_fleet_in_session(self):
+        self.client.force_login(self.owner)
+        self.client.get(reverse('shop-car-detail', args=[self.car.pk]))
+        self.assertEqual(self.client.session[SELECTED_FLEET_ID_SESSION_KEY], str(self.fleet.pk))
+
+    def test_car_create_preselects_fleet_from_session(self):
+        self.client.force_login(self.owner)
+        session = self.client.session
+        session[SELECTED_FLEET_ID_SESSION_KEY] = str(self.fleet.pk)
+        session.save()
+
+        response = self.client.get(reverse('shop-car-create'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['form'].initial.get('fleet'), self.fleet.pk)
+
+    def test_car_create_ignores_stale_session_fleet(self):
+        self.client.force_login(self.owner)
+        session = self.client.session
+        session[SELECTED_FLEET_ID_SESSION_KEY] = 'not-a-uuid'
+        session.save()
+
+        response = self.client.get(reverse('shop-car-create'))
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.context['form'].initial.get('fleet'))
+
+    def test_car_create_ignores_viewer_only_fleet(self):
+        self.client.force_login(self.viewer)
+        session = self.client.session
+        session[SELECTED_FLEET_ID_SESSION_KEY] = str(self.fleet.pk)
+        session.save()
+
+        response = self.client.get(reverse('shop-car-create'))
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.context['form'].initial.get('fleet'))
+
+    def test_car_create_post_uses_submitted_fleet_not_session(self):
+        self.client.force_login(self.owner)
+        session = self.client.session
+        session[SELECTED_FLEET_ID_SESSION_KEY] = str(self.fleet.pk)
+        session.save()
+
+        response = self.client.post(
+            reverse('shop-car-create'),
+            data={
+                'fleet': str(self.other_fleet.pk),
+                'usual_name': 'Roadster',
+                'make': 'Mazda',
+                'model': 'MX-5',
+                'colour': 'Red',
+                'year': '2024',
+                'vin': 'JM1NDAB77P0112345',
+                'license_plate': 'ABC 123',
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        created_car = Car.objects.get(vin='JM1NDAB77P0112345')
+        self.assertEqual(created_car.fleet_id, self.other_fleet.pk)
+
+    def test_get_selected_fleet_returns_none_when_no_session_value(self):
+        self.client.force_login(self.owner)
+        request = self.client.get(reverse('shop-car-create')).wsgi_request
+        self.assertIsNone(get_selected_fleet(request))
