@@ -69,6 +69,20 @@ def _wait(driver: webdriver.Firefox) -> WebDriverWait:
     return WebDriverWait(driver, 10)
 
 
+def _wait_for_element(driver: webdriver.Firefox, by: By, value: str, label: str):
+    """Wait for an element and print debug context if it is not found."""
+    try:
+        return _wait(driver).until(ec.presence_of_element_located((by, value)))
+    except Exception as exc:
+        current_url = getattr(driver, 'current_url', 'unknown')
+        page_source = getattr(driver, 'page_source', '')[:2000]
+        raise AssertionError(
+            f"Could not locate {label} ({by}={value!r}).\n"
+            f"Current URL: {current_url}\n"
+            f"Page source snippet:\n{page_source}"
+        ) from exc
+
+
 @given('a running application server')
 def running_server():
     # The E2E suite assumes `make test-e2e` starts the Django server externally.
@@ -80,6 +94,9 @@ def sign_in(firefox_driver: webdriver.Firefox, state: dict[str, str], email: str
     state['email'] = email
     firefox_driver.get(_url(f'/set-test-session/?email={email}&next=/fleets/add/'))
     _wait(firefox_driver).until(ec.url_contains('/fleets/add/'))
+    # Verify the session was created and we are on the fleet create form,
+    # not a login or error page.
+    _wait_for_element(firefox_driver, By.NAME, 'name', 'fleet create name field')
 
 
 @given(parsers.parse('a fleet "{fleet_name}" owned by "{email}"'))
@@ -248,7 +265,7 @@ def doc_list_shows_attachment(firefox_driver: webdriver.Firefox):
 @when(parsers.parse('they create a known shop named "{shop_name}"'))
 def create_known_shop(firefox_driver: webdriver.Firefox, state: dict[str, str], shop_name: str):
     firefox_driver.get(_url('/shops/add/'))
-    name_input = _wait(firefox_driver).until(ec.presence_of_element_located((By.NAME, 'name')))
+    name_input = _wait_for_element(firefox_driver, By.NAME, 'name', 'known shop name field')
     unique_name = _unique(shop_name)
     state['shop_name'] = unique_name
     name_input.send_keys(unique_name)
