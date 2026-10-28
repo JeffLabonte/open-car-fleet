@@ -4,6 +4,7 @@
     {% include 'shop/partials/_logo.html' %}
     {% translate 'Open Fleets' as default_brand_name %}
     <span>{{ brand_name|default:default_brand_name }}</span>
+    <span class="badge badge--pending">{% translate 'Beta' %}</span>
   </a>
   <nav class="app-sidebar__nav">
     <a class="app-navlink" href="{% url 'shop-index' %}" data-testid="nav-fleets">
@@ -46,6 +47,7 @@
     {% include 'shop/partials/_logo.html' %}
     {% translate 'Open Fleets' as default_brand_name %}
     <span>{{ brand_name|default:default_brand_name }}</span>
+    <span class="badge badge--pending">{% translate 'Beta' %}</span>
   </a>
   {% include 'shop/partials/_theme_toggle.html' %}
 </header>

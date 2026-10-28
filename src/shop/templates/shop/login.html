@@ -6,6 +6,7 @@
     <div class="public-header__brand">
       {% include 'shop/partials/_logo.html' %}
       <span>{{ title|default:'Open Car Fleet' }}</span>
+      <span class="badge badge--pending">{% translate 'Beta' %}</span>
     </div>
     <div class="public-header__controls">
       {% include 'shop/partials/_theme_toggle.html' %}

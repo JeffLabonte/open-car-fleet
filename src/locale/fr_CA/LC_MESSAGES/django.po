@@ -1506,6 +1506,12 @@ msgstr "Navigation principale"
 msgid "Open Fleets"
 msgstr "Open Fleets"
 
+#: src/shop/templates/shop/login.html:9
+#: src/shop/templates/shop/partials/_nav.html:7
+#: src/shop/templates/shop/partials/_nav.html:50
+msgid "Beta"
+msgstr "Bêta"
+
 #: src/shop/templates/shop/partials/_nav.html:11 src/shop/views/fleet.py:49
 msgid "My Fleets"
 msgstr "Mes parcs"
