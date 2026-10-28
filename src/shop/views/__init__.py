@@ -53,6 +53,7 @@ from shop.views.fleet import (
     fleet_update,
     index,
 )
+from shop.views.inspection import inspection_create, inspection_history, inspection_update
 from shop.views.invitations import (
     _render_invitation_response,
     fleet_invitation_accept,
@@ -97,6 +98,9 @@ __all__ = [
     "get_theme_from_request",
     "hanko_callback",
     "index",
+    "inspection_create",
+    "inspection_history",
+    "inspection_update",
     "known_shop_create",
     "known_shop_detail",
     "known_shop_list",

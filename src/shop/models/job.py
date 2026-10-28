@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -31,6 +32,13 @@ class WorkJob(AssignedToShopMixin, models.Model):
     ]
 
     car = models.ForeignKey(Car, related_name="work_jobs", on_delete=models.CASCADE)
+    inspection = models.ForeignKey(
+        "shop.Inspection",
+        related_name="recommended_work",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+    )
     title = models.CharField(max_length=200)
     maintenance_type = models.CharField(max_length=50, blank=True)
     assigned_to = models.ForeignKey(
@@ -64,6 +72,21 @@ class WorkJob(AssignedToShopMixin, models.Model):
                 name="workjob_single_assignment_target",
             )
         ]
+
+    def clean(self) -> None:
+        super().clean()
+        if self.car_id and self.inspection_id:
+            inspection_car_id = getattr(self.inspection, "car_id", None)
+            if inspection_car_id is None:
+                from shop.models.inspection import Inspection
+
+                inspection_car_id = (
+                    Inspection.objects.filter(pk=self.inspection_id).values_list("car_id", flat=True).first()
+                )
+            if inspection_car_id != self.car_id:
+                raise ValidationError(
+                    {"inspection": _("The inspection must belong to the same vehicle as the work job.")}
+                )
 
     def __str__(self) -> str:
         return f"{self.title} [{self.get_urgency_display()}] for {self.car}"

@@ -47,6 +47,13 @@ urlpatterns = [
     path("cars/<uuid:pk>/", views.car_detail, name="shop-car-detail"),
     path("cars/<uuid:pk>/import/", views.car_import, name="shop-car-import"),
     path("cars/<uuid:pk>/edit/", views.car_update, name="shop-car-update"),
+    path("cars/<uuid:car_pk>/inspections/add/", views.inspection_create, name="shop-inspection-create"),
+    path("cars/<uuid:car_pk>/inspections/", views.inspection_history, name="shop-inspection-history"),
+    path(
+        "cars/<uuid:car_pk>/inspections/<int:pk>/edit/",
+        views.inspection_update,
+        name="shop-inspection-update",
+    ),
     path("cars/<uuid:car_pk>/parts/add/", views.part_create, name="shop-part-create"),
     path("cars/<uuid:car_pk>/parts/<int:pk>/edit/", views.part_update, name="shop-part-update"),
     path("cars/<uuid:car_pk>/work-jobs/add/", views.workjob_create, name="shop-workjob-create"),

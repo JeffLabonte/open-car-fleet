@@ -5,6 +5,7 @@ from django.utils.translation import gettext_lazy as _
 from shop.models.attachment import Attachment
 from shop.models.car import Car
 from shop.models.fleet import Fleet, FleetInvitation, FleetMembership, KnownShop
+from shop.models.inspection import Inspection
 from shop.models.job import WorkJob
 from shop.models.report import Report
 from shop.models.user import ShopUser
@@ -29,6 +30,17 @@ class ReportAdmin(admin.ModelAdmin):
     list_filter = ("date_done",)
     search_fields = ("job_name", "note")
     inlines = (AttachmentInline,)
+
+
+@admin.register(Inspection)
+class InspectionAdmin(admin.ModelAdmin):
+    list_display = ("car", "inspected_at", "mileage", "created_by")
+    list_filter = ("inspected_at",)
+    search_fields = ("car__usual_name", "car__vin", "car__license_plate", "notes")
+    inlines = (AttachmentInline,)
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(WorkJob)

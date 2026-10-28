@@ -1,0 +1,19 @@
+{% extends 'shop/partials/_attachment_form.html' %}
+{% load static i18n %}
+
+{% block testid %}inspection-form{% endblock %}
+{% block form_title %}{% if is_create %}{% translate 'Add Inspection' %}{% else %}{% translate 'Edit Inspection' %}{% endif %}{% endblock %}
+{% block form_subtitle %}
+  <p class="has-text-grey mb-4">{% translate 'Record the exact time, findings, photos, and documents for this vehicle inspection.' %}</p>
+{% endblock %}
+{% block cancel_url %}{% url 'shop-car-detail' car.pk %}{% endblock %}
+
+{% block form_extra %}
+  {% with current_attachments=inspection.attachments.all %}
+    {{ block.super }}
+  {% endwith %}
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'shop/js/attachments.js' %}" defer></script>
+{% endblock %}

@@ -1,0 +1,88 @@
+{% extends 'shop/base.html' %}
+{% load i18n %}
+
+{% block title %}
+  <title>{% translate 'Inspection history' %} · {{ car.usual_name|default:car.make }} · Open Car Fleet</title>
+{% endblock %}
+
+{% block content %}
+  <div class="box" data-testid="inspection-history">
+    <div class="page-header mb-0">
+      <div>
+        <h1 class="title mb-2">{% translate 'Inspection history' %}</h1>
+        <p class="subtitle mb-0">{{ car.usual_name|default:car.make }} · {% translate 'All recorded inspections and recommended work.' %}</p>
+      </div>
+      <div class="page-actions">
+        {% if can_edit_fleet_data %}
+          <a class="button is-primary" href="{% url 'shop-inspection-create' car.pk %}">{% translate 'Add inspection' %}</a>
+        {% endif %}
+        <a class="button is-light" href="{% url 'shop-car-detail' car.pk %}">{% translate 'Back to vehicle' %}</a>
+      </div>
+    </div>
+  </div>
+
+  {% if inspections %}
+    {% for inspection in inspections %}
+      <article class="message is-info" data-testid="inspection-history-item">
+        <div class="message-header">
+          <p>{% translate 'Inspection' %} — {{ inspection.inspected_at|date:'F j, Y, g:i a T' }}</p>
+          {% if can_edit_fleet_data %}
+            <a class="button is-small" href="{% url 'shop-inspection-update' car.pk inspection.pk %}">{% translate 'Edit' %}</a>
+          {% endif %}
+        </div>
+        <div class="message-body">
+          {% if inspection.mileage is not None %}
+            <p><strong>{% translate 'Mileage:' %}</strong> {{ inspection.mileage }}</p>
+          {% endif %}
+          <p class="report-description">{{ inspection.notes|linebreaksbr|default:_('No inspection findings provided.') }}</p>
+
+          {% include 'shop/partials/_inspection_attachments.html' with inspection=inspection %}
+
+          <h3 class="title is-6 mt-4">{% translate 'Recommended work' %}</h3>
+          {% with recommended_work=inspection.recommended_work.all %}
+            {% if recommended_work %}
+              <div class="table-container">
+                <div class="table-wrap">
+                  <table class="table is-fullwidth is-striped table--responsive" data-testid="inspection-recommended-work-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">{% translate 'Work' %}</th>
+                        <th scope="col">{% translate 'Discovered' %}</th>
+                        <th scope="col">{% translate 'Planned' %}</th>
+                        <th scope="col">{% translate 'Status' %}</th>
+                        <th scope="col">{% translate 'Actions' %}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for job in recommended_work %}
+                        <tr data-testid="inspection-recommended-work-row">
+                          <td data-label="{% translate 'Work' %}">{{ job.title }}</td>
+                          <td data-label="{% translate 'Discovered' %}">{{ inspection.inspected_at|date:'M j, Y g:i a T' }}</td>
+                          <td data-label="{% translate 'Planned' %}">{{ job.planned_date|date:'M j, Y'|default:'—' }}</td>
+                          <td data-label="{% translate 'Status' %}">{{ job.get_status_display }}</td>
+                          <td data-label="">
+                            {% if can_edit_fleet_data %}
+                              <a class="button is-small is-link" href="{% url 'shop-workjob-update' car.pk job.pk %}">{% translate 'Edit' %}</a>
+                            {% endif %}
+                          </td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            {% else %}
+              <p class="has-text-grey">{% translate 'No recommended work was recorded for this inspection.' %}</p>
+            {% endif %}
+          {% endwith %}
+
+          {% if can_edit_fleet_data %}
+            <a class="button is-primary is-small mt-3" href="{% url 'shop-workjob-create' car.pk %}?inspection={{ inspection.pk }}">{% translate 'Add recommended work' %}</a>
+          {% endif %}
+        </div>
+      </article>
+    {% endfor %}
+  {% else %}
+    <div class="notification is-warning">{% translate 'No inspections recorded for this vehicle yet.' %}</div>
+  {% endif %}
+{% endblock %}

@@ -11,6 +11,7 @@ from shop.forms.fleet import (
     FleetMembershipRoleForm,
 )
 from shop.forms.import_data import CarImportForm, FleetImportForm
+from shop.forms.inspection import InspectionForm
 from shop.forms.job import WorkJobForm
 from shop.forms.report import ReportForm
 from shop.forms.shop import KnownShopForm, KnownShopProofForm
@@ -26,6 +27,7 @@ __all__ = [
     "FleetMembershipRoleForm",
     "CarImportForm",
     "FleetImportForm",
+    "InspectionForm",
     "WorkJobForm",
     "ReportForm",
     "KnownShopForm",

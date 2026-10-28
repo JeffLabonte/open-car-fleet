@@ -4,6 +4,7 @@ from django import forms
 from django.utils.translation import gettext_lazy as _
 
 from shop.forms.base import AssignedToShopFormMixin, LineListFieldMixin
+from shop.models.inspection import Inspection
 from shop.models.job import WorkJob
 
 
@@ -18,6 +19,7 @@ class WorkJobForm(LineListFieldMixin, AssignedToShopFormMixin, forms.ModelForm):
         model = WorkJob
         fields = [
             "title",
+            "inspection",
             "maintenance_type",
             "assigned_to",
             "assigned_shop",
@@ -32,6 +34,7 @@ class WorkJobForm(LineListFieldMixin, AssignedToShopFormMixin, forms.ModelForm):
         widgets = {
             "title": forms.TextInput(attrs={"class": "input", "placeholder": _("Work title")}),
             "maintenance_type": forms.TextInput(attrs={"class": "input", "placeholder": _("Maintenance type")}),
+            "inspection": forms.Select(attrs={"class": "input"}),
             "assigned_to": forms.Select(attrs={"class": "input"}),
             "assigned_shop": forms.Select(attrs={"class": "input"}),
             "planned_date": forms.DateInput(attrs={"class": "input", "type": "date"}),
@@ -42,6 +45,7 @@ class WorkJobForm(LineListFieldMixin, AssignedToShopFormMixin, forms.ModelForm):
         }
         labels = {
             "title": _("Work title"),
+            "inspection": _("Discovered during inspection"),
             "maintenance_type": _("Maintenance type"),
             "assigned_to": _("Assigned to"),
             "assigned_shop": _("Known shop"),
@@ -57,8 +61,14 @@ class WorkJobForm(LineListFieldMixin, AssignedToShopFormMixin, forms.ModelForm):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         user = kwargs.pop("user", None)
         fleet = kwargs.pop("fleet", None)
+        car = kwargs.pop("car", None)
         super().__init__(*args, **kwargs)
         self.configure_assigned_fields(user=user, fleet=fleet)
+        self.fields["inspection"].queryset = (
+            Inspection.objects.filter(car=car).order_by(*Inspection.LATEST_ORDERING)
+            if car is not None
+            else Inspection.objects.none()
+        )
         if self.instance and self.instance.pk:
             self.fields["required_items"].initial = "\n".join(self.instance.required_items or [])
 

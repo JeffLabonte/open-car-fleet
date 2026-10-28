@@ -14,6 +14,7 @@ from shop.forms.base import validate_uploaded_file
 from shop.middleware import hanko_login_required
 from shop.models.attachment import Attachment
 from shop.models.fleet import KnownShopProof
+from shop.models.inspection import Inspection
 from shop.models.report import Report
 from shop.services.attachments import (
     ATTACHMENT_USER_STAGED_QUOTA_BYTES,
@@ -95,6 +96,8 @@ def _user_can_view_attachment(user: Any, attachment: Attachment) -> bool:
     if parent is None:
         return False
     if isinstance(parent, Report):
+        return user_cars_queryset(user).filter(pk=parent.car_id).exists()
+    if isinstance(parent, Inspection):
         return user_cars_queryset(user).filter(pk=parent.car_id).exists()
     if isinstance(parent, CarDoc):
         from shop.view_helpers import user_car_docs_queryset

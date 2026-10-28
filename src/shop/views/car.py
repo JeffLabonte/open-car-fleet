@@ -2,6 +2,8 @@ import logging
 
 from django.contrib import messages
 from django.db import transaction
+from django.db.models import Prefetch
+from django.db.models.deletion import ProtectedError
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -19,6 +21,7 @@ from shop.importers import ImportContext
 from shop.middleware import hanko_login_required
 from shop.models.car import CarPart
 from shop.models.fleet import FleetMembership
+from shop.models.inspection import Inspection
 from shop.models.job import WorkJob
 from shop.models.report import Report
 from shop.permissions import FleetSharingPermissions
@@ -125,7 +128,11 @@ def car_delete(request: HttpRequest, pk: str) -> HttpResponse:
         messages.error(request, _("You do not have permission to delete this car."))
         return redirect(reverse("shop-car-list"))
 
-    car.delete()
+    try:
+        car.delete()
+    except ProtectedError:
+        messages.error(request, _("This car cannot be deleted because it has inspection history."))
+        return redirect(reverse("shop-car-detail", args=[car.pk]))
     messages.success(request, _("Car deleted successfully."))
     return redirect(reverse("shop-car-list"))
 
@@ -141,10 +148,28 @@ def car_detail(request: HttpRequest, pk: str) -> HttpResponse:
     )
     set_selected_fleet(request, car.fleet)
     show_done = request.GET.get("show_done") == "1"
-    work_jobs_qs = car.work_jobs.order_by("status", "planned_date", "created_at")
+    work_jobs_qs = car.work_jobs.select_related("inspection", "assigned_to", "assigned_shop").order_by(
+        "status", "planned_date", "created_at"
+    )
     if not show_done:
         work_jobs_qs = work_jobs_qs.exclude(status__in=(WorkJob.STATUS_DONE, WorkJob.STATUS_CANCELLED))
     reports = car.reports.order_by("-date_done", "-created_at")
+    latest_inspection = (
+        Inspection.objects.filter(car=car)
+        .select_related("created_by")
+        .prefetch_related(
+            "attachments",
+            Prefetch(
+                "recommended_work",
+                queryset=WorkJob.objects.select_related("assigned_to", "assigned_shop").order_by(
+                    "status", "planned_date", "created_at"
+                ),
+            ),
+        )
+        .order_by(*Inspection.LATEST_ORDERING)
+        .first()
+    )
+    inspection_count = Inspection.objects.filter(car=car).count()
     parts = list(car.parts.order_by("name"))
     related_cars = (
         user_cars_queryset(request.user)
@@ -161,6 +186,8 @@ def car_detail(request: HttpRequest, pk: str) -> HttpResponse:
             "related_cars": related_cars,
             "work_jobs": work_jobs_qs,
             "reports": reports,
+            "latest_inspection": latest_inspection,
+            "inspection_count": inspection_count,
             "parts": parts,
             "can_edit_fleet_data": can_edit,
             "show_done": show_done,
@@ -259,7 +286,7 @@ def workjob_create(request: HttpRequest, car_pk: str) -> HttpResponse:
         messages.error(request, _("You do not have permission to add planned work to this car."))
         return redirect(reverse("shop-car-detail", args=[car.pk]))
     if request.method == "POST":
-        form = WorkJobForm(request.POST, user=request.user, fleet=car.fleet)
+        form = WorkJobForm(request.POST, user=request.user, fleet=car.fleet, car=car)
         if form.is_valid():
             work_job = form.save(commit=False)
             work_job.car = car
@@ -267,7 +294,14 @@ def workjob_create(request: HttpRequest, car_pk: str) -> HttpResponse:
             messages.success(request, _("Planned work added successfully."))
             return redirect(reverse("shop-car-detail", args=[car.pk]))
     else:
-        form = WorkJobForm(user=request.user, fleet=car.fleet)
+        initial = {}
+        selected_inspection = None
+        raw_inspection_pk = request.GET.get("inspection", "")
+        if raw_inspection_pk.isdigit():
+            selected_inspection = Inspection.objects.filter(car=car, pk=int(raw_inspection_pk)).first()
+        if selected_inspection is not None:
+            initial["inspection"] = selected_inspection.pk
+        form = WorkJobForm(user=request.user, fleet=car.fleet, car=car, initial=initial)
     return render(request, "shop/workjob_form.html", {"form": form, "is_create": True, "car": car})
 
 
@@ -279,13 +313,13 @@ def workjob_update(request: HttpRequest, car_pk: str, pk: str) -> HttpResponse:
         return redirect(reverse("shop-car-detail", args=[car.pk]))
     work_job = get_object_or_404(WorkJob, pk=pk, car=car)
     if request.method == "POST":
-        form = WorkJobForm(request.POST, instance=work_job, user=request.user, fleet=car.fleet)
+        form = WorkJobForm(request.POST, instance=work_job, user=request.user, fleet=car.fleet, car=car)
         if form.is_valid():
             form.save()
             messages.success(request, _("Planned work updated successfully."))
             return redirect(reverse("shop-car-detail", args=[car.pk]))
     else:
-        form = WorkJobForm(instance=work_job, user=request.user, fleet=car.fleet)
+        form = WorkJobForm(instance=work_job, user=request.user, fleet=car.fleet, car=car)
     return render(
         request, "shop/workjob_form.html", {"form": form, "is_create": False, "car": car, "work_job": work_job}
     )

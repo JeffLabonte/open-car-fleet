@@ -45,7 +45,85 @@
   </div>
 
   {% if can_edit_fleet_data %}
-    {% include 'shop/partials/_confirm_delete_dialog.html' with dialog_id='dialog-car-delete' title=_('Delete this car?') message=_('This will permanently remove the vehicle and all of its parts, work jobs and reports.') %}
+    {% include 'shop/partials/_confirm_delete_dialog.html' with dialog_id='dialog-car-delete' title=_('Delete this car?') message=_('This will permanently remove the vehicle and all of its parts, work jobs and reports. Vehicles with inspection history cannot be deleted.') %}
+  {% endif %}
+
+  <section class="section-head" data-testid="inspection-section">
+    <h2 class="title is-4">{% translate 'Latest inspection' %}</h2>
+    <div class="section-actions">
+      {% if inspection_count %}
+        <a class="button is-light is-small" href="{% url 'shop-inspection-history' car.pk %}" data-testid="inspection-history-link">
+          {% translate 'View inspection history' %} ({{ inspection_count }})
+        </a>
+      {% endif %}
+      {% if can_edit_fleet_data %}
+        <a class="button is-primary is-small" href="{% url 'shop-inspection-create' car.pk %}">{% translate 'Add inspection' %}</a>
+      {% endif %}
+    </div>
+  </section>
+
+  {% if latest_inspection %}
+    <article class="message is-info" data-testid="latest-inspection">
+      <div class="message-header">
+        <p>{{ latest_inspection.inspected_at|date:'F j, Y, g:i a T' }}</p>
+        {% if can_edit_fleet_data %}
+          <a class="button is-small" href="{% url 'shop-inspection-update' car.pk latest_inspection.pk %}">{% translate 'Edit' %}</a>
+        {% endif %}
+      </div>
+      <div class="message-body">
+        {% if latest_inspection.mileage is not None %}
+          <p><strong>{% translate 'Mileage:' %}</strong> {{ latest_inspection.mileage }}</p>
+        {% endif %}
+        <p class="report-description">{{ latest_inspection.notes|linebreaksbr|default:_('No inspection findings provided.') }}</p>
+
+        {% include 'shop/partials/_inspection_attachments.html' with inspection=latest_inspection %}
+
+        <div class="section-head mt-5 mb-3">
+          <h3 class="title is-5 mb-0">{% translate 'Recommended work' %}</h3>
+          {% if can_edit_fleet_data %}
+            <a class="button is-primary is-small" href="{% url 'shop-workjob-create' car.pk %}?inspection={{ latest_inspection.pk }}">{% translate 'Add recommended work' %}</a>
+          {% endif %}
+        </div>
+        {% with recommended_work=latest_inspection.recommended_work.all %}
+          {% if recommended_work %}
+            <div class="table-container">
+              <div class="table-wrap">
+                <table class="table is-fullwidth is-striped table--responsive" data-testid="latest-inspection-recommended-work">
+                  <thead>
+                    <tr>
+                      <th scope="col">{% translate 'Work' %}</th>
+                      <th scope="col">{% translate 'Discovered' %}</th>
+                      <th scope="col">{% translate 'Planned' %}</th>
+                      <th scope="col">{% translate 'Status' %}</th>
+                      <th scope="col">{% translate 'Actions' %}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for job in recommended_work %}
+                      <tr data-testid="latest-inspection-recommended-work-row">
+                        <td data-label="{% translate 'Work' %}">{{ job.title }}</td>
+                        <td data-label="{% translate 'Discovered' %}">{{ latest_inspection.inspected_at|date:'M j, Y g:i a T' }}</td>
+                        <td data-label="{% translate 'Planned' %}">{{ job.planned_date|date:'M j, Y'|default:'—' }}</td>
+                        <td data-label="{% translate 'Status' %}">{{ job.get_status_display }}</td>
+                        <td data-label="">
+                          {% if can_edit_fleet_data %}
+                            <a class="button is-small is-link" href="{% url 'shop-workjob-update' car.pk job.pk %}">{% translate 'Edit' %}</a>
+                          {% endif %}
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          {% else %}
+            <p class="has-text-grey">{% translate 'No recommended work was recorded for this inspection.' %}</p>
+          {% endif %}
+        {% endwith %}
+      </div>
+    </article>
+  {% else %}
+    <div class="notification is-warning" data-testid="no-inspection">{% translate 'No inspections recorded for this vehicle yet.' %}</div>
   {% endif %}
 
   <section class="section-head" data-testid="parts-section">
