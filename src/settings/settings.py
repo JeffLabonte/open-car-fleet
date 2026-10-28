@@ -49,6 +49,15 @@ def load_dotenv(path: Path) -> dict[str, str]:
     return values
 
 
+def load_environment_files(paths: list[Path]) -> dict[str, str]:
+    """Merge env files in precedence order, keeping the first value found."""
+    values: dict[str, str] = {}
+    for path in paths:
+        for name, value in load_dotenv(path).items():
+            values.setdefault(name, value)
+    return values
+
+
 # Load environment settings from .env first, then fall back to the checked-in template.
 # Real process environment variables always take precedence over file values.
 env_paths = [
@@ -58,8 +67,7 @@ env_paths = [
     BASE_DIR.parent / ".env.template",
 ]
 _file_env: dict[str, str] = {}
-for env_path in env_paths:
-    _file_env.update(load_dotenv(env_path))
+_file_env = load_environment_files(env_paths)
 
 
 def _env(name: str, default: str = "") -> str:
@@ -298,9 +306,13 @@ MEDIA_ROOT = BASE_DIR / "media"
 # Email (MailerSend API via django-anymail)
 # https://anymail.dev/en/stable/esps/mailersend/
 
-EMAIL_BACKEND = "anymail.backends.mailersend.EmailBackend"
-ANYMAIL = {
-    "MAILERSEND_API_TOKEN": _env("MAILERSEND_API_TOKEN", ""),
+MAILERS = {
+    "default": {
+        "BACKEND": "anymail.backends.mailersend.EmailBackend",
+        "OPTIONS": {
+            "api_token": _env("MAILERSEND_API_TOKEN", ""),
+        },
+    }
 }
 DEFAULT_FROM_EMAIL = _env(
     "DEFAULT_FROM_EMAIL",

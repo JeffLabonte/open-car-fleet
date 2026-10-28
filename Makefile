@@ -15,6 +15,9 @@ E2E_HOST ?= 127.0.0.1
 E2E_PORT ?= 8000
 E2E_BASE_URL ?= http://$(E2E_HOST):$(E2E_PORT)
 E2E_WAIT_SECONDS ?= 60
+# The host-side make targets are for local development, not production. Keep
+# Django from inheriting production HTTPS enforcement from the env files.
+DEV_DJANGO_ENV = DEBUG=True SECURE_SSL_REDIRECT=False
 # Dedicated SQLite database shared by the e2e server and the pytest process.
 # POSTGRES_* must stay empty so both processes resolve to this file.
 E2E_DB ?= /tmp/open-car-fleet-e2e-$(E2E_PORT).sqlite3
@@ -97,10 +100,10 @@ db-reset:
 	$(MAKE) db-wait
 
 migrate: db-up db-wait
-	$(PYTHON) src/manage.py migrate
+	$(DEV_DJANGO_ENV) $(PYTHON) src/manage.py migrate
 
 run: install migrate
-	$(PYTHON) src/manage.py runserver $(HOST):$(PORT)
+	$(DEV_DJANGO_ENV) $(PYTHON) src/manage.py runserver $(HOST):$(PORT)
 
 test:
 	$(PYTEST) $(PYTEST_ARGS)

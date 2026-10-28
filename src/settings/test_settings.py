@@ -28,7 +28,11 @@ if _e2e_db_path:
 
 # Never let the pytest suite or the e2e live server reach the real
 # MailerSend API; locmem delivers into django.core.mail.outbox.
-EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+MAILERS = {
+    "default": {
+        "BACKEND": "django.core.mail.backends.locmem.EmailBackend",
+    }
+}
 
 # Disable django-ratelimit by default in tests so existing suites are not
 # throttled. Targeted tests can re-enable it with override_settings.

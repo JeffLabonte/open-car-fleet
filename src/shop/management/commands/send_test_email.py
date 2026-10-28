@@ -2,12 +2,12 @@ from typing import Any
 
 from anymail.exceptions import AnymailError
 from django.conf import settings
-from django.core.mail import EmailMessage, get_connection
+from django.core.mail import EmailMessage
 from django.core.management.base import BaseCommand, CommandError
 
 
 class Command(BaseCommand):
-    help = "Send a test email through the configured email backend to verify dispatch."
+    help = "Send a test email through the configured default mailer to verify dispatch."
 
     def add_arguments(self, parser: Any) -> None:
         parser.add_argument("--to", required=True, help="Recipient email address.")
@@ -17,33 +17,23 @@ class Command(BaseCommand):
             default=None,
             help="From address (defaults to settings.DEFAULT_FROM_EMAIL).",
         )
-        parser.add_argument(
-            "--backend",
-            default=None,
-            help="Email backend path to use (defaults to settings.EMAIL_BACKEND).",
-        )
 
     def handle(self, *args: Any, **options: Any) -> None:
         recipient = options["to"].strip()
         if not recipient:
             raise CommandError("Recipient email cannot be empty.")
 
-        backend_path = options["backend"]
         from_email = options["from_email"] or getattr(settings, "DEFAULT_FROM_EMAIL", "webmaster@localhost")
 
         message = EmailMessage(
             subject="Open Car Fleet test email",
-            body=(
-                "This is a test message sent by the send_test_email command.\n"
-                f"Backend: {backend_path or getattr(settings, 'EMAIL_BACKEND', '<django default>')}\n"
-            ),
+            body="This is a test message sent by the send_test_email command.\n",
             from_email=from_email,
             to=[recipient],
-            connection=get_connection(backend=backend_path, fail_silently=False),
         )
 
         try:
-            sent = message.send()
+            sent = message.send(using="default")
         except AnymailError as exc:
             raise CommandError(f"Email dispatch failed via Anymail: {exc}") from exc
         except Exception as exc:

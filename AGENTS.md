@@ -67,7 +67,7 @@ Other useful targets:
 
 - `settings/settings.py` loads `src/.env` → falls back to checked-in `src/.env.template` → root `.env`/`.env.template` (first value per variable wins). The template has working defaults, so no `.env` is needed for dev or tests.
 - DB: Postgres when `POSTGRES_DB` is set (docker-compose `db` service, postgres:18), else sqlite at `src/db.sqlite3`. Dev server uses Postgres via `make run`.
-- `HANKO_API_URL` is required for real logins; `MAILERSEND_API_TOKEN` for invitation emails (django-anymail MailerSend backend via `EMAIL_BACKEND`/`ANYMAIL` settings; not SMTP). `DEFAULT_FROM_EMAIL` must be an address on the verified MailerSend domain. Django 6.1 deprecates `EMAIL_BACKEND` (RemovedInDjango70Warning) in favour of its new `MAILERS` framework — Anymail 15.x still targets the classic backend API; revisit when Anymail supports `MAILERS`.
+- `HANKO_API_URL` is required for real logins; `MAILERSEND_API_TOKEN` for invitation emails (django-anymail MailerSend backend configured through Django's `MAILERS` framework). `DEFAULT_FROM_EMAIL` must be an address on the verified MailerSend domain.
 
 ## Authentication
 

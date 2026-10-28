@@ -3,14 +3,13 @@ from datetime import timedelta
 from unittest.mock import patch
 
 import requests
-from anymail.backends.mailersend import EmailBackend as MailerSendBackend
 from anymail.exceptions import (
     AnymailAPIError,
     AnymailConfigurationError,
     AnymailRequestsAPIError,
 )
 from django.core import mail as django_mail
-from django.core.mail import EmailMessage, get_connection
+from django.core.mail import EmailMessage, mailers
 from django.test import TestCase
 from django.test.utils import override_settings
 from django.utils import timezone
@@ -47,8 +46,12 @@ class _FakeSession:
 
 
 @override_settings(
-    EMAIL_BACKEND="anymail.backends.mailersend.EmailBackend",
-    ANYMAIL={"MAILERSEND_API_TOKEN": "test-token"},
+    MAILERS={
+        "default": {
+            "BACKEND": "anymail.backends.mailersend.EmailBackend",
+            "OPTIONS": {"api_token": "test-token"},
+        }
+    }
 )
 class MailerSendBackendTests(TestCase):
     def _patch_session(self, fake_session):
@@ -132,13 +135,20 @@ class MailerSendBackendTests(TestCase):
                 to=["one@example.com"],
                 from_email="from@example.com",
             )
-            connection = get_connection(fail_silently=True)
+            connection = mailers.default
+            connection.fail_silently = True
             self.assertEqual(connection.send_messages([message]), 0)
 
     def test_missing_token_raises_configuration_error(self):
-        with override_settings(ANYMAIL={}):
+        with override_settings(
+            MAILERS={
+                "default": {
+                    "BACKEND": "anymail.backends.mailersend.EmailBackend",
+                }
+            }
+        ):
             with self.assertRaises(AnymailConfigurationError):
-                MailerSendBackend()
+                mailers.default
 
 
 class LocmemEndToEndTests(TestCase):

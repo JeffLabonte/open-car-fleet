@@ -5,11 +5,34 @@ from pathlib import Path
 
 from django.test import TestCase
 
+from settings.settings import load_environment_files
+
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
 
 class TestDeploymentHardening(TestCase):
     """Regression tests for deployment configuration hardening."""
+
+    def test_environment_file_precedence_keeps_the_first_value(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            primary = Path(tmp) / ".env"
+            fallback = Path(tmp) / ".env.template"
+            primary.write_text("SHARED=from-primary\nPRIMARY_ONLY=yes\n")
+            fallback.write_text("SHARED=from-fallback\nFALLBACK_ONLY=yes\n")
+
+            values = load_environment_files([primary, fallback])
+
+        self.assertEqual(values["SHARED"], "from-primary")
+        self.assertEqual(values["PRIMARY_ONLY"], "yes")
+        self.assertEqual(values["FALLBACK_ONLY"], "yes")
+
+    def test_make_run_uses_local_development_security_settings(self):
+        makefile = REPO_ROOT / "Makefile"
+        text = makefile.read_text()
+
+        self.assertIn("DEV_DJANGO_ENV = DEBUG=True SECURE_SSL_REDIRECT=False", text)
+        self.assertIn("$(DEV_DJANGO_ENV) $(PYTHON) src/manage.py migrate", text)
+        self.assertIn("$(DEV_DJANGO_ENV) $(PYTHON) src/manage.py runserver", text)
 
     def test_ansible_cfg_does_not_disable_host_key_checking(self):
         cfg = REPO_ROOT / "ansible" / "ansible.cfg"

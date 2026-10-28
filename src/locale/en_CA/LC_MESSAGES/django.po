@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Open Car Fleet\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-28 08:51-0400\n"
+"POT-Creation-Date: 2026-10-28 21:56+0000\n"
 "PO-Revision-Date: 2026-09-13 02:13+0000\n"
 "Last-Translator: Open Car Fleet <noreply@opencarfleet.ca>\n"
 "Language-Team: en_CA <LL@li.org>\n"
@@ -191,11 +191,11 @@ msgstr ""
 msgid "Confirm document removal"
 msgstr ""
 
-#: src/settings/settings.py:267
+#: src/settings/settings.py:275
 msgid "English"
 msgstr ""
 
-#: src/settings/settings.py:268
+#: src/settings/settings.py:276
 msgid "Français"
 msgstr ""
 
@@ -478,7 +478,7 @@ msgid "External documents"
 msgstr ""
 
 #: src/shop/forms/inspection.py:72 src/shop/forms/report.py:94
-msgid "External links must use http:// or https://."
+msgid "External links must use HTTP or HTTPS."
 msgstr ""
 
 #: src/shop/forms/job.py:14
@@ -1369,11 +1369,17 @@ msgstr ""
 msgid "Inspection"
 msgstr ""
 
-#: src/shop/templates/shop/login.html:19
-msgid "Sign in"
+#: src/shop/templates/shop/login.html:9
+#: src/shop/templates/shop/partials/_nav.html:7
+#: src/shop/templates/shop/partials/_nav.html:50
+msgid "Beta"
 msgstr ""
 
 #: src/shop/templates/shop/login.html:20
+msgid "Sign in"
+msgstr ""
+
+#: src/shop/templates/shop/login.html:21
 msgid "You must be signed in to view the shop."
 msgstr ""
 
@@ -1432,54 +1438,48 @@ msgid "Create"
 msgstr ""
 
 #: src/shop/templates/shop/partials/_nav.html:2
-#: src/shop/templates/shop/partials/_nav.html:53
+#: src/shop/templates/shop/partials/_nav.html:55
 msgid "Main navigation"
 msgstr ""
 
 #: src/shop/templates/shop/partials/_nav.html:5
-#: src/shop/templates/shop/partials/_nav.html:47
+#: src/shop/templates/shop/partials/_nav.html:48
 msgid "Open Fleets"
 msgstr ""
 
-#: src/shop/templates/shop/login.html:9
-#: src/shop/templates/shop/partials/_nav.html:7
-#: src/shop/templates/shop/partials/_nav.html:50
-msgid "Beta"
-msgstr ""
-
-#: src/shop/templates/shop/partials/_nav.html:11 src/shop/views/fleet.py:49
+#: src/shop/templates/shop/partials/_nav.html:12 src/shop/views/fleet.py:49
 msgid "My Fleets"
 msgstr ""
 
-#: src/shop/templates/shop/partials/_nav.html:15
-#: src/shop/templates/shop/partials/_nav.html:60 src/shop/views/car.py:109
+#: src/shop/templates/shop/partials/_nav.html:16
+#: src/shop/templates/shop/partials/_nav.html:62 src/shop/views/car.py:109
 msgid "Cars"
 msgstr ""
 
-#: src/shop/templates/shop/partials/_nav.html:19
+#: src/shop/templates/shop/partials/_nav.html:20
 #: src/shop/views/known_shops.py:34
 msgid "Known shops"
 msgstr ""
 
-#: src/shop/templates/shop/partials/_nav.html:28
-#: src/shop/templates/shop/partials/_nav.html:75 src/shop/views/auth.py:66
+#: src/shop/templates/shop/partials/_nav.html:29
+#: src/shop/templates/shop/partials/_nav.html:77 src/shop/views/auth.py:66
 msgid "Profile"
 msgstr ""
 
-#: src/shop/templates/shop/partials/_nav.html:34
-#: src/shop/templates/shop/partials/_nav.html:82
+#: src/shop/templates/shop/partials/_nav.html:35
+#: src/shop/templates/shop/partials/_nav.html:84
 msgid "Logout"
 msgstr ""
 
-#: src/shop/templates/shop/partials/_nav.html:56
+#: src/shop/templates/shop/partials/_nav.html:58
 msgid "Fleets"
 msgstr ""
 
-#: src/shop/templates/shop/partials/_nav.html:64
+#: src/shop/templates/shop/partials/_nav.html:66
 msgid "Shops"
 msgstr ""
 
-#: src/shop/templates/shop/partials/_nav.html:69
+#: src/shop/templates/shop/partials/_nav.html:71
 msgid "Account"
 msgstr ""
 

@@ -91,5 +91,5 @@ class ReportForm(AssignedToShopFormMixin, StagedAttachmentsMixin, forms.ModelFor
         for link in links:
             parsed = urlparse(link)
             if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-                raise forms.ValidationError(_("External links must use http:// or https://."))
+                raise forms.ValidationError(_("External links must use HTTP or HTTPS."))
         return links

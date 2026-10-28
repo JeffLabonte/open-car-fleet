@@ -70,10 +70,15 @@
   when: ansible_facts.os_family == "Debian"
 
 - name: Add Docker apt repository (Debian family)
-  ansible.builtin.apt_repository:
-    repo: "deb [arch={{ ansible_facts.architecture }} signed-by={{ docker_gpg_key_path }}] {{ docker_repo_url }} {{ docker_debian_release }} stable"
+  ansible.builtin.deb822_repository:
+    name: docker
+    types: deb
+    uris: "{{ docker_repo_url }}"
+    suites: "{{ docker_debian_release }}"
+    components: stable
+    signed_by: "{{ docker_gpg_key_path }}"
+    architectures: "{{ ansible_facts.architecture }}"
     state: present
-    filename: docker
   when: ansible_facts.os_family == "Debian"
 
 - name: Add Docker dnf repository (RedHat family)

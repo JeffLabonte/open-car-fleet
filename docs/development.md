@@ -52,6 +52,7 @@ make run HOST=0.0.0.0 PORT=8080
 ### Local Postgres lifecycle via docker-compose
 
 - `make run` automatically starts `db` with `docker compose up -d db`, waits for readiness, runs migrations, then starts Django.
+- `make migrate` and `make run` explicitly use local development security settings (`DEBUG=True` and `SECURE_SSL_REDIRECT=False`); production Docker/Ansible commands continue to use their environment files.
 - `make db-stop` gracefully stops the Postgres container.
 - `make db-reset` is destructive: it removes containers and volumes, recreates `db`, and waits for readiness.
 - `make db-snapshot` writes a `pg_dump` snapshot to `db_backups/`.
