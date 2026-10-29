@@ -9,6 +9,7 @@ from shop.models.fleet import (
     KnownShopProof,
 )
 from shop.models.inspection import Inspection
+from shop.models.inspection_point import InspectionPoint
 from shop.models.job import WorkJob
 from shop.models.report import Report
 from shop.models.user import ShopUser
@@ -24,6 +25,7 @@ __all__ = [
     "KnownShop",
     "KnownShopProof",
     "Inspection",
+    "InspectionPoint",
     "WorkJob",
     "Report",
     "Attachment",

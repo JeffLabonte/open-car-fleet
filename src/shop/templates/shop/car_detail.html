@@ -76,6 +76,17 @@
         {% endif %}
         <p class="report-description">{{ latest_inspection.notes|linebreaksbr|default:_('No inspection findings provided.') }}</p>
 
+        {% if latest_inspection.use_structured_checklist %}
+          {% with counts=latest_inspection.point_status_counts %}
+            <div class="tags are-medium mt-3" data-testid="latest-inspection-summary">
+              <span class="tag is-success">{% translate 'OK' %}: {{ counts.pass }}</span>
+              <span class="tag is-warning">{% translate 'Attention' %}: {{ counts.attention }}</span>
+              <span class="tag is-danger">{% translate 'Needs repair' %}: {{ counts.repair }}</span>
+              <span class="tag is-light">{% translate 'N/A' %}: {{ counts.na }}</span>
+            </div>
+          {% endwith %}
+        {% endif %}
+
         {% include 'shop/partials/_inspection_attachments.html' with inspection=latest_inspection %}
 
         <div class="section-head mt-5 mb-3">

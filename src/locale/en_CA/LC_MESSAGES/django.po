@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Open Car Fleet\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-28 21:56+0000\n"
+"POT-Creation-Date: 2026-10-29 13:14+0000\n"
 "PO-Revision-Date: 2026-09-13 02:13+0000\n"
 "Last-Translator: Open Car Fleet <noreply@opencarfleet.ca>\n"
 "Language-Team: en_CA <LL@li.org>\n"
@@ -21,10 +21,13 @@ msgstr ""
 msgid "Document title"
 msgstr ""
 
-#: src/car_docs/forms.py:24 src/shop/forms/car.py:19 src/shop/forms/job.py:58
+#: src/car_docs/forms.py:24 src/shop/forms/car.py:19
+#: src/shop/forms/inspection.py:106 src/shop/forms/job.py:58
 #: src/shop/forms/shop.py:17 src/shop/forms/shop.py:44
-#: src/shop/templates/shop/car_detail.html:147
-#: src/shop/templates/shop/car_detail.html:160
+#: src/shop/templates/shop/car_detail.html:158
+#: src/shop/templates/shop/car_detail.html:171
+#: src/shop/templates/shop/inspection_history.html:59
+#: src/shop/templates/shop/inspection_history.html:71
 msgid "Notes"
 msgstr ""
 
@@ -67,12 +70,12 @@ msgstr ""
 #: src/car_docs/templates/car_docs/list.html:40
 #: src/shop/templates/shop/car_detail.html:14
 #: src/shop/templates/shop/car_detail.html:70
-#: src/shop/templates/shop/car_detail.html:110
-#: src/shop/templates/shop/car_detail.html:176
-#: src/shop/templates/shop/car_detail.html:248
-#: src/shop/templates/shop/car_detail.html:286
+#: src/shop/templates/shop/car_detail.html:121
+#: src/shop/templates/shop/car_detail.html:187
+#: src/shop/templates/shop/car_detail.html:259
+#: src/shop/templates/shop/car_detail.html:297
 #: src/shop/templates/shop/inspection_history.html:30
-#: src/shop/templates/shop/inspection_history.html:65
+#: src/shop/templates/shop/inspection_history.html:110
 #: src/shop/templates/shop/shop_detail.html:44
 msgid "Edit"
 msgstr ""
@@ -115,12 +118,12 @@ msgid "Updated"
 msgstr ""
 
 #: src/car_docs/templates/car_docs/list.html:24
-#: src/shop/templates/shop/car_detail.html:98
-#: src/shop/templates/shop/car_detail.html:149
-#: src/shop/templates/shop/car_detail.html:219
+#: src/shop/templates/shop/car_detail.html:109
+#: src/shop/templates/shop/car_detail.html:160
+#: src/shop/templates/shop/car_detail.html:230
 #: src/shop/templates/shop/car_list.html:27
 #: src/shop/templates/shop/fleet_members.html:24
-#: src/shop/templates/shop/inspection_history.html:53
+#: src/shop/templates/shop/inspection_history.html:98
 msgid "Actions"
 msgstr ""
 
@@ -199,7 +202,7 @@ msgstr ""
 msgid "Français"
 msgstr ""
 
-#: src/shop/admin.py:96
+#: src/shop/admin.py:105
 msgid "Staged upload"
 msgstr ""
 
@@ -248,15 +251,17 @@ msgstr ""
 msgid "Part name"
 msgstr ""
 
-#: src/shop/forms/car.py:18 src/shop/forms/job.py:54
-#: src/shop/templates/shop/car_detail.html:97
-#: src/shop/templates/shop/car_detail.html:107
-#: src/shop/templates/shop/car_detail.html:145
+#: src/shop/forms/car.py:18 src/shop/forms/inspection.py:104
+#: src/shop/forms/job.py:54 src/shop/templates/shop/car_detail.html:108
+#: src/shop/templates/shop/car_detail.html:118
 #: src/shop/templates/shop/car_detail.html:156
-#: src/shop/templates/shop/car_detail.html:217
-#: src/shop/templates/shop/car_detail.html:242
-#: src/shop/templates/shop/inspection_history.html:52
-#: src/shop/templates/shop/inspection_history.html:62
+#: src/shop/templates/shop/car_detail.html:167
+#: src/shop/templates/shop/car_detail.html:228
+#: src/shop/templates/shop/car_detail.html:253
+#: src/shop/templates/shop/inspection_history.html:57
+#: src/shop/templates/shop/inspection_history.html:69
+#: src/shop/templates/shop/inspection_history.html:97
+#: src/shop/templates/shop/inspection_history.html:107
 msgid "Status"
 msgstr ""
 
@@ -303,8 +308,8 @@ msgstr ""
 
 #: src/shop/forms/car.py:50 src/shop/forms/car.py:60
 #: src/shop/templates/shop/car_detail.html:39
-#: src/shop/templates/shop/car_detail.html:352
-#: src/shop/templates/shop/car_detail.html:360
+#: src/shop/templates/shop/car_detail.html:363
+#: src/shop/templates/shop/car_detail.html:371
 #: src/shop/templates/shop/car_list.html:25
 #: src/shop/templates/shop/car_list.html:47
 #: src/shop/templates/shop/fleet_detail.html:47
@@ -314,8 +319,8 @@ msgstr ""
 
 #: src/shop/forms/car.py:51 src/shop/forms/car.py:61
 #: src/shop/templates/shop/car_detail.html:41
-#: src/shop/templates/shop/car_detail.html:353
-#: src/shop/templates/shop/car_detail.html:361
+#: src/shop/templates/shop/car_detail.html:364
+#: src/shop/templates/shop/car_detail.html:372
 #: src/shop/templates/shop/fleet_detail.html:48
 #: src/shop/templates/shop/fleet_detail.html:58
 msgid "VIN"
@@ -437,48 +442,71 @@ msgid ""
 "selected car is applied automatically."
 msgstr ""
 
-#: src/shop/forms/inspection.py:21
-msgid "Upload inspection photos or documents."
+#: src/shop/forms/inspection.py:18 src/shop/forms/inspection.py:61
+#: src/shop/models/inspection.py:42
+msgid "Use structured checklist"
+msgstr ""
+
+#: src/shop/forms/inspection.py:19 src/shop/models/inspection.py:43
+msgid "Walk through a detailed inspection checklist."
 msgstr ""
 
 #: src/shop/forms/inspection.py:29
+msgid "Upload inspection photos or documents."
+msgstr ""
+
+#: src/shop/forms/inspection.py:37
 msgid "One external document link per line"
 msgstr ""
 
-#: src/shop/forms/inspection.py:32
+#: src/shop/forms/inspection.py:40
 msgid "Add one external document link per line."
 msgstr ""
 
-#: src/shop/forms/inspection.py:43
+#: src/shop/forms/inspection.py:51
 msgid "Mileage at inspection"
 msgstr ""
 
-#: src/shop/forms/inspection.py:45
+#: src/shop/forms/inspection.py:53
 msgid "Write the inspection findings here"
 msgstr ""
 
-#: src/shop/forms/inspection.py:49
+#: src/shop/forms/inspection.py:58
 msgid "Inspection date and time (UTC)"
 msgstr ""
 
-#: src/shop/forms/inspection.py:50 src/shop/forms/report.py:63
+#: src/shop/forms/inspection.py:59 src/shop/forms/report.py:63
 msgid "Mileage"
 msgstr ""
 
-#: src/shop/forms/inspection.py:51
+#: src/shop/forms/inspection.py:60
 msgid "Inspection findings"
 msgstr ""
 
-#: src/shop/forms/inspection.py:52
+#: src/shop/forms/inspection.py:62
 msgid "Photos and documents"
 msgstr ""
 
-#: src/shop/forms/inspection.py:53
+#: src/shop/forms/inspection.py:63
 msgid "External documents"
 msgstr ""
 
-#: src/shop/forms/inspection.py:72 src/shop/forms/report.py:94
+#: src/shop/forms/inspection.py:86 src/shop/forms/report.py:94
 msgid "External links must use HTTP or HTTPS."
+msgstr ""
+
+#: src/shop/forms/inspection.py:97
+msgid "Size / pressure / spec / measurement"
+msgstr ""
+
+#: src/shop/forms/inspection.py:100
+msgid "Notes for this item"
+msgstr ""
+
+#: src/shop/forms/inspection.py:105
+#: src/shop/templates/shop/inspection_history.html:58
+#: src/shop/templates/shop/inspection_history.html:70
+msgid "Measurement / spec"
 msgstr ""
 
 #: src/shop/forms/job.py:14
@@ -506,8 +534,8 @@ msgid "Discovered during inspection"
 msgstr ""
 
 #: src/shop/forms/job.py:50 src/shop/forms/report.py:65
-#: src/shop/templates/shop/car_detail.html:215
-#: src/shop/templates/shop/car_detail.html:232
+#: src/shop/templates/shop/car_detail.html:226
+#: src/shop/templates/shop/car_detail.html:243
 msgid "Assigned to"
 msgstr ""
 
@@ -746,6 +774,154 @@ msgstr ""
 msgid "Ignored fields: %(fields)s"
 msgstr ""
 
+#: src/shop/inspection_checklist.py:10
+msgid "Dashboard & controls"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:12
+msgid "Any dashboard light"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:13
+msgid "Brake works?"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:14
+msgid "Working hand-brake?"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:15
+msgid "Brake pedal is stiff or soft?"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:20
+msgid "Steering & fluids"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:22
+msgid "Steering wheel and steering shaft seem ok?"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:23
+msgid "Power steering fluid (if power steering is hydraulic)"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:24
+msgid "Power steering cooling"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:29
+msgid "Brake system"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:31
+msgid "ABS control module / Brake booster"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:32
+msgid "Level of brake fluids"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:33
+msgid "Brake lines and flexible hoses (or brake hoses and fittings)"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:34
+msgid "Brake metal lines"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:35
+msgid "Hose clamps and lines (hoses)"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:36
+msgid "Brake wear"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:37
+msgid "Pad lining size front and rear"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:38
+msgid "Disc wear"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:39
+msgid "If drum brakes"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:40
+msgid "Measure of the warping if there is a warp"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:41
+msgid "Brake specs found on Mitchell by the tech/mechanic"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:46
+msgid "Tires & wheels"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:48
+msgid "OEM tire size"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:49
+msgid "OEM tire pressure front and rear"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:50
+msgid "Size of the wheel on the car"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:51
+msgid "Wheel rotation in the right direction"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:52
+msgid "Is there any wear"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:53
+msgid "How inflated they are"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:54
+msgid "Wheel bolts wear"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:55
+msgid "Air valve"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:56
+msgid "General state of the rim"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:61
+msgid "Belts"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:63
+msgid "Serpentine belt for power distribution state"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:68
+msgid "Suspension & driveline"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:70
+msgid "Everything related to the struts"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:71
+msgid "Bushings"
+msgstr ""
+
+#: src/shop/inspection_checklist.py:72
+msgid "CV Axle"
+msgstr ""
+
 #: src/shop/management/commands/import_csv.py:85
 #, python-format
 msgid "Fleet not found for id '%(value)s'."
@@ -755,7 +931,8 @@ msgstr ""
 msgid "New"
 msgstr ""
 
-#: src/shop/models/car.py:23
+#: src/shop/models/car.py:23 src/shop/templates/shop/car_detail.html:82
+#: src/shop/templates/shop/inspection_history.html:42
 msgid "OK"
 msgstr ""
 
@@ -823,9 +1000,31 @@ msgid ""
 "%(message)s\n"
 msgstr ""
 
-#: src/shop/models/inspection.py:19 src/shop/models/inspection.py:66
-#: src/shop/models/inspection.py:72
+#: src/shop/models/inspection.py:19 src/shop/models/inspection.py:82
+#: src/shop/models/inspection.py:88
 msgid "Inspection history cannot be deleted."
+msgstr ""
+
+#: src/shop/models/inspection_point.py:16
+msgid "OK / Pass"
+msgstr ""
+
+#: src/shop/models/inspection_point.py:17
+#: src/shop/templates/shop/car_detail.html:83
+#: src/shop/templates/shop/inspection_history.html:43
+msgid "Attention"
+msgstr ""
+
+#: src/shop/models/inspection_point.py:18
+#: src/shop/templates/shop/car_detail.html:84
+#: src/shop/templates/shop/inspection_history.html:44
+msgid "Needs repair"
+msgstr ""
+
+#: src/shop/models/inspection_point.py:19
+#: src/shop/templates/shop/car_detail.html:85
+#: src/shop/templates/shop/inspection_history.html:45
+msgid "N/A"
 msgstr ""
 
 #: src/shop/models/job.py:18
@@ -840,8 +1039,8 @@ msgstr ""
 msgid "In Progress"
 msgstr ""
 
-#: src/shop/models/job.py:30 src/shop/templates/shop/car_detail.html:218
-#: src/shop/templates/shop/car_detail.html:245
+#: src/shop/models/job.py:30 src/shop/templates/shop/car_detail.html:229
+#: src/shop/templates/shop/car_detail.html:256
 msgid "Done"
 msgstr ""
 
@@ -862,7 +1061,7 @@ msgid "Skip to main content"
 msgstr ""
 
 #: src/shop/templates/shop/car_detail.html:20
-#: src/shop/templates/shop/car_detail.html:202
+#: src/shop/templates/shop/car_detail.html:213
 msgid "Add planned work"
 msgstr ""
 
@@ -885,8 +1084,8 @@ msgid "Odometer"
 msgstr "Odometer"
 
 #: src/shop/templates/shop/car_detail.html:43
-#: src/shop/templates/shop/car_detail.html:146
-#: src/shop/templates/shop/car_detail.html:159
+#: src/shop/templates/shop/car_detail.html:157
+#: src/shop/templates/shop/car_detail.html:170
 msgid "Last updated"
 msgstr ""
 
@@ -924,161 +1123,161 @@ msgstr ""
 msgid "No inspection findings provided."
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:82
-#: src/shop/templates/shop/inspection_history.html:41
+#: src/shop/templates/shop/car_detail.html:93
+#: src/shop/templates/shop/inspection_history.html:86
 msgid "Recommended work"
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:84
-#: src/shop/templates/shop/inspection_history.html:80
+#: src/shop/templates/shop/car_detail.html:95
+#: src/shop/templates/shop/inspection_history.html:125
 msgid "Add recommended work"
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:94
-#: src/shop/templates/shop/car_detail.html:104
-#: src/shop/templates/shop/car_detail.html:213
-#: src/shop/templates/shop/car_detail.html:225
-#: src/shop/templates/shop/inspection_history.html:49
-#: src/shop/templates/shop/inspection_history.html:59
+#: src/shop/templates/shop/car_detail.html:105
+#: src/shop/templates/shop/car_detail.html:115
+#: src/shop/templates/shop/car_detail.html:224
+#: src/shop/templates/shop/car_detail.html:236
+#: src/shop/templates/shop/inspection_history.html:94
+#: src/shop/templates/shop/inspection_history.html:104
 msgid "Work"
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:95
-#: src/shop/templates/shop/car_detail.html:105
-#: src/shop/templates/shop/inspection_history.html:50
-#: src/shop/templates/shop/inspection_history.html:60
+#: src/shop/templates/shop/car_detail.html:106
+#: src/shop/templates/shop/car_detail.html:116
+#: src/shop/templates/shop/inspection_history.html:95
+#: src/shop/templates/shop/inspection_history.html:105
 msgid "Discovered"
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:96
-#: src/shop/templates/shop/car_detail.html:106
-#: src/shop/templates/shop/car_detail.html:216
-#: src/shop/templates/shop/car_detail.html:241
-#: src/shop/templates/shop/inspection_history.html:51
-#: src/shop/templates/shop/inspection_history.html:61
+#: src/shop/templates/shop/car_detail.html:107
+#: src/shop/templates/shop/car_detail.html:117
+#: src/shop/templates/shop/car_detail.html:227
+#: src/shop/templates/shop/car_detail.html:252
+#: src/shop/templates/shop/inspection_history.html:96
+#: src/shop/templates/shop/inspection_history.html:106
 msgid "Planned"
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:120
-#: src/shop/templates/shop/inspection_history.html:75
+#: src/shop/templates/shop/car_detail.html:131
+#: src/shop/templates/shop/inspection_history.html:120
 msgid "No recommended work was recorded for this inspection."
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:126
-#: src/shop/templates/shop/inspection_history.html:86
+#: src/shop/templates/shop/car_detail.html:137
+#: src/shop/templates/shop/inspection_history.html:131
 msgid "No inspections recorded for this vehicle yet."
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:130
+#: src/shop/templates/shop/car_detail.html:141
 msgid "Part status tracker"
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:133
+#: src/shop/templates/shop/car_detail.html:144
 msgid "Add part status"
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:144
 #: src/shop/templates/shop/car_detail.html:155
+#: src/shop/templates/shop/car_detail.html:166
 msgid "Part"
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:148
-#: src/shop/templates/shop/car_detail.html:161
+#: src/shop/templates/shop/car_detail.html:159
+#: src/shop/templates/shop/car_detail.html:172
 msgid "Change history"
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:166
+#: src/shop/templates/shop/car_detail.html:177
 msgid "initial"
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:186
+#: src/shop/templates/shop/car_detail.html:197
 msgid "No parts tracked for this car yet."
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:190
+#: src/shop/templates/shop/car_detail.html:201
 msgid "Planned work and assignments"
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:193
+#: src/shop/templates/shop/car_detail.html:204
 msgid "Hide done/cancelled"
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:195
+#: src/shop/templates/shop/car_detail.html:206
 msgid "Show done/cancelled"
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:200
+#: src/shop/templates/shop/car_detail.html:211
 msgid "Import work jobs"
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:214
-#: src/shop/templates/shop/car_detail.html:231
+#: src/shop/templates/shop/car_detail.html:225
+#: src/shop/templates/shop/car_detail.html:242
 msgid "Type"
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:234
-#: src/shop/templates/shop/car_detail.html:295
+#: src/shop/templates/shop/car_detail.html:245
+#: src/shop/templates/shop/car_detail.html:306
 msgid "Mechanic:"
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:236
-#: src/shop/templates/shop/car_detail.html:297
+#: src/shop/templates/shop/car_detail.html:247
+#: src/shop/templates/shop/car_detail.html:308
 msgid "Shop:"
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:238
+#: src/shop/templates/shop/car_detail.html:249
 msgid "Unassigned"
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:260
+#: src/shop/templates/shop/car_detail.html:271
 msgid "No planned jobs or assignments for this car."
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:262
+#: src/shop/templates/shop/car_detail.html:273
 msgid ""
 "No open planned jobs or assignments for this car. Done or cancelled items "
 "are hidden."
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:268
+#: src/shop/templates/shop/car_detail.html:279
 msgid "Maintenance history"
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:273
+#: src/shop/templates/shop/car_detail.html:284
 msgid "Import reports"
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:275
+#: src/shop/templates/shop/car_detail.html:286
 msgid "Add maintenance report"
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:290
+#: src/shop/templates/shop/car_detail.html:301
 msgid "No maintenance report details provided."
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:292
+#: src/shop/templates/shop/car_detail.html:303
 msgid "Additional information:"
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:301
+#: src/shop/templates/shop/car_detail.html:312
 msgid "Attachments:"
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:321
+#: src/shop/templates/shop/car_detail.html:332
 #: src/shop/templates/shop/partials/_inspection_attachments.html:25
 msgid "Your browser does not support embedded videos."
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:337
+#: src/shop/templates/shop/car_detail.html:348
 msgid "No completed maintenance reports found for this car."
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:342
+#: src/shop/templates/shop/car_detail.html:353
 msgid "Related cars"
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:351
-#: src/shop/templates/shop/car_detail.html:359
+#: src/shop/templates/shop/car_detail.html:362
+#: src/shop/templates/shop/car_detail.html:370
 #: src/shop/templates/shop/car_list.html:23
 #: src/shop/templates/shop/car_list.html:33
 #: src/shop/templates/shop/fleet_detail.html:44
@@ -1086,7 +1285,7 @@ msgstr ""
 msgid "Name"
 msgstr ""
 
-#: src/shop/templates/shop/car_detail.html:370
+#: src/shop/templates/shop/car_detail.html:381
 msgid "No related cars with the same make and model."
 msgstr ""
 
@@ -1353,7 +1552,7 @@ msgstr ""
 
 #: src/shop/templates/shop/inspection_history.html:5
 #: src/shop/templates/shop/inspection_history.html:12
-#: src/shop/views/inspection.py:102
+#: src/shop/views/inspection.py:125
 msgid "Inspection history"
 msgstr ""
 
@@ -1367,6 +1566,20 @@ msgstr ""
 
 #: src/shop/templates/shop/inspection_history.html:28
 msgid "Inspection"
+msgstr ""
+
+#: src/shop/templates/shop/inspection_history.html:55
+#: src/shop/templates/shop/inspection_history.html:67
+msgid "Category"
+msgstr ""
+
+#: src/shop/templates/shop/inspection_history.html:56
+#: src/shop/templates/shop/inspection_history.html:68
+msgid "Item"
+msgstr ""
+
+#: src/shop/templates/shop/inspection_history.html:80
+msgid "No checklist items recorded for this inspection."
 msgstr ""
 
 #: src/shop/templates/shop/login.html:9
@@ -1675,80 +1888,80 @@ msgstr ""
 msgid "Car deleted successfully."
 msgstr ""
 
-#: src/shop/views/car.py:195
+#: src/shop/views/car.py:196
 msgid "Vehicle identity, status tracker and maintenance ledger."
 msgstr ""
 
-#: src/shop/views/car.py:208
+#: src/shop/views/car.py:209
 msgid "You do not have permission to add a car to this fleet."
 msgstr ""
 
-#: src/shop/views/car.py:211
+#: src/shop/views/car.py:212
 msgid "Car created successfully."
 msgstr ""
 
-#: src/shop/views/car.py:225
+#: src/shop/views/car.py:226
 msgid "You do not have permission to edit this car."
 msgstr ""
 
-#: src/shop/views/car.py:233
+#: src/shop/views/car.py:234
 msgid "You do not have permission to move this car to the selected fleet."
 msgstr ""
 
-#: src/shop/views/car.py:236
+#: src/shop/views/car.py:237
 msgid "Car updated successfully."
 msgstr ""
 
-#: src/shop/views/car.py:247
+#: src/shop/views/car.py:248
 msgid "You do not have permission to add parts to this car."
 msgstr ""
 
-#: src/shop/views/car.py:259
+#: src/shop/views/car.py:260
 msgid "Part status added successfully."
 msgstr ""
 
-#: src/shop/views/car.py:268
+#: src/shop/views/car.py:269
 msgid "You do not have permission to update parts for this car."
 msgstr ""
 
-#: src/shop/views/car.py:277
+#: src/shop/views/car.py:278
 msgid "Part status updated successfully."
 msgstr ""
 
-#: src/shop/views/car.py:286
+#: src/shop/views/car.py:287
 msgid "You do not have permission to add planned work to this car."
 msgstr ""
 
-#: src/shop/views/car.py:294
+#: src/shop/views/car.py:295
 msgid "Planned work added successfully."
 msgstr ""
 
-#: src/shop/views/car.py:312
+#: src/shop/views/car.py:313
 msgid "You do not have permission to update planned work for this car."
 msgstr ""
 
-#: src/shop/views/car.py:319
+#: src/shop/views/car.py:320
 msgid "Planned work updated successfully."
 msgstr ""
 
-#: src/shop/views/car.py:332
+#: src/shop/views/car.py:333
 msgid "You do not have permission to add reports to this car."
 msgstr ""
 
-#: src/shop/views/car.py:351 src/shop/views/car.py:382
+#: src/shop/views/car.py:352 src/shop/views/car.py:383
 #, python-format
 msgid "Vehicle odometer updated to %(mileage)s km."
 msgstr ""
 
-#: src/shop/views/car.py:353
+#: src/shop/views/car.py:354
 msgid "Maintenance report added successfully."
 msgstr ""
 
-#: src/shop/views/car.py:364
+#: src/shop/views/car.py:365
 msgid "You do not have permission to update reports for this car."
 msgstr ""
 
-#: src/shop/views/car.py:384
+#: src/shop/views/car.py:385
 msgid "Maintenance report updated successfully."
 msgstr ""
 
@@ -1916,27 +2129,27 @@ msgstr ""
 msgid "Import validation failed. Fix the file and try again."
 msgstr ""
 
-#: src/shop/views/inspection.py:24
+#: src/shop/views/inspection.py:28
 #, fuzzy
 #| msgid "You do not have permission to manage fleet invitations."
 msgid "You do not have permission to add inspections to this car."
 msgstr "You do not have permission to manage fleet invitations."
 
-#: src/shop/views/inspection.py:41
+#: src/shop/views/inspection.py:47
 msgid "Inspection added successfully."
 msgstr ""
 
-#: src/shop/views/inspection.py:53
+#: src/shop/views/inspection.py:59
 #, fuzzy
 #| msgid "You do not have permission to manage fleet invitations."
 msgid "You do not have permission to edit inspections for this car."
 msgstr "You do not have permission to manage fleet invitations."
 
-#: src/shop/views/inspection.py:68
+#: src/shop/views/inspection.py:80
 msgid "Inspection updated successfully."
 msgstr ""
 
-#: src/shop/views/inspection.py:103
+#: src/shop/views/inspection.py:126
 msgid "All recorded inspections and the work discovered during them."
 msgstr ""
 

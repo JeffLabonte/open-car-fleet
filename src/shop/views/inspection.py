@@ -5,7 +5,11 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext as _
 
-from shop.forms import InspectionForm
+from shop.forms import (
+    InspectionForm,
+    InspectionPointFormSet,
+    create_inspection_points,
+)
 from shop.middleware import hanko_login_required
 from shop.models.inspection import Inspection
 from shop.permissions import FleetSharingPermissions
@@ -32,6 +36,9 @@ def inspection_create(request: HttpRequest, car_pk: str) -> HttpResponse:
                 inspection.car = car
                 inspection.created_by = request.user
                 inspection.save()
+                use_structured = form.cleaned_data.get("use_structured_checklist")
+                if use_structured:
+                    create_inspection_points(inspection)
                 save_attachments(
                     inspection,
                     form.cleaned_data.get("attachments", []),
@@ -39,6 +46,8 @@ def inspection_create(request: HttpRequest, car_pk: str) -> HttpResponse:
                     staged=form.cleaned_data.get("staged_attachments"),
                 )
             messages.success(request, _("Inspection added successfully."))
+            if use_structured:
+                return redirect(reverse("shop-inspection-update", args=[car.pk, inspection.pk]))
             return redirect(reverse("shop-car-detail", args=[car.pk]))
     else:
         form = InspectionForm(user=request.user)
@@ -53,12 +62,18 @@ def inspection_update(request: HttpRequest, car_pk: str, pk: int) -> HttpRespons
         messages.error(request, _("You do not have permission to edit inspections for this car."))
         return redirect(reverse("shop-car-detail", args=[car.pk]))
     inspection = get_object_or_404(Inspection, pk=pk, car=car)
+    is_structured = inspection.points.exists()
 
     if request.method == "POST":
         form = InspectionForm(request.POST, request.FILES, instance=inspection, user=request.user)
-        if form.is_valid():
+        point_formset = None
+        if is_structured:
+            point_formset = InspectionPointFormSet(request.POST, instance=inspection, prefix="points")
+        if form.is_valid() and (point_formset is None or point_formset.is_valid()):
             with transaction.atomic():
                 form.save()
+                if point_formset is not None:
+                    point_formset.save()
                 save_attachments(
                     inspection,
                     form.cleaned_data.get("attachments", []),
@@ -69,11 +84,21 @@ def inspection_update(request: HttpRequest, car_pk: str, pk: int) -> HttpRespons
             return redirect(reverse("shop-car-detail", args=[car.pk]))
     else:
         form = InspectionForm(instance=inspection, user=request.user)
+        point_formset = None
+        if is_structured:
+            point_formset = InspectionPointFormSet(instance=inspection, prefix="points")
 
     return render(
         request,
         "shop/inspection_form.html",
-        {"form": form, "is_create": False, "car": car, "inspection": inspection},
+        {
+            "form": form,
+            "is_create": False,
+            "car": car,
+            "inspection": inspection,
+            "point_formset": point_formset,
+            "is_structured": is_structured,
+        },
     )
 
 
@@ -86,6 +111,7 @@ def inspection_history(request: HttpRequest, car_pk: str) -> HttpResponse:
         .select_related("created_by")
         .prefetch_related(
             "attachments",
+            "points",
             "recommended_work__assigned_to",
             "recommended_work__assigned_shop",
         )

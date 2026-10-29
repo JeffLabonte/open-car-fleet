@@ -6,6 +6,7 @@ from shop.models.attachment import Attachment
 from shop.models.car import Car
 from shop.models.fleet import Fleet, FleetInvitation, FleetMembership, KnownShop
 from shop.models.inspection import Inspection
+from shop.models.inspection_point import InspectionPoint
 from shop.models.job import WorkJob
 from shop.models.report import Report
 from shop.models.user import ShopUser
@@ -16,6 +17,14 @@ class AttachmentInline(GenericTabularInline):
     extra = 0
     fields = ("source_type", "kind", "file", "url", "display_name", "mime_type", "order")
     readonly_fields = ("created_at",)
+
+
+class InspectionPointInline(admin.TabularInline):
+    model = InspectionPoint
+    extra = 0
+    fields = ("category_label", "label", "status", "measurement", "notes")
+    readonly_fields = ("category_label", "label")
+    ordering = ("position",)
 
 
 @admin.register(Car)
@@ -34,10 +43,10 @@ class ReportAdmin(admin.ModelAdmin):
 
 @admin.register(Inspection)
 class InspectionAdmin(admin.ModelAdmin):
-    list_display = ("car", "inspected_at", "mileage", "created_by")
-    list_filter = ("inspected_at",)
+    list_display = ("car", "inspected_at", "mileage", "use_structured_checklist", "created_by")
+    list_filter = ("inspected_at", "use_structured_checklist")
     search_fields = ("car__usual_name", "car__vin", "car__license_plate", "notes")
-    inlines = (AttachmentInline,)
+    inlines = (AttachmentInline, InspectionPointInline)
 
     def has_delete_permission(self, request, obj=None):
         return False

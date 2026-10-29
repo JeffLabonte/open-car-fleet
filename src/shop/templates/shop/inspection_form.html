@@ -8,6 +8,62 @@
 {% endblock %}
 {% block cancel_url %}{% url 'shop-car-detail' car.pk %}{% endblock %}
 
+{% block form_fields %}
+  {% for field in form.visible_fields %}
+    {% if field.name != 'attachments' %}
+      {% include 'shop/partials/_form_field.html' %}
+    {% endif %}
+  {% endfor %}
+
+  {% if point_formset %}
+    {{ point_formset.management_form }}
+    {% if point_formset.non_form_errors %}
+      <div class="notification is-danger mb-4">
+        {{ point_formset.non_form_errors }}
+      </div>
+    {% endif %}
+
+    {% regroup point_formset by instance.category_label as grouped_points %}
+    {% for group in grouped_points %}
+      <div class="inspection-category box is-shadowless has-background-light mt-5" data-testid="inspection-category-{{ group.grouper|slugify }}">
+        <h3 class="title is-5 mb-4">{{ group.grouper }}</h3>
+        <div class="form-grid">
+          {% for point_form in group.list %}
+            <div class="inspection-point is-fullwidth" data-testid="inspection-point-{{ point_form.instance.code }}">
+              <div class="field">
+                <label class="label">{{ point_form.instance.label }}</label>
+                <div class="columns is-multiline">
+                  <div class="column is-3">
+                    <div class="field">
+                      {{ point_form.status.label_tag }}
+                      <div class="control">
+                        <div class="select is-fullwidth">{{ point_form.status }}</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="column is-9">
+                    <div class="field">
+                      {{ point_form.measurement.label_tag }}
+                      <div class="control">{{ point_form.measurement }}</div>
+                    </div>
+                  </div>
+                  <div class="column is-12">
+                    <div class="field">
+                      {{ point_form.notes.label_tag }}
+                      <div class="control">{{ point_form.notes }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {% for hidden in point_form.hidden_fields %}{{ hidden }}{% endfor %}
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endblock %}
+
 {% block form_extra %}
   {% with current_attachments=inspection.attachments.all %}
     {{ block.super }}

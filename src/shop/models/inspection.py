@@ -37,6 +37,11 @@ class Inspection(models.Model):
     inspected_at = models.DateTimeField(default=timezone.now)
     mileage = models.PositiveIntegerField(null=True, blank=True)
     notes = models.TextField(blank=True)
+    use_structured_checklist = models.BooleanField(
+        default=False,
+        verbose_name=_("Use structured checklist"),
+        help_text=_("Walk through a detailed inspection checklist."),
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
@@ -61,6 +66,17 @@ class Inspection(models.Model):
 
     def __str__(self) -> str:
         return f"Inspection of {self.car} on {self.inspected_at}"
+
+    def point_status_counts(self) -> dict[str, int]:
+        """Return counts of each point status for structured inspections."""
+        from shop.models.inspection_point import InspectionPoint
+
+        counts = {status: 0 for status, _ in InspectionPoint.STATUS_CHOICES}
+        if not self.pk:
+            return counts
+        for point in self.points.only("status"):
+            counts[point.status] = counts.get(point.status, 0) + 1
+        return counts
 
     def delete(self, *args, **kwargs):
         raise ProtectedError(_("Inspection history cannot be deleted."), {self})

@@ -36,6 +36,51 @@
           {% endif %}
           <p class="report-description">{{ inspection.notes|linebreaksbr|default:_('No inspection findings provided.') }}</p>
 
+          {% if inspection.use_structured_checklist %}
+            {% with counts=inspection.point_status_counts %}
+              <div class="tags are-medium mt-3" data-testid="inspection-summary-{{ inspection.pk }}">
+                <span class="tag is-success">{% translate 'OK' %}: {{ counts.pass }}</span>
+                <span class="tag is-warning">{% translate 'Attention' %}: {{ counts.attention }}</span>
+                <span class="tag is-danger">{% translate 'Needs repair' %}: {{ counts.repair }}</span>
+                <span class="tag is-light">{% translate 'N/A' %}: {{ counts.na }}</span>
+              </div>
+            {% endwith %}
+
+            {% if inspection.points.all %}
+              <div class="table-container mt-4">
+                <div class="table-wrap">
+                  <table class="table is-fullwidth is-striped table--responsive" data-testid="inspection-points-{{ inspection.pk }}">
+                    <thead>
+                      <tr>
+                        <th scope="col">{% translate 'Category' %}</th>
+                        <th scope="col">{% translate 'Item' %}</th>
+                        <th scope="col">{% translate 'Status' %}</th>
+                        <th scope="col">{% translate 'Measurement / spec' %}</th>
+                        <th scope="col">{% translate 'Notes' %}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% regroup inspection.points.all by category_label as grouped_points %}
+                      {% for group in grouped_points %}
+                        {% for point in group.list %}
+                          <tr data-testid="inspection-point-row-{{ point.code }}">
+                            {% if forloop.first %}<td data-label="{% translate 'Category' %}" rowspan="{{ group.list|length }}">{{ group.grouper }}</td>{% endif %}
+                            <td data-label="{% translate 'Item' %}">{{ point.label }}</td>
+                            <td data-label="{% translate 'Status' %}"><span class="tag {% if point.status == 'pass' %}is-success{% elif point.status == 'attention' %}is-warning{% elif point.status == 'repair' %}is-danger{% else %}is-light{% endif %}">{{ point.get_status_display }}</span></td>
+                            <td data-label="{% translate 'Measurement / spec' %}">{{ point.measurement|default:'—' }}</td>
+                            <td data-label="{% translate 'Notes' %}">{{ point.notes|linebreaksbr|default:'—' }}</td>
+                          </tr>
+                        {% endfor %}
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            {% else %}
+              <p class="has-text-grey mt-3">{% translate 'No checklist items recorded for this inspection.' %}</p>
+            {% endif %}
+          {% endif %}
+
           {% include 'shop/partials/_inspection_attachments.html' with inspection=inspection %}
 
           <h3 class="title is-6 mt-4">{% translate 'Recommended work' %}</h3>

@@ -7,8 +7,10 @@ from django.urls import reverse
 from django.utils import timezone
 
 from shop.forms import InspectionForm, WorkJobForm
+from shop.inspection_checklist import flatten_checklist
 from shop.models import Attachment, Inspection, WorkJob
 from shop.models.fleet import FleetMembership
+from shop.models.inspection_point import InspectionPoint
 from shop.tests.helpers import PNG_SIGNATURE, ShopTestCase
 
 
@@ -55,6 +57,46 @@ class InspectionModelAndFormTests(ShopTestCase):
 
         self.assertIn(inspection, form.fields["inspection"].queryset)
         self.assertNotIn(other_inspection, form.fields["inspection"].queryset)
+
+    def test_inspection_form_rejects_invalid_external_link(self):
+        form = InspectionForm(
+            data={
+                "inspected_at": "2026-10-20T14:30",
+                "mileage": "12345",
+                "notes": "Notes",
+                "external_links": "not-a-valid-link",
+            },
+            user=self.owner,
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("external_links", form.errors)
+
+    def test_unsaved_inspection_has_empty_status_counts(self):
+        inspection = Inspection(car=self.create_car())
+        self.assertEqual(
+            inspection.point_status_counts(),
+            {
+                InspectionPoint.STATUS_PASS: 0,
+                InspectionPoint.STATUS_ATTENTION: 0,
+                InspectionPoint.STATUS_REPAIR: 0,
+                InspectionPoint.STATUS_NA: 0,
+            },
+        )
+
+    def test_inspection_point_str(self):
+        inspection = Inspection.objects.create(car=self.create_car())
+        point = InspectionPoint.objects.create(
+            inspection=inspection,
+            category="brakes",
+            category_label="Brake system",
+            code="brake_wear",
+            label="Brake wear",
+            status=InspectionPoint.STATUS_PASS,
+            position=0,
+        )
+        self.assertIn("Brake wear", str(point))
+        self.assertIn("OK / Pass", str(point))
 
     def test_work_job_rejects_inspection_from_another_car(self):
         car = self.create_car()
@@ -186,6 +228,13 @@ class InspectionViewIntegrationTests(ShopTestCase):
         work_job = WorkJob.objects.get(title="Replace tire")
         self.assertEqual(work_job.inspection, inspection)
 
+    def test_create_inspection_form_renders_with_initial_datetime(self):
+        response = self.client.get(reverse("shop-inspection-create", args=[self.car.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Use structured checklist")
+        self.assertIsNotNone(response.context["form"].fields["inspected_at"].initial)
+
     def test_viewer_can_read_history_but_cannot_create_inspection(self):
         viewer = self.create_user(username="inspection-viewer", email="inspection-viewer@example.com")
         FleetMembership.objects.create(
@@ -200,6 +249,20 @@ class InspectionViewIntegrationTests(ShopTestCase):
 
         self.assertEqual(history_response.status_code, 200)
         self.assertRedirects(create_response, reverse("shop-car-detail", args=[self.car.pk]))
+
+    def test_viewer_cannot_edit_inspection(self):
+        viewer = self.create_user(username="inspection-viewer", email="inspection-viewer@example.com")
+        FleetMembership.objects.create(
+            fleet=self.fleet,
+            user=viewer,
+            role=FleetMembership.ROLE_VIEWER,
+        )
+        inspection = Inspection.objects.create(car=self.car)
+        self.client.force_login(viewer)
+
+        response = self.client.get(reverse("shop-inspection-update", args=[self.car.pk, inspection.pk]))
+
+        self.assertRedirects(response, reverse("shop-car-detail", args=[self.car.pk]))
 
     def test_stranger_cannot_retrieve_inspection_history(self):
         stranger = self.create_user(username="inspection-stranger", email="inspection-stranger@example.com")
@@ -234,3 +297,154 @@ class InspectionViewIntegrationTests(ShopTestCase):
         self.assertTrue(Inspection.objects.filter(car=self.car).exists())
         self.assertTrue(response.context["car"].pk == self.car.pk)
         self.assertContains(response, "This car cannot be deleted because it has inspection history.")
+
+    def test_structured_inspection_creates_all_checklist_points(self):
+        response = self.client.post(
+            reverse("shop-inspection-create", args=[self.car.pk]),
+            data={
+                "inspected_at": "2026-10-20T14:30",
+                "mileage": "12345",
+                "notes": "Structured inspection.",
+                "use_structured_checklist": "on",
+                "external_links": "",
+            },
+        )
+
+        inspection = Inspection.objects.get(car=self.car)
+        self.assertTrue(inspection.use_structured_checklist)
+        self.assertEqual(inspection.points.count(), len(flatten_checklist()))
+        self.assertRedirects(
+            response,
+            reverse("shop-inspection-update", args=[self.car.pk, inspection.pk]),
+        )
+
+    def test_non_structured_inspection_creates_no_points(self):
+        response = self.client.post(
+            reverse("shop-inspection-create", args=[self.car.pk]),
+            data={
+                "inspected_at": "2026-10-20T14:30",
+                "mileage": "12345",
+                "notes": "Quick inspection.",
+                "external_links": "",
+            },
+        )
+
+        self.assertRedirects(response, reverse("shop-car-detail", args=[self.car.pk]))
+        inspection = Inspection.objects.get(car=self.car)
+        self.assertFalse(inspection.use_structured_checklist)
+        self.assertEqual(inspection.points.count(), 0)
+
+    def test_structured_checkbox_is_disabled_when_points_exist(self):
+        inspection = Inspection.objects.create(
+            car=self.car,
+            use_structured_checklist=True,
+        )
+        InspectionPoint.objects.create(
+            inspection=inspection,
+            category="brakes",
+            category_label="Brake system",
+            code="brake_wear",
+            label="Brake wear",
+            position=0,
+        )
+
+        response = self.client.get(reverse("shop-inspection-update", args=[self.car.pk, inspection.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["form"].fields["use_structured_checklist"].disabled)
+        self.assertContains(response, "Brake system")
+        self.assertContains(response, "Brake wear")
+
+    def test_update_structured_inspection_persists_point_values(self):
+        inspection = Inspection.objects.create(
+            car=self.car,
+            use_structured_checklist=True,
+        )
+        point = InspectionPoint.objects.create(
+            inspection=inspection,
+            category="brakes",
+            category_label="Brake system",
+            code="brake_wear",
+            label="Brake wear",
+            position=0,
+        )
+
+        response = self.client.post(
+            reverse("shop-inspection-update", args=[self.car.pk, inspection.pk]),
+            data={
+                "inspected_at": "2026-10-20T14:30",
+                "mileage": "12345",
+                "notes": "Updated.",
+                "points-TOTAL_FORMS": "1",
+                "points-INITIAL_FORMS": "1",
+                "points-MIN_NUM_FORMS": "0",
+                "points-MAX_NUM_FORMS": "1000",
+                "points-0-id": str(point.pk),
+                "points-0-inspection": str(inspection.pk),
+                "points-0-status": InspectionPoint.STATUS_REPAIR,
+                "points-0-measurement": "2mm",
+                "points-0-notes": "Needs replacement soon.",
+            },
+        )
+
+        self.assertRedirects(response, reverse("shop-car-detail", args=[self.car.pk]))
+        point.refresh_from_db()
+        self.assertEqual(point.status, InspectionPoint.STATUS_REPAIR)
+        self.assertEqual(point.measurement, "2mm")
+        self.assertEqual(point.notes, "Needs replacement soon.")
+
+    def test_car_detail_shows_structured_inspection_summary(self):
+        inspection = Inspection.objects.create(
+            car=self.car,
+            use_structured_checklist=True,
+            inspected_at=timezone.make_aware(datetime(2026, 10, 20, 14, 30)),
+        )
+        InspectionPoint.objects.create(
+            inspection=inspection,
+            category="brakes",
+            category_label="Brake system",
+            code="brake_wear",
+            label="Brake wear",
+            status=InspectionPoint.STATUS_REPAIR,
+            position=0,
+        )
+        InspectionPoint.objects.create(
+            inspection=inspection,
+            category="tires_wheels",
+            category_label="Tires & wheels",
+            code="tire_wear",
+            label="Is there any wear",
+            status=InspectionPoint.STATUS_PASS,
+            position=1,
+        )
+
+        response = self.client.get(reverse("shop-car-detail", args=[self.car.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Needs repair: 1")
+        self.assertContains(response, "OK: 1")
+
+    def test_history_page_shows_structured_inspection_points(self):
+        inspection = Inspection.objects.create(
+            car=self.car,
+            use_structured_checklist=True,
+            inspected_at=timezone.make_aware(datetime(2026, 10, 20, 14, 30)),
+        )
+        InspectionPoint.objects.create(
+            inspection=inspection,
+            category="brakes",
+            category_label="Brake system",
+            code="brake_wear",
+            label="Brake wear",
+            status=InspectionPoint.STATUS_REPAIR,
+            measurement="2mm",
+            position=0,
+        )
+
+        response = self.client.get(reverse("shop-inspection-history", args=[self.car.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Brake system")
+        self.assertContains(response, "Brake wear")
+        self.assertContains(response, "Needs repair")
+        self.assertContains(response, "2mm")

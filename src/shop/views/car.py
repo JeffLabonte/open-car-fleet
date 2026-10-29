@@ -159,6 +159,7 @@ def car_detail(request: HttpRequest, pk: str) -> HttpResponse:
         .select_related("created_by")
         .prefetch_related(
             "attachments",
+            "points",
             Prefetch(
                 "recommended_work",
                 queryset=WorkJob.objects.select_related("assigned_to", "assigned_shop").order_by(
