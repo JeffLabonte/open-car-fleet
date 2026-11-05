@@ -155,7 +155,7 @@ def car_detail(request: HttpRequest, pk: str) -> HttpResponse:
         work_jobs_qs = work_jobs_qs.exclude(status__in=(WorkJob.STATUS_DONE, WorkJob.STATUS_CANCELLED))
     reports = car.reports.order_by("-date_done", "-created_at")
     latest_inspection = (
-        Inspection.objects.filter(car=car)
+        Inspection.objects.filter(car=car, is_draft=False)
         .select_related("created_by")
         .prefetch_related(
             "attachments",
@@ -170,7 +170,7 @@ def car_detail(request: HttpRequest, pk: str) -> HttpResponse:
         .order_by(*Inspection.LATEST_ORDERING)
         .first()
     )
-    inspection_count = Inspection.objects.filter(car=car).count()
+    inspection_count = Inspection.objects.filter(car=car, is_draft=False).count()
     parts = list(car.parts.order_by("name"))
     related_cars = (
         user_cars_queryset(request.user)
@@ -299,7 +299,7 @@ def workjob_create(request: HttpRequest, car_pk: str) -> HttpResponse:
         selected_inspection = None
         raw_inspection_pk = request.GET.get("inspection", "")
         if raw_inspection_pk.isdigit():
-            selected_inspection = Inspection.objects.filter(car=car, pk=int(raw_inspection_pk)).first()
+            selected_inspection = Inspection.objects.filter(car=car, pk=int(raw_inspection_pk), is_draft=False).first()
         if selected_inspection is not None:
             initial["inspection"] = selected_inspection.pk
         form = WorkJobForm(user=request.user, fleet=car.fleet, car=car, initial=initial)

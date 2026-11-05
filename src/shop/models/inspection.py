@@ -42,6 +42,17 @@ class Inspection(models.Model):
         verbose_name=_("Use structured checklist"),
         help_text=_("Walk through a detailed inspection checklist."),
     )
+    enabled_categories = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name=_("Enabled checklist categories"),
+        help_text=_("Categories the mechanic chose to fill for this inspection."),
+    )
+    is_draft = models.BooleanField(
+        default=False,
+        verbose_name=_("Draft"),
+        help_text=_("Draft inspections can be edited and deleted until finalized."),
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
@@ -79,10 +90,16 @@ class Inspection(models.Model):
         return counts
 
     def delete(self, *args, **kwargs):
-        raise ProtectedError(_("Inspection history cannot be deleted."), {self})
+        if not self.is_draft:
+            raise ProtectedError(_("Inspection history cannot be deleted."), {self})
+        super().delete(*args, **kwargs)
 
 
 @receiver(pre_delete, sender=Inspection)
 def prevent_inspection_delete(sender, instance: Inspection, **kwargs: object) -> None:
-    """Protect queryset and cascading deletes as well as instance deletes."""
-    raise ProtectedError(_("Inspection history cannot be deleted."), {instance})
+    """Protect queryset and cascading deletes as well as instance deletes.
+
+    Drafts are allowed to be deleted before they are finalized.
+    """
+    if not instance.is_draft:
+        raise ProtectedError(_("Inspection history cannot be deleted."), {instance})

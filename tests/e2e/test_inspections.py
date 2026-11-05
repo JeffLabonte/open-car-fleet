@@ -116,8 +116,8 @@ def create_inspection_car(
     inspection_state["car_pk"] = inspection_state["car_url"].rstrip("/").rsplit("/", 1)[-1]
 
 
-@when(parsers.parse('they create an inspection at "{inspected_at}" with notes "{notes}"'))
-def create_inspection(
+@when(parsers.parse('they start an inspection at "{inspected_at}" with notes "{notes}"'))
+def start_an_inspection(
     firefox_driver: webdriver.Firefox,
     inspection_state: dict[str, str],
     inspected_at: str,
@@ -136,40 +136,109 @@ def create_inspection(
     )
     firefox_driver.find_element(By.NAME, "notes").send_keys(notes)
     firefox_driver.find_element(By.CSS_SELECTOR, '#main-content form button[type="submit"]').click()
+    _wait(firefox_driver).until(ec.presence_of_element_located((By.CSS_SELECTOR, '[data-testid="finalize-button"]')))
+
+
+@when("they finalize the inspection")
+def finalize_the_inspection(firefox_driver: webdriver.Firefox):
+    _wait(firefox_driver).until(ec.presence_of_element_located((By.CSS_SELECTOR, '[data-testid="finalize-button"]')))
+    firefox_driver.find_element(By.CSS_SELECTOR, '[data-testid="finalize-button"]').click()
     _wait(firefox_driver).until(ec.presence_of_element_located((By.CSS_SELECTOR, '[data-testid="latest-inspection"]')))
 
 
 @when("they attach an inspection photo and document")
 def attach_inspection_evidence(firefox_driver: webdriver.Firefox, inspection_files: dict[str, str]):
-    car_pk = inspection_state_from_url(firefox_driver)
-    firefox_driver.get(_url(f"/cars/{car_pk}/"))
-    _wait(firefox_driver).until(ec.presence_of_element_located((By.CSS_SELECTOR, '[data-testid="latest-inspection"]')))
-    firefox_driver.find_element(
-        By.CSS_SELECTOR,
-        '[data-testid="latest-inspection"] a[href*="/inspections/"][href*="/edit/"]',
-    ).click()
     _wait(firefox_driver).until(ec.presence_of_element_located((By.NAME, "inspected_at")))
-    firefox_driver.find_element(By.NAME, "notes").clear()
-    firefox_driver.find_element(By.NAME, "notes").send_keys("LATEST_INSPECTION_FINDINGS_WITH_EVIDENCE")
+    firefox_driver.execute_script(
+        """
+        const notes = document.querySelector('textarea[name="notes"]');
+        notes.value = arguments[0];
+        notes.dispatchEvent(new Event('input', {bubbles: true}));
+        notes.dispatchEvent(new Event('change', {bubbles: true}));
+        """,
+        "LATEST_INSPECTION_FINDINGS_WITH_EVIDENCE",
+    )
     firefox_driver.find_element(By.CSS_SELECTOR, 'input[name="attachments"]').send_keys(
         f"{inspection_files['photo']}\n{inspection_files['document']}"
     )
-    firefox_driver.find_element(By.CSS_SELECTOR, '#main-content form button[type="submit"]').click()
-    _wait(firefox_driver).until(ec.presence_of_element_located((By.CSS_SELECTOR, '[data-testid="latest-inspection"]')))
+    _wait(firefox_driver).until(
+        lambda driver: driver.find_element(By.NAME, "staged_attachments").get_attribute("value").count(",") == 1
+    )
+    _finalize_and_wait_for_car_page(firefox_driver)
+
+
+def _finalize_and_wait_for_car_page(firefox_driver: webdriver.Firefox):
+    current_url = firefox_driver.current_url
+    firefox_driver.find_element(By.CSS_SELECTOR, '[data-testid="finalize-button"]').click()
+    _wait(firefox_driver).until(ec.url_changes(current_url))
 
 
 def inspection_state_from_url(firefox_driver: webdriver.Firefox) -> str:
     return firefox_driver.current_url.rstrip("/").split("/cars/", 1)[1].split("/", 1)[0]
 
 
+@then("the inspection form shows the save draft and finalize buttons")
+def inspection_form_shows_draft_actions(firefox_driver: webdriver.Firefox):
+    _wait(firefox_driver).until(ec.presence_of_element_located((By.CSS_SELECTOR, '[data-testid="save-draft-button"]')))
+    _wait(firefox_driver).until(ec.presence_of_element_located((By.CSS_SELECTOR, '[data-testid="finalize-button"]')))
+
+
+@then("the detailed checklist is visible with fluids and filters items")
+def detailed_checklist_with_fluids_and_filters(firefox_driver: webdriver.Firefox):
+    _wait(firefox_driver).until(
+        ec.presence_of_element_located((By.CSS_SELECTOR, '[data-testid="inspection-category-fluids_filters"]'))
+    )
+    source = firefox_driver.page_source
+    assert "Engine filter" in source
+    assert "Cabin filter" in source
+    assert "Cooling fluid level" in source
+    assert "Brake fluid level" in source
+    assert "Engine oil level" in source
+    assert "Any leaks" in source
+
+
+@when("they select all checklist sections")
+def select_all_checklist_sections(firefox_driver: webdriver.Firefox):
+    firefox_driver.find_element(By.CSS_SELECTOR, '[data-testid="select-all-sections"]').click()
+
+
+@when("they deselect all checklist sections")
+def deselect_all_checklist_sections(firefox_driver: webdriver.Firefox):
+    firefox_driver.find_element(By.CSS_SELECTOR, '[data-testid="deselect-all-sections"]').click()
+
+
+@then("all checklist sections are enabled")
+def all_checklist_sections_enabled(firefox_driver: webdriver.Firefox):
+    categories = firefox_driver.find_elements(By.CSS_SELECTOR, ".inspection-category")
+    enabled = firefox_driver.find_elements(By.CSS_SELECTOR, ".inspection-category:not(.is-disabled)")
+    assert len(enabled) == len(categories)
+
+
+@then("all checklist sections are disabled")
+def all_checklist_sections_disabled(firefox_driver: webdriver.Firefox):
+    categories = firefox_driver.find_elements(By.CSS_SELECTOR, ".inspection-category")
+    disabled = firefox_driver.find_elements(By.CSS_SELECTOR, ".inspection-category.is-disabled")
+    assert len(disabled) == len(categories)
+
+
+@then("the vehicle page shows the finalized inspection")
+def vehicle_page_shows_finalized_inspection(firefox_driver: webdriver.Firefox):
+    _wait(firefox_driver).until(ec.presence_of_element_located((By.CSS_SELECTOR, '[data-testid="latest-inspection"]')))
+    latest_section = firefox_driver.find_element(By.CSS_SELECTOR, '[data-testid="latest-inspection"]')
+    assert "FINALIZED_FINDINGS" in latest_section.text
+
+
 @then("the vehicle page shows only the latest inspection")
 def vehicle_page_shows_only_latest(firefox_driver: webdriver.Firefox):
-    source = firefox_driver.page_source
-    assert "LATEST_INSPECTION_FINDINGS_WITH_EVIDENCE" in source
-    assert "OLDER_INSPECTION_FINDINGS" not in source
-
-    latest_section = firefox_driver.find_element(By.CSS_SELECTOR, '[data-testid="latest-inspection"]')
-    assert "LATEST_INSPECTION_FINDINGS_WITH_EVIDENCE" in latest_section.text
+    latest_section = _wait(firefox_driver).until(
+        ec.presence_of_element_located(
+            (
+                By.XPATH,
+                "//*[@data-testid='latest-inspection']//*[contains(text(), 'LATEST_INSPECTION_FINDINGS_WITH_EVIDENCE')]",
+            )
+        )
+    )
+    assert "OLDER_INSPECTION_FINDINGS" not in firefox_driver.page_source
     assert "OLDER_INSPECTION_FINDINGS" not in latest_section.text
 
 

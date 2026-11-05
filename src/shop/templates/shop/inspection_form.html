@@ -5,8 +5,16 @@
 {% block form_title %}{% if is_create %}{% translate 'Add Inspection' %}{% else %}{% translate 'Edit Inspection' %}{% endif %}{% endblock %}
 {% block form_subtitle %}
   <p class="has-text-grey mb-4">{% translate 'Record the exact time, findings, photos, and documents for this vehicle inspection.' %}</p>
+  {% if inspection and inspection.is_draft %}
+    <div class="notification is-info is-light mb-4">
+      {% translate 'This inspection is a draft. It will not appear in the vehicle history until it is finalized.' %}
+      <span class="autosave-status has-text-grey" data-testid="autosave-status"></span>
+    </div>
+  {% endif %}
 {% endblock %}
 {% block cancel_url %}{% url 'shop-car-detail' car.pk %}{% endblock %}
+{% block submit_label %}{% if is_create %}{% translate 'Create inspection' %}{% else %}{% translate 'Update' %}{% endif %}{% endblock %}
+{% block form_attrs %}{% if not is_create and inspection and inspection.is_draft %}enctype="multipart/form-data" novalidate data-autosave-url="{% url 'shop-inspection-autosave' car.pk inspection.pk %}"{% else %}enctype="multipart/form-data" novalidate{% endif %}{% endblock %}
 
 {% block form_fields %}
   {% for field in form.visible_fields %}
@@ -17,49 +25,93 @@
 
   {% if point_formset %}
     {{ point_formset.management_form }}
+    {{ form.enabled_categories }}
     {% if point_formset.non_form_errors %}
       <div class="notification is-danger mb-4">
         {{ point_formset.non_form_errors }}
       </div>
     {% endif %}
 
-    {% regroup point_formset by instance.category_label as grouped_points %}
-    {% for group in grouped_points %}
-      <div class="inspection-category box is-shadowless has-background-light mt-5" data-testid="inspection-category-{{ group.grouper|slugify }}">
-        <h3 class="title is-5 mb-4">{{ group.grouper }}</h3>
-        <div class="form-grid">
-          {% for point_form in group.list %}
-            <div class="inspection-point is-fullwidth" data-testid="inspection-point-{{ point_form.instance.code }}">
-              <div class="field">
-                <label class="label">{{ point_form.instance.label }}</label>
-                <div class="columns is-multiline">
-                  <div class="column is-3">
-                    <div class="field">
-                      {{ point_form.status.label_tag }}
-                      <div class="control">
-                        <div class="select is-fullwidth">{{ point_form.status }}</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="column is-9">
-                    <div class="field">
-                      {{ point_form.measurement.label_tag }}
-                      <div class="control">{{ point_form.measurement }}</div>
-                    </div>
-                  </div>
-                  <div class="column is-12">
-                    <div class="field">
-                      {{ point_form.notes.label_tag }}
-                      <div class="control">{{ point_form.notes }}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              {% for hidden in point_form.hidden_fields %}{{ hidden }}{% endfor %}
-            </div>
-          {% endfor %}
-        </div>
+    <div class="field is-grouped mb-4">
+      <div class="control">
+        <button type="button" class="button is-small is-light" data-testid="select-all-sections">{% translate 'Select all sections' %}</button>
       </div>
+      <div class="control">
+        <button type="button" class="button is-small is-light" data-testid="deselect-all-sections">{% translate 'Deselect all sections' %}</button>
+      </div>
+    </div>
+
+    {% regroup point_formset by instance.category as grouped_points %}
+    {% for group in grouped_points %}
+      <details class="inspection-category" data-category="{{ group.grouper }}" data-testid="inspection-category-{{ group.grouper }}">
+        <summary class="inspection-category__summary">
+          <span class="inspection-category__title">{{ group.list.0.instance.category_label }}</span>
+          <label class="inspection-category__toggle">
+            <input type="checkbox" class="category-enable-toggle" checked>
+            <span class="inspection-category__toggle-label">{% translate 'Enable section' %}</span>
+          </label>
+          <span class="inspection-category__chevron" aria-hidden="true"></span>
+        </summary>
+        <div class="inspection-category__body">
+          <table class="table inspection-points-table is-fullwidth">
+            <thead>
+              <tr>
+                <th scope="col">{% translate 'Item' %}</th>
+                <th scope="col">{% translate 'Status' %}</th>
+                <th scope="col">{% translate 'Measurement / spec' %}</th>
+                <th scope="col">{% translate 'Notes' %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for point_form in group.list %}
+                <tr class="inspection-point" data-testid="inspection-point-{{ point_form.instance.code }}">
+                  <td class="inspection-point__label" data-label="{% translate 'Item' %}">
+                    <label class="label" for="{{ point_form.status.id_for_label }}">{{ point_form.instance.label }}</label>
+                  </td>
+                  <td class="inspection-point__status" data-label="{% translate 'Status' %}">
+                    <div class="select is-fullwidth">{{ point_form.status }}</div>
+                  </td>
+                  <td class="inspection-point__measurement" data-label="{% translate 'Measurement / spec' %}">
+                    {% if point_form.instance.code == "rear_brake_type" %}
+                      <div class="select is-fullwidth">
+                        <select name="{{ point_form.measurement.html_name }}" id="{{ point_form.measurement.id_for_label }}" data-rear-brake-type-select>
+                          <option value="" {% if not point_form.measurement.value %}selected{% endif %}>{% translate '— Select —' %}</option>
+                          <option value="disc" {% if point_form.measurement.value == "disc" %}selected{% endif %}>{% translate 'Disc' %}</option>
+                          <option value="drum" {% if point_form.measurement.value == "drum" %}selected{% endif %}>{% translate 'Drum' %}</option>
+                        </select>
+                      </div>
+                    {% elif point_form.instance.code in "cooling_fluid_level,brake_fluid_level,engine_oil_level" %}
+                      <div class="select is-fullwidth">
+                        <select name="{{ point_form.measurement.html_name }}" id="{{ point_form.measurement.id_for_label }}">
+                          <option value="" {% if not point_form.measurement.value %}selected{% endif %}>{% translate '— Select —' %}</option>
+                          <option value="high" {% if point_form.measurement.value == "high" %}selected{% endif %}>{% translate 'High' %}</option>
+                          <option value="ok" {% if point_form.measurement.value == "ok" %}selected{% endif %}>{% translate 'OK' %}</option>
+                          <option value="too low" {% if point_form.measurement.value == "too low" %}selected{% endif %}>{% translate 'Too low' %}</option>
+                          <option value="missing" {% if point_form.measurement.value == "missing" %}selected{% endif %}>{% translate 'Missing' %}</option>
+                        </select>
+                      </div>
+                    {% elif point_form.instance.code == "any_leaks" %}
+                      <div class="select is-fullwidth">
+                        <select name="{{ point_form.measurement.html_name }}" id="{{ point_form.measurement.id_for_label }}">
+                          <option value="" {% if not point_form.measurement.value %}selected{% endif %}>{% translate '— Select —' %}</option>
+                          <option value="none" {% if point_form.measurement.value == "none" %}selected{% endif %}>{% translate 'None' %}</option>
+                          <option value="present" {% if point_form.measurement.value == "present" %}selected{% endif %}>{% translate 'Present' %}</option>
+                        </select>
+                      </div>
+                    {% else %}
+                      {{ point_form.measurement }}
+                    {% endif %}
+                  </td>
+                  <td class="inspection-point__notes" data-label="{% translate 'Notes' %}">
+                    {{ point_form.notes }}
+                  </td>
+                </tr>
+                {% for hidden in point_form.hidden_fields %}{{ hidden }}{% endfor %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </details>
     {% endfor %}
   {% endif %}
 {% endblock %}
@@ -70,6 +122,42 @@
   {% endwith %}
 {% endblock %}
 
+{% block form_buttons %}
+  {% if not is_create and inspection and inspection.is_draft %}
+    <div class="field is-grouped">
+      <div class="control">
+        <button class="button is-light" type="submit" name="action" value="save_draft" data-testid="save-draft-button">
+          {% translate 'Save draft' %}
+        </button>
+      </div>
+      <div class="control">
+        <button class="button is-primary" type="submit" name="action" value="finalize" data-testid="finalize-button">
+          {% translate 'Finalize inspection' %}
+        </button>
+      </div>
+      <div class="control">
+        <a class="button is-light" href="{% url 'shop-car-detail' car.pk %}">{% translate 'Cancel' %}</a>
+      </div>
+    </div>
+  {% else %}
+    {{ block.super }}
+  {% endif %}
+{% endblock %}
+
+{% block form_after %}
+  {% if not is_create and inspection and inspection.is_draft %}
+    <form method="post" action="{% url 'shop-inspection-delete' car.pk inspection.pk %}" class="mt-4" onsubmit="return confirm('{% translate "Delete this draft? This cannot be undone." %}');">
+      {% csrf_token %}
+      <button class="button is-danger is-small" type="submit" data-testid="delete-draft-button">
+        {% translate 'Delete draft' %}
+      </button>
+    </form>
+  {% endif %}
+{% endblock %}
+
 {% block extra_scripts %}
   <script src="{% static 'shop/js/attachments.js' %}" defer></script>
+  <script src="{% static 'shop/js/inspection.js' %}" defer></script>
+  <script src="{% static 'shop/js/inspection_brake_type.js' %}" defer></script>
+  <script src="{% static 'shop/js/inspection_autosave.js' %}" defer></script>
 {% endblock %}

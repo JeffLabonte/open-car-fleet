@@ -54,6 +54,16 @@ urlpatterns = [
         views.inspection_update,
         name="shop-inspection-update",
     ),
+    path(
+        "cars/<uuid:car_pk>/inspections/<int:pk>/autosave/",
+        views.inspection_autosave,
+        name="shop-inspection-autosave",
+    ),
+    path(
+        "cars/<uuid:car_pk>/inspections/<int:pk>/delete/",
+        views.inspection_delete,
+        name="shop-inspection-delete",
+    ),
     path("cars/<uuid:car_pk>/parts/add/", views.part_create, name="shop-part-create"),
     path("cars/<uuid:car_pk>/parts/<int:pk>/edit/", views.part_update, name="shop-part-update"),
     path("cars/<uuid:car_pk>/work-jobs/add/", views.workjob_create, name="shop-workjob-create"),

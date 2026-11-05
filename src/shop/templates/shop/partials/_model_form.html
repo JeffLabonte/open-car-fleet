@@ -38,14 +38,18 @@ including `form` and `is_create`.
 
       {% block form_extra %}{% endblock %}
 
-      <div class="field is-grouped">
-        <div class="control">
-          <button class="button is-primary" type="submit">{% block submit_label %}{% if is_create %}{% translate 'Create' %}{% else %}{% translate 'Update' %}{% endif %}{% endblock %}</button>
+      {% block form_buttons %}
+        <div class="field is-grouped">
+          <div class="control">
+            <button class="button is-primary" type="submit">{% block submit_label %}{% if is_create %}{% translate 'Create' %}{% else %}{% translate 'Update' %}{% endif %}{% endblock %}</button>
+          </div>
+          <div class="control">
+            <a class="button is-light" href="{% block cancel_url %}{% endblock %}">{% translate 'Cancel' %}</a>
+          </div>
         </div>
-        <div class="control">
-          <a class="button is-light" href="{% block cancel_url %}{% endblock %}">{% translate 'Cancel' %}</a>
-        </div>
-      </div>
+      {% endblock %}
     </form>
+
+    {% block form_after %}{% endblock %}
   </section>
 {% endblock %}

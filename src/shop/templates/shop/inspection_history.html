@@ -23,11 +23,24 @@
 
   {% if inspections %}
     {% for inspection in inspections %}
-      <article class="message is-info" data-testid="inspection-history-item">
+      <article class="message {% if inspection.is_draft %}is-warning{% else %}is-info{% endif %}" data-testid="inspection-history-item">
         <div class="message-header">
-          <p>{% translate 'Inspection' %} — {{ inspection.inspected_at|date:'F j, Y, g:i a T' }}</p>
+          <p>
+            {% if inspection.is_draft %}
+              <span class="tag is-light mr-2">{% translate 'Draft' %}</span>
+            {% endif %}
+            {% translate 'Inspection' %} — {{ inspection.inspected_at|date:'F j, Y, g:i a T' }}
+          </p>
           {% if can_edit_fleet_data %}
-            <a class="button is-small" href="{% url 'shop-inspection-update' car.pk inspection.pk %}">{% translate 'Edit' %}</a>
+            <div class="buttons are-small">
+              <a class="button is-small" href="{% url 'shop-inspection-update' car.pk inspection.pk %}">{% translate 'Edit' %}</a>
+              {% if inspection.is_draft %}
+                <form method="post" action="{% url 'shop-inspection-delete' car.pk inspection.pk %}" class="is-inline" onsubmit="return confirm('{% translate "Delete this draft? This cannot be undone." %}');">
+                  {% csrf_token %}
+                  <button class="button is-danger is-small" type="submit">{% translate 'Delete' %}</button>
+                </form>
+              {% endif %}
+            </div>
           {% endif %}
         </div>
         <div class="message-body">

@@ -1,9 +1,10 @@
 from django.contrib import messages
 from django.db import transaction
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext as _
+from django.views.decorators.http import require_POST
 
 from shop.forms import (
     InspectionForm,
@@ -35,24 +36,57 @@ def inspection_create(request: HttpRequest, car_pk: str) -> HttpResponse:
                 inspection = form.save(commit=False)
                 inspection.car = car
                 inspection.created_by = request.user
+                inspection.is_draft = True
+                inspection.use_structured_checklist = True
                 inspection.save()
-                use_structured = form.cleaned_data.get("use_structured_checklist")
-                if use_structured:
-                    create_inspection_points(inspection)
+                create_inspection_points(inspection)
                 save_attachments(
                     inspection,
                     form.cleaned_data.get("attachments", []),
                     form.cleaned_data.get("external_links", []),
                     staged=form.cleaned_data.get("staged_attachments"),
                 )
-            messages.success(request, _("Inspection added successfully."))
-            if use_structured:
-                return redirect(reverse("shop-inspection-update", args=[car.pk, inspection.pk]))
-            return redirect(reverse("shop-car-detail", args=[car.pk]))
+            return redirect(reverse("shop-inspection-update", args=[car.pk, inspection.pk]))
     else:
         form = InspectionForm(user=request.user)
 
     return render(request, "shop/inspection_form.html", {"form": form, "is_create": True, "car": car})
+
+
+def _save_inspection_from_request(
+    request: HttpRequest,
+    inspection: Inspection,
+    car,
+    *,
+    finalize: bool,
+) -> tuple[InspectionForm, InspectionPointFormSet | None, bool]:
+    """Save the inspection and formset from POST data.
+
+    Returns (form, point_formset, success).
+    """
+    form = InspectionForm(request.POST, request.FILES, instance=inspection, user=request.user)
+    is_structured = inspection.points.exists()
+    point_formset = None
+    if is_structured:
+        point_formset = InspectionPointFormSet(request.POST, instance=inspection, prefix="points")
+
+    if not form.is_valid() or (point_formset is not None and not point_formset.is_valid()):
+        return form, point_formset, False
+
+    with transaction.atomic():
+        form.save()
+        if finalize:
+            inspection.is_draft = False
+            inspection.save(update_fields=["is_draft"])
+        if point_formset is not None:
+            point_formset.save()
+        save_attachments(
+            inspection,
+            form.cleaned_data.get("attachments", []),
+            form.cleaned_data.get("external_links", []),
+            staged=form.cleaned_data.get("staged_attachments"),
+        )
+    return form, point_formset, True
 
 
 @hanko_login_required
@@ -65,22 +99,14 @@ def inspection_update(request: HttpRequest, car_pk: str, pk: int) -> HttpRespons
     is_structured = inspection.points.exists()
 
     if request.method == "POST":
-        form = InspectionForm(request.POST, request.FILES, instance=inspection, user=request.user)
-        point_formset = None
-        if is_structured:
-            point_formset = InspectionPointFormSet(request.POST, instance=inspection, prefix="points")
-        if form.is_valid() and (point_formset is None or point_formset.is_valid()):
-            with transaction.atomic():
-                form.save()
-                if point_formset is not None:
-                    point_formset.save()
-                save_attachments(
-                    inspection,
-                    form.cleaned_data.get("attachments", []),
-                    form.cleaned_data.get("external_links", []),
-                    staged=form.cleaned_data.get("staged_attachments"),
-                )
-            messages.success(request, _("Inspection updated successfully."))
+        action = request.POST.get("action", "finalize")
+        finalize = action == "finalize"
+        form, point_formset, success = _save_inspection_from_request(request, inspection, car, finalize=finalize)
+        if success:
+            if finalize:
+                messages.success(request, _("Inspection finalized successfully."))
+            else:
+                messages.success(request, _("Draft saved successfully."))
             return redirect(reverse("shop-car-detail", args=[car.pk]))
     else:
         form = InspectionForm(instance=inspection, user=request.user)
@@ -100,6 +126,45 @@ def inspection_update(request: HttpRequest, car_pk: str, pk: int) -> HttpRespons
             "is_structured": is_structured,
         },
     )
+
+
+@hanko_login_required
+@require_POST
+def inspection_autosave(request: HttpRequest, car_pk: str, pk: int) -> HttpResponse:
+    """Autosave a draft inspection via AJAX and return JSON status."""
+    car = _get_user_car(request, car_pk)
+    if not FleetSharingPermissions(request.user, car.fleet).can_edit_fleet_data:
+        return JsonResponse({"ok": False, "error": _("Permission denied.")}, status=403)
+
+    inspection = get_object_or_404(Inspection, pk=pk, car=car, is_draft=True)
+    form, point_formset, success = _save_inspection_from_request(request, inspection, car, finalize=False)
+
+    if success:
+        return JsonResponse({"ok": True, "saved_at": inspection.updated_at.isoformat()})
+
+    errors = form.errors
+    if point_formset is not None:
+        errors["points"] = point_formset.errors
+    return JsonResponse({"ok": False, "errors": errors}, status=400)
+
+
+@hanko_login_required
+@require_POST
+def inspection_delete(request: HttpRequest, car_pk: str, pk: int) -> HttpResponse:
+    """Delete a draft inspection. Finalized inspections cannot be deleted."""
+    car = _get_user_car(request, car_pk)
+    if not FleetSharingPermissions(request.user, car.fleet).can_edit_fleet_data:
+        messages.error(request, _("You do not have permission to delete inspections for this car."))
+        return redirect(reverse("shop-car-detail", args=[car.pk]))
+
+    inspection = get_object_or_404(Inspection, pk=pk, car=car)
+    if not inspection.is_draft:
+        messages.error(request, _("Only draft inspections can be deleted."))
+        return redirect(reverse("shop-inspection-history", args=[car.pk]))
+
+    inspection.delete()
+    messages.success(request, _("Draft inspection deleted."))
+    return redirect(reverse("shop-car-detail", args=[car.pk]))
 
 
 @hanko_login_required
