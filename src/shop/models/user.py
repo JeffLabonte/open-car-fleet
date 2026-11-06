@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 
 class ShopUser(AbstractUser):
@@ -14,6 +15,8 @@ class ShopUser(AbstractUser):
     last_login_at = models.DateTimeField(null=True, blank=True)
     is_mechanic = models.BooleanField(default=False)
     mechanic_promoted_at = models.DateTimeField(null=True, blank=True)
+    phone_number = models.CharField(_("phone number"), max_length=30, blank=True)
+    onboarding_completed = models.BooleanField(_("onboarding completed"), default=False)
 
     class Meta:
         db_table = "shop_user"

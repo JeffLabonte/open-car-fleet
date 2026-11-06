@@ -14,6 +14,7 @@ from django.views.decorators.http import require_GET
 from django_ratelimit.decorators import ratelimit
 
 from shop.auth import HankoAuthenticationError, complete_hanko_login, fetch_hanko_userinfo
+from shop.forms.profile import ShopUserProfileForm
 from shop.middleware import hanko_login_required
 from shop.theme import get_theme_from_request, normalize_theme
 
@@ -59,12 +60,23 @@ def login_view(request: HttpRequest) -> HttpResponse:
 
 @hanko_login_required
 def profile_view(request: HttpRequest) -> HttpResponse:
+    user = request.user
+    if request.method == "POST":
+        form = ShopUserProfileForm(request.POST, instance=user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _("Profile updated."))
+            return redirect(reverse("shop-profile"))
+    else:
+        form = ShopUserProfileForm(instance=user)
+
     return render(
         request,
         "shop/profile.html",
         {
             "title": _("Profile"),
-            "subtitle": _("Manage your Hanko account, emails, and passkeys"),
+            "subtitle": _("Manage your account and preferences"),
+            "form": form,
             "hanko_api_url": getattr(settings, "HANKO_API_URL", ""),
         },
     )
@@ -135,17 +147,18 @@ def hanko_callback(request: HttpRequest) -> JsonResponse:
     request.session["hanko_session_token"] = session_token
     request.session.save()
 
-    return JsonResponse(
-        {
-            "ok": True,
-            "user": {
-                "id": user.pk,
-                "username": user.username,
-                "email": user.email,
-                "display_name": user.display_name or user.username,
-            },
-        }
-    )
+    payload = {
+        "ok": True,
+        "user": {
+            "id": user.pk,
+            "username": user.username,
+            "email": user.email,
+            "display_name": user.display_name or user.username,
+        },
+    }
+    if not getattr(user, "onboarding_completed", False):
+        payload["redirect_url"] = reverse("shop-welcome")
+    return JsonResponse(payload)
 
 
 def logout_view(request: HttpRequest) -> HttpResponse:

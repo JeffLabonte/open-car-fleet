@@ -72,6 +72,7 @@ from shop.views.known_shops import (
     known_shop_proof_create,
     known_shop_proof_update,
 )
+from shop.views.onboarding import welcome_view
 
 __all__ = [
     "ATTACHMENT_USER_STAGED_QUOTA_BYTES",
@@ -126,6 +127,7 @@ __all__ = [
     "save_attachments",
     "set_test_session",
     "theme_view",
+    "welcome_view",
     "workjob_create",
     "workjob_update",
 ]

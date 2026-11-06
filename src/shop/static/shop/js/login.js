@@ -67,8 +67,12 @@ async function finishLogin() {
       throw new Error(`Login callback failed with status ${response.status}`);
     }
 
+    const callbackPayload = await response.json().catch(() => ({}));
+
     let redirectTarget = '/';
-    if (typeof nextUrl === 'string' && nextUrl.trim() !== '') {
+    if (typeof callbackPayload.redirect_url === 'string' && callbackPayload.redirect_url.trim() !== '') {
+      redirectTarget = callbackPayload.redirect_url;
+    } else if (typeof nextUrl === 'string' && nextUrl.trim() !== '') {
       try {
         const safeUrl = new URL(nextUrl, window.location.origin);
         if (safeUrl.origin === window.location.origin) {

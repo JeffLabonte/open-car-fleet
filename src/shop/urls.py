@@ -8,6 +8,7 @@ urlpatterns = [
     path("theme/<str:theme>/", views.theme_view, name="shop-theme"),
     path("logout/", views.logout_view, name="shop-logout"),
     path("profile/", views.profile_view, name="shop-profile"),
+    path("welcome/", views.welcome_view, name="shop-welcome"),
     path("auth/hanko/callback/", views.hanko_callback, name="shop-hanko-callback"),
     path("", views.index, name="shop-index"),
     path("fleets/add/", views.fleet_create, name="shop-fleet-create"),

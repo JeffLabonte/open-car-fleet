@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Open Car Fleet\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-06 00:27+0000\n"
+"POT-Creation-Date: 2026-11-06 00:35+0000\n"
 "PO-Revision-Date: 2026-09-13 02:13+0000\n"
 "Last-Translator: Open Car Fleet <noreply@opencarfleet.ca>\n"
 "Language-Team: en_CA <LL@li.org>\n"
@@ -599,6 +599,72 @@ msgstr ""
 msgid "Required items"
 msgstr ""
 
+#: src/shop/forms/onboarding.py:9 src/shop/forms/profile.py:22
+msgid "First name"
+msgstr ""
+
+#: src/shop/forms/onboarding.py:14 src/shop/forms/profile.py:23
+msgid "Last name"
+msgstr ""
+
+#: src/shop/forms/onboarding.py:20
+msgid "I am a mechanic"
+msgstr ""
+
+#: src/shop/forms/onboarding.py:24
+msgid ""
+"Enable mechanic mode to be assignable to work jobs and reports. You can "
+"change this later in your profile."
+msgstr ""
+
+#: src/shop/forms/onboarding.py:40 src/shop/forms/profile.py:81
+msgid "Please enter your first or last name."
+msgstr ""
+
+#: src/shop/forms/profile.py:24
+msgid "Username"
+msgstr ""
+
+#: src/shop/forms/profile.py:25 src/shop/forms/shop.py:14
+msgid "Email"
+msgstr ""
+
+#: src/shop/forms/profile.py:26
+msgid "Phone number"
+msgstr ""
+
+#: src/shop/forms/profile.py:27
+msgid "Display name"
+msgstr ""
+
+#: src/shop/forms/profile.py:28
+msgid "Mechanic mode"
+msgstr ""
+
+#: src/shop/forms/profile.py:40
+msgid "If left blank, your username will be set to your first and last name."
+msgstr ""
+
+#: src/shop/forms/profile.py:41
+msgid "Optional."
+msgstr ""
+
+#: src/shop/forms/profile.py:42
+msgid "How your name appears in the app. If left blank, your username is used."
+msgstr ""
+
+#: src/shop/forms/profile.py:43
+msgid "Enable mechanic mode to be assignable to work jobs and reports."
+msgstr ""
+
+#: src/shop/forms/profile.py:61
+msgid "This username is already taken."
+msgstr ""
+
+#: src/shop/forms/profile.py:71
+msgid "This email is already in use."
+msgstr ""
+
 #: src/shop/forms/report.py:28
 msgid "One external link per line (OneDrive, Google Drive, etc.)"
 msgstr ""
@@ -652,10 +718,6 @@ msgstr ""
 
 #: src/shop/forms/shop.py:13
 msgid "Shop name"
-msgstr ""
-
-#: src/shop/forms/shop.py:14
-msgid "Email"
 msgstr ""
 
 #: src/shop/forms/shop.py:15
@@ -1406,6 +1468,14 @@ msgstr ""
 msgid "The inspection must belong to the same vehicle as the work job."
 msgstr ""
 
+#: src/shop/models/user.py:18
+msgid "phone number"
+msgstr ""
+
+#: src/shop/models/user.py:19
+msgid "onboarding completed"
+msgstr ""
+
 #: src/shop/permissions.py:107
 msgid "Membership not found."
 msgstr ""
@@ -2026,6 +2096,10 @@ msgstr ""
 msgid "You must be signed in to view the shop."
 msgstr ""
 
+#: src/shop/templates/shop/onboarding.html:24
+msgid "Get started"
+msgstr ""
+
 #: src/shop/templates/shop/part_form.html:5
 msgid "Add Part Status"
 msgstr ""
@@ -2105,7 +2179,7 @@ msgid "Known shops"
 msgstr ""
 
 #: src/shop/templates/shop/partials/_nav.html:29
-#: src/shop/templates/shop/partials/_nav.html:77 src/shop/views/auth.py:66
+#: src/shop/templates/shop/partials/_nav.html:77 src/shop/views/auth.py:77
 msgid "Profile"
 msgstr ""
 
@@ -2136,6 +2210,22 @@ msgstr ""
 
 #: src/shop/templates/shop/partials/_theme_toggle.html:13
 msgid "Dark"
+msgstr ""
+
+#: src/shop/templates/shop/profile.html:9
+msgid "Account information"
+msgstr ""
+
+#: src/shop/templates/shop/profile.html:26
+msgid "Update profile"
+msgstr ""
+
+#: src/shop/templates/shop/profile.html:34
+msgid "Hanko account"
+msgstr ""
+
+#: src/shop/templates/shop/profile.html:35
+msgid "Manage your passkeys and Hanko profile below."
 msgstr ""
 
 #: src/shop/templates/shop/report_form.html:5
@@ -2259,23 +2349,27 @@ msgstr ""
 msgid "Attachment has no file."
 msgstr ""
 
-#: src/shop/views/auth.py:50
+#: src/shop/views/auth.py:51
 msgid "Login"
 msgstr ""
 
-#: src/shop/views/auth.py:51
+#: src/shop/views/auth.py:52
 msgid "Authenticate with Hanko to continue"
 msgstr ""
 
-#: src/shop/views/auth.py:67
-msgid "Manage your Hanko account, emails, and passkeys"
+#: src/shop/views/auth.py:68
+msgid "Profile updated."
 msgstr ""
 
-#: src/shop/views/auth.py:91
+#: src/shop/views/auth.py:78
+msgid "Manage your account and preferences"
+msgstr ""
+
+#: src/shop/views/auth.py:103
 msgid "Not found."
 msgstr ""
 
-#: src/shop/views/auth.py:155
+#: src/shop/views/auth.py:168
 msgid "Logged out successfully."
 msgstr ""
 
@@ -2679,4 +2773,16 @@ msgstr ""
 
 #: src/shop/views/known_shops.py:154
 msgid "Update the document or notes supporting this shop"
+msgstr ""
+
+#: src/shop/views/onboarding.py:38
+msgid "Welcome! Your profile is ready."
+msgstr ""
+
+#: src/shop/views/onboarding.py:52
+msgid "Welcome"
+msgstr ""
+
+#: src/shop/views/onboarding.py:53
+msgid "Let’s finish setting up your account."
 msgstr ""

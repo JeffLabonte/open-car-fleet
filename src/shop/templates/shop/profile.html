@@ -5,13 +5,41 @@
   <section class="content-card auth-card" data-testid="profile-card">
     {% include 'shop/partials/_page_header.html' %}
 
-    <div id="hanko-profile-container">
-      {% if hanko_api_url %}
-        <hanko-profile></hanko-profile>
-      {% else %}
-        <p class="notification is-warning">Missing HANKO_API_URL. Set it in .env and restart the server.</p>
-      {% endif %}
+    <div class="box">
+      <h2 class="title is-5">{% translate 'Account information' %}</h2>
+      <form method="post" data-testid="profile-form" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+          <div class="notification is-danger mb-4">
+            {{ form.non_field_errors }}
+          </div>
+        {% endif %}
+
+        <div class="form-grid">
+          {% for field in form.visible_fields %}
+            {% include 'shop/partials/_form_field.html' %}
+          {% endfor %}
+        </div>
+
+        <div class="field is-grouped">
+          <div class="control">
+            <button class="button is-primary" type="submit">{% translate 'Update profile' %}</button>
+          </div>
+        </div>
+      </form>
     </div>
+
+    {% if hanko_api_url %}
+      <div class="box">
+        <h2 class="title is-5">{% translate 'Hanko account' %}</h2>
+        <p class="subtitle is-6">{% translate 'Manage your passkeys and Hanko profile below.' %}</p>
+        <div id="hanko-profile-container">
+          <hanko-profile></hanko-profile>
+        </div>
+      </div>
+    {% else %}
+      <p class="notification is-warning">Missing HANKO_API_URL. Set it in .env and restart the server.</p>
+    {% endif %}
   </section>
 
   {{ hanko_api_url|json_script:'hanko-api-url' }}

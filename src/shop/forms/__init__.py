@@ -18,6 +18,8 @@ from shop.forms.inspection import (
     create_inspection_points,
 )
 from shop.forms.job import WorkJobForm
+from shop.forms.onboarding import OnboardingForm
+from shop.forms.profile import ShopUserProfileForm
 from shop.forms.report import ReportForm
 from shop.forms.shop import KnownShopForm, KnownShopProofForm
 
@@ -36,6 +38,8 @@ __all__ = [
     "InspectionPointForm",
     "InspectionPointFormSet",
     "create_inspection_points",
+    "OnboardingForm",
+    "ShopUserProfileForm",
     "WorkJobForm",
     "ReportForm",
     "KnownShopForm",

@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Open Car Fleet\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-06 00:27+0000\n"
+"POT-Creation-Date: 2026-11-06 00:35+0000\n"
 "PO-Revision-Date: 2026-09-13 02:13+0000\n"
 "Last-Translator: Open Car Fleet <noreply@opencarfleet.ca>\n"
 "Language-Team: fr_CA <LL@li.org>\n"
@@ -619,6 +619,80 @@ msgstr "Urgence"
 msgid "Required items"
 msgstr "Articles requis"
 
+#: src/shop/forms/onboarding.py:9 src/shop/forms/profile.py:22
+msgid "First name"
+msgstr "Prénom"
+
+#: src/shop/forms/onboarding.py:14 src/shop/forms/profile.py:23
+msgid "Last name"
+msgstr "Nom de famille"
+
+#: src/shop/forms/onboarding.py:20
+msgid "I am a mechanic"
+msgstr "Je suis mécanicien"
+
+#: src/shop/forms/onboarding.py:24
+msgid ""
+"Enable mechanic mode to be assignable to work jobs and reports. You can "
+"change this later in your profile."
+msgstr ""
+"Activez le mode mécanicien pour pouvoir être assigné à des travaux et des "
+"rapports. Vous pourrez modifier ce choix plus tard dans votre profil."
+
+#: src/shop/forms/onboarding.py:40 src/shop/forms/profile.py:81
+msgid "Please enter your first or last name."
+msgstr "Veuillez entrer votre prénom ou votre nom de famille."
+
+#: src/shop/forms/profile.py:24
+msgid "Username"
+msgstr "Nom d'utilisateur"
+
+#: src/shop/forms/profile.py:25 src/shop/forms/shop.py:14
+msgid "Email"
+msgstr "Courriel"
+
+#: src/shop/forms/profile.py:26
+msgid "Phone number"
+msgstr "Numéro de téléphone"
+
+#: src/shop/forms/profile.py:27
+msgid "Display name"
+msgstr "Nom d'affichage"
+
+#: src/shop/forms/profile.py:28
+msgid "Mechanic mode"
+msgstr "Mode mécanicien"
+
+#: src/shop/forms/profile.py:40
+msgid "If left blank, your username will be set to your first and last name."
+msgstr ""
+"Si laissé vide, votre nom d'utilisateur sera défini à partir de votre prénom "
+"et nom de famille."
+
+#: src/shop/forms/profile.py:41
+msgid "Optional."
+msgstr "Facultatif."
+
+#: src/shop/forms/profile.py:42
+msgid "How your name appears in the app. If left blank, your username is used."
+msgstr ""
+"Comment votre nom apparaît dans l'application. Si laissé vide, votre nom "
+"d'utilisateur est utilisé."
+
+#: src/shop/forms/profile.py:43
+msgid "Enable mechanic mode to be assignable to work jobs and reports."
+msgstr ""
+"Activez le mode mécanicien pour pouvoir être assigné à des travaux et des "
+"rapports."
+
+#: src/shop/forms/profile.py:61
+msgid "This username is already taken."
+msgstr "Ce nom d'utilisateur est déjà pris."
+
+#: src/shop/forms/profile.py:71
+msgid "This email is already in use."
+msgstr "Ce courriel est déjà utilisé."
+
 #: src/shop/forms/report.py:28
 msgid "One external link per line (OneDrive, Google Drive, etc.)"
 msgstr "Un lien externe par ligne (OneDrive, Google Drive, etc.)"
@@ -675,10 +749,6 @@ msgstr "Odomètre actuel : %(mileage)s"
 #: src/shop/forms/shop.py:13
 msgid "Shop name"
 msgstr "Nom de l'atelier"
-
-#: src/shop/forms/shop.py:14
-msgid "Email"
-msgstr "Courriel"
 
 #: src/shop/forms/shop.py:15
 msgid "Phone"
@@ -1571,6 +1641,14 @@ msgstr "Annulé"
 msgid "The inspection must belong to the same vehicle as the work job."
 msgstr "L'inspection doit appartenir au même véhicule que le travail planifié."
 
+#: src/shop/models/user.py:18
+msgid "phone number"
+msgstr "numéro de téléphone"
+
+#: src/shop/models/user.py:19
+msgid "onboarding completed"
+msgstr "intégration terminée"
+
 #: src/shop/permissions.py:107
 msgid "Membership not found."
 msgstr "Membre introuvable."
@@ -2227,6 +2305,10 @@ msgstr "Se connecter"
 msgid "You must be signed in to view the shop."
 msgstr "Vous devez vous connecter pour consulter l'atelier."
 
+#: src/shop/templates/shop/onboarding.html:24
+msgid "Get started"
+msgstr "Commencer"
+
 #: src/shop/templates/shop/part_form.html:5
 msgid "Add Part Status"
 msgstr "Ajouter un état de pièce"
@@ -2306,7 +2388,7 @@ msgid "Known shops"
 msgstr "Ateliers connus"
 
 #: src/shop/templates/shop/partials/_nav.html:29
-#: src/shop/templates/shop/partials/_nav.html:77 src/shop/views/auth.py:66
+#: src/shop/templates/shop/partials/_nav.html:77 src/shop/views/auth.py:77
 msgid "Profile"
 msgstr "Profil"
 
@@ -2338,6 +2420,22 @@ msgstr "Clair"
 #: src/shop/templates/shop/partials/_theme_toggle.html:13
 msgid "Dark"
 msgstr "Sombre"
+
+#: src/shop/templates/shop/profile.html:9
+msgid "Account information"
+msgstr "Informations du compte"
+
+#: src/shop/templates/shop/profile.html:26
+msgid "Update profile"
+msgstr "Mettre à jour le profil"
+
+#: src/shop/templates/shop/profile.html:34
+msgid "Hanko account"
+msgstr "Compte Hanko"
+
+#: src/shop/templates/shop/profile.html:35
+msgid "Manage your passkeys and Hanko profile below."
+msgstr "Gérez vos clés d'accès et votre profil Hanko ci-dessous."
 
 #: src/shop/templates/shop/report_form.html:5
 msgid "Add Maintenance Report"
@@ -2467,25 +2565,29 @@ msgstr "Pièce jointe introuvable."
 msgid "Attachment has no file."
 msgstr "La pièce jointe n'a aucun fichier."
 
-#: src/shop/views/auth.py:50
+#: src/shop/views/auth.py:51
 msgid "Login"
 msgstr "Connexion"
 
-#: src/shop/views/auth.py:51
+#: src/shop/views/auth.py:52
 msgid "Authenticate with Hanko to continue"
 msgstr "Authentifiez-vous avec Hanko pour continuer"
 
-#: src/shop/views/auth.py:67
+#: src/shop/views/auth.py:68
+msgid "Profile updated."
+msgstr "Profil mis à jour."
+
+#: src/shop/views/auth.py:78
 #, fuzzy
 #| msgid "Manage your account and preferences"
-msgid "Manage your Hanko account, emails, and passkeys"
+msgid "Manage your account and preferences"
 msgstr "Gérez votre compte et vos préférences"
 
-#: src/shop/views/auth.py:91
+#: src/shop/views/auth.py:103
 msgid "Not found."
 msgstr "Introuvable."
 
-#: src/shop/views/auth.py:155
+#: src/shop/views/auth.py:168
 msgid "Logged out successfully."
 msgstr "Déconnexion réussie."
 
@@ -2926,95 +3028,17 @@ msgstr "Ajouter une preuve pour %(name)s"
 msgid "Update the document or notes supporting this shop"
 msgstr "Ajoutez un document ou des notes à l'appui de cet atelier"
 
-#~ msgid "First name"
-#~ msgstr "Prénom"
+#: src/shop/views/onboarding.py:38
+msgid "Welcome! Your profile is ready."
+msgstr "Bienvenue ! Votre profil est prêt."
 
-#~ msgid "Last name"
-#~ msgstr "Nom de famille"
+#: src/shop/views/onboarding.py:52
+msgid "Welcome"
+msgstr "Bienvenue"
 
-#~ msgid "I am a mechanic"
-#~ msgstr "Je suis mécanicien"
-
-#~ msgid ""
-#~ "Enable mechanic mode to be assignable to work jobs and reports. You can "
-#~ "change this later in your profile."
-#~ msgstr ""
-#~ "Activez le mode mécanicien pour pouvoir être assigné à des travaux et des "
-#~ "rapports. Vous pourrez modifier ce choix plus tard dans votre profil."
-
-#~ msgid "Please enter your first or last name."
-#~ msgstr "Veuillez entrer votre prénom ou votre nom de famille."
-
-#~ msgid "Username"
-#~ msgstr "Nom d'utilisateur"
-
-#~ msgid "Phone number"
-#~ msgstr "Numéro de téléphone"
-
-#~ msgid "Display name"
-#~ msgstr "Nom d'affichage"
-
-#~ msgid "Mechanic mode"
-#~ msgstr "Mode mécanicien"
-
-#~ msgid ""
-#~ "If left blank, your username will be set to your first and last name."
-#~ msgstr ""
-#~ "Si laissé vide, votre nom d'utilisateur sera défini à partir de votre "
-#~ "prénom et nom de famille."
-
-#~ msgid "Optional."
-#~ msgstr "Facultatif."
-
-#~ msgid ""
-#~ "How your name appears in the app. If left blank, your username is used."
-#~ msgstr ""
-#~ "Comment votre nom apparaît dans l'application. Si laissé vide, votre nom "
-#~ "d'utilisateur est utilisé."
-
-#~ msgid "Enable mechanic mode to be assignable to work jobs and reports."
-#~ msgstr ""
-#~ "Activez le mode mécanicien pour pouvoir être assigné à des travaux et des "
-#~ "rapports."
-
-#~ msgid "This username is already taken."
-#~ msgstr "Ce nom d'utilisateur est déjà pris."
-
-#~ msgid "This email is already in use."
-#~ msgstr "Ce courriel est déjà utilisé."
-
-#~ msgid "phone number"
-#~ msgstr "numéro de téléphone"
-
-#~ msgid "onboarding completed"
-#~ msgstr "intégration terminée"
-
-#~ msgid "Get started"
-#~ msgstr "Commencer"
-
-#~ msgid "Account information"
-#~ msgstr "Informations du compte"
-
-#~ msgid "Update profile"
-#~ msgstr "Mettre à jour le profil"
-
-#~ msgid "Hanko account"
-#~ msgstr "Compte Hanko"
-
-#~ msgid "Manage your passkeys and Hanko profile below."
-#~ msgstr "Gérez vos clés d'accès et votre profil Hanko ci-dessous."
-
-#~ msgid "Profile updated."
-#~ msgstr "Profil mis à jour."
-
-#~ msgid "Welcome! Your profile is ready."
-#~ msgstr "Bienvenue ! Votre profil est prêt."
-
-#~ msgid "Welcome"
-#~ msgstr "Bienvenue"
-
-#~ msgid "Let’s finish setting up your account."
-#~ msgstr "Terminons la configuration de votre compte."
+#: src/shop/views/onboarding.py:53
+msgid "Let’s finish setting up your account."
+msgstr "Terminons la configuration de votre compte."
 
 #~ msgid "Use structured checklist"
 #~ msgstr "Utiliser une liste de vérification structurée"

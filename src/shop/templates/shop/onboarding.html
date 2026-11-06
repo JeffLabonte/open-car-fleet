@@ -1,0 +1,29 @@
+{% extends 'shop/base.html' %}
+{% load i18n %}
+
+{% block content %}
+  <section class="content-card auth-card box" data-testid="onboarding-card">
+    {% include 'shop/partials/_page_header.html' %}
+
+    <form method="post" data-testid="onboarding-form" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="notification is-danger mb-4">
+          {{ form.non_field_errors }}
+        </div>
+      {% endif %}
+
+      <div class="form-grid">
+        {% for field in form.visible_fields %}
+          {% include 'shop/partials/_form_field.html' %}
+        {% endfor %}
+      </div>
+
+      <div class="field is-grouped">
+        <div class="control">
+          <button class="button is-primary" type="submit">{% translate 'Get started' %}</button>
+        </div>
+      </div>
+    </form>
+  </section>
+{% endblock %}
