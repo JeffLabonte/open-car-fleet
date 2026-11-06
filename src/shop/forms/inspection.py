@@ -14,11 +14,6 @@ from shop.models.inspection_point import InspectionPoint
 
 
 class InspectionForm(StagedAttachmentsMixin, forms.ModelForm):
-    use_structured_checklist = forms.BooleanField(
-        required=False,
-        label=_("Use structured checklist"),
-        help_text=_("Walk through a detailed inspection checklist."),
-    )
     enabled_categories = forms.CharField(
         required=False,
         widget=forms.HiddenInput(),

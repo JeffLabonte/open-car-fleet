@@ -314,7 +314,6 @@ class InspectionViewIntegrationTests(ShopTestCase):
         )
 
         inspection = Inspection.objects.get(car=self.car)
-        self.assertTrue(inspection.use_structured_checklist)
         self.assertEqual(inspection.points.count(), len(flatten_checklist()))
         self.assertRedirects(
             response,
@@ -324,7 +323,6 @@ class InspectionViewIntegrationTests(ShopTestCase):
     def test_update_form_renders_checklist_when_points_exist(self):
         inspection = Inspection.objects.create(
             car=self.car,
-            use_structured_checklist=True,
         )
         InspectionPoint.objects.create(
             inspection=inspection,
@@ -344,7 +342,6 @@ class InspectionViewIntegrationTests(ShopTestCase):
     def test_update_structured_inspection_persists_point_values(self):
         inspection = Inspection.objects.create(
             car=self.car,
-            use_structured_checklist=True,
         )
         point = InspectionPoint.objects.create(
             inspection=inspection,
@@ -382,7 +379,6 @@ class InspectionViewIntegrationTests(ShopTestCase):
     def test_update_structured_inspection_persists_enabled_categories(self):
         inspection = Inspection.objects.create(
             car=self.car,
-            use_structured_checklist=True,
         )
         point = InspectionPoint.objects.create(
             inspection=inspection,
@@ -533,7 +529,6 @@ class InspectionViewIntegrationTests(ShopTestCase):
     def test_finalize_inspection_sets_is_draft_false(self):
         inspection = Inspection.objects.create(
             car=self.car,
-            use_structured_checklist=True,
             is_draft=True,
         )
 
@@ -554,7 +549,6 @@ class InspectionViewIntegrationTests(ShopTestCase):
     def test_save_draft_keeps_is_draft_true(self):
         inspection = Inspection.objects.create(
             car=self.car,
-            use_structured_checklist=True,
             is_draft=True,
         )
 
@@ -595,7 +589,6 @@ class InspectionViewIntegrationTests(ShopTestCase):
     def test_autosave_endpoint_updates_draft(self):
         inspection = Inspection.objects.create(
             car=self.car,
-            use_structured_checklist=True,
             is_draft=True,
         )
 
@@ -677,7 +670,6 @@ class InspectionViewIntegrationTests(ShopTestCase):
     def test_car_detail_shows_structured_inspection_summary(self):
         inspection = Inspection.objects.create(
             car=self.car,
-            use_structured_checklist=True,
             inspected_at=timezone.make_aware(datetime(2026, 10, 20, 14, 30)),
         )
         InspectionPoint.objects.create(
@@ -708,7 +700,6 @@ class InspectionViewIntegrationTests(ShopTestCase):
     def test_history_page_shows_structured_inspection_points(self):
         inspection = Inspection.objects.create(
             car=self.car,
-            use_structured_checklist=True,
             inspected_at=timezone.make_aware(datetime(2026, 10, 20, 14, 30)),
         )
         InspectionPoint.objects.create(

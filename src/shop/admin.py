@@ -43,8 +43,8 @@ class ReportAdmin(admin.ModelAdmin):
 
 @admin.register(Inspection)
 class InspectionAdmin(admin.ModelAdmin):
-    list_display = ("car", "inspected_at", "mileage", "use_structured_checklist", "created_by")
-    list_filter = ("inspected_at", "use_structured_checklist")
+    list_display = ("car", "inspected_at", "mileage", "is_draft", "created_by")
+    list_filter = ("inspected_at", "is_draft")
     search_fields = ("car__usual_name", "car__vin", "car__license_plate", "notes")
     inlines = (AttachmentInline, InspectionPointInline)
 

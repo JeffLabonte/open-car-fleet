@@ -37,7 +37,6 @@ def inspection_create(request: HttpRequest, car_pk: str) -> HttpResponse:
                 inspection.car = car
                 inspection.created_by = request.user
                 inspection.is_draft = True
-                inspection.use_structured_checklist = True
                 inspection.save()
                 create_inspection_points(inspection)
                 save_attachments(

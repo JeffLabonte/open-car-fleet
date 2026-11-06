@@ -49,17 +49,16 @@
           {% endif %}
           <p class="report-description">{{ inspection.notes|linebreaksbr|default:_('No inspection findings provided.') }}</p>
 
-          {% if inspection.use_structured_checklist %}
-            {% with counts=inspection.point_status_counts %}
-              <div class="tags are-medium mt-3" data-testid="inspection-summary-{{ inspection.pk }}">
-                <span class="tag is-success">{% translate 'OK' %}: {{ counts.pass }}</span>
-                <span class="tag is-warning">{% translate 'Attention' %}: {{ counts.attention }}</span>
-                <span class="tag is-danger">{% translate 'Needs repair' %}: {{ counts.repair }}</span>
-                <span class="tag is-light">{% translate 'N/A' %}: {{ counts.na }}</span>
-              </div>
-            {% endwith %}
+          {% with counts=inspection.point_status_counts %}
+            <div class="tags are-medium mt-3" data-testid="inspection-summary-{{ inspection.pk }}">
+              <span class="tag is-success">{% translate 'OK' %}: {{ counts.pass }}</span>
+              <span class="tag is-warning">{% translate 'Attention' %}: {{ counts.attention }}</span>
+              <span class="tag is-danger">{% translate 'Needs repair' %}: {{ counts.repair }}</span>
+              <span class="tag is-light">{% translate 'N/A' %}: {{ counts.na }}</span>
+            </div>
+          {% endwith %}
 
-            {% if inspection.points.all %}
+          {% if inspection.points.all %}
               <div class="table-container mt-4">
                 <div class="table-wrap">
                   <table class="table is-fullwidth is-striped table--responsive" data-testid="inspection-points-{{ inspection.pk }}">
@@ -92,7 +91,6 @@
             {% else %}
               <p class="has-text-grey mt-3">{% translate 'No checklist items recorded for this inspection.' %}</p>
             {% endif %}
-          {% endif %}
 
           {% include 'shop/partials/_inspection_attachments.html' with inspection=inspection %}
 

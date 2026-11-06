@@ -37,11 +37,6 @@ class Inspection(models.Model):
     inspected_at = models.DateTimeField(default=timezone.now)
     mileage = models.PositiveIntegerField(null=True, blank=True)
     notes = models.TextField(blank=True)
-    use_structured_checklist = models.BooleanField(
-        default=False,
-        verbose_name=_("Use structured checklist"),
-        help_text=_("Walk through a detailed inspection checklist."),
-    )
     enabled_categories = models.JSONField(
         default=list,
         blank=True,
