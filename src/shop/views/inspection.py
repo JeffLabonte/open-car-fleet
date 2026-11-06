@@ -3,6 +3,7 @@ from django.db import transaction
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
@@ -23,33 +24,24 @@ def _get_user_car(request: HttpRequest, pk: str):
 
 
 @hanko_login_required
+@require_POST
 def inspection_create(request: HttpRequest, car_pk: str) -> HttpResponse:
+    """Create a new draft inspection with the full checklist and redirect to edit it."""
     car = _get_user_car(request, car_pk)
     if not FleetSharingPermissions(request.user, car.fleet).can_edit_fleet_data:
         messages.error(request, _("You do not have permission to add inspections to this car."))
         return redirect(reverse("shop-car-detail", args=[car.pk]))
 
-    if request.method == "POST":
-        form = InspectionForm(request.POST, request.FILES, user=request.user)
-        if form.is_valid():
-            with transaction.atomic():
-                inspection = form.save(commit=False)
-                inspection.car = car
-                inspection.created_by = request.user
-                inspection.is_draft = True
-                inspection.save()
-                create_inspection_points(inspection)
-                save_attachments(
-                    inspection,
-                    form.cleaned_data.get("attachments", []),
-                    form.cleaned_data.get("external_links", []),
-                    staged=form.cleaned_data.get("staged_attachments"),
-                )
-            return redirect(reverse("shop-inspection-update", args=[car.pk, inspection.pk]))
-    else:
-        form = InspectionForm(user=request.user)
+    with transaction.atomic():
+        inspection = Inspection.objects.create(
+            car=car,
+            inspected_at=timezone.now(),
+            created_by=request.user,
+            is_draft=True,
+        )
+        create_inspection_points(inspection)
 
-    return render(request, "shop/inspection_form.html", {"form": form, "is_create": True, "car": car})
+    return redirect(reverse("shop-inspection-update", args=[car.pk, inspection.pk]))
 
 
 def _save_inspection_from_request(

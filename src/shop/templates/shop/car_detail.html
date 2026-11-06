@@ -57,7 +57,10 @@
         </a>
       {% endif %}
       {% if can_edit_fleet_data %}
-        <a class="button is-primary is-small" href="{% url 'shop-inspection-create' car.pk %}">{% translate 'Add inspection' %}</a>
+        <form method="post" action="{% url 'shop-inspection-create' car.pk %}" class="is-inline">
+          {% csrf_token %}
+          <button class="button is-primary is-small" type="submit" data-testid="add-inspection-button">{% translate 'Add inspection' %}</button>
+        </form>
       {% endif %}
     </div>
   </section>

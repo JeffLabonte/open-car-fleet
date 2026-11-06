@@ -14,7 +14,10 @@
       </div>
       <div class="page-actions">
         {% if can_edit_fleet_data %}
-          <a class="button is-primary" href="{% url 'shop-inspection-create' car.pk %}">{% translate 'Add inspection' %}</a>
+          <form method="post" action="{% url 'shop-inspection-create' car.pk %}" class="is-inline">
+            {% csrf_token %}
+            <button class="button is-primary" type="submit" data-testid="add-inspection-button">{% translate 'Add inspection' %}</button>
+          </form>
         {% endif %}
         <a class="button is-light" href="{% url 'shop-car-detail' car.pk %}">{% translate 'Back to vehicle' %}</a>
       </div>

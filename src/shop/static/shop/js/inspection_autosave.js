@@ -63,6 +63,10 @@
   form.addEventListener("input", scheduleAutosave);
   form.addEventListener("change", scheduleAutosave);
 
+  // Save the initial blank draft as soon as the page loads so the inspection
+  // is persisted even if the mechanic navigates away without changing anything.
+  scheduleAutosave();
+
   // Cancel any pending autosave when the form is submitted normally; the
   // submit action already persists the inspection and a racing autosave could
   // overwrite a finalize with a draft state.

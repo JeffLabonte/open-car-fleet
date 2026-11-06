@@ -123,7 +123,11 @@ def start_an_inspection(
     inspected_at: str,
     notes: str,
 ):
-    firefox_driver.get(_url(f"/cars/{inspection_state['car_pk']}/inspections/add/"))
+    firefox_driver.get(_url(f"/cars/{inspection_state['car_pk']}/"))
+    _wait(firefox_driver).until(
+        ec.presence_of_element_located((By.CSS_SELECTOR, '[data-testid="add-inspection-button"]'))
+    )
+    firefox_driver.find_element(By.CSS_SELECTOR, '[data-testid="add-inspection-button"]').click()
     _wait(firefox_driver).until(ec.presence_of_element_located((By.NAME, "inspected_at")))
     firefox_driver.execute_script(
         """
@@ -135,8 +139,6 @@ def start_an_inspection(
         inspected_at,
     )
     firefox_driver.find_element(By.NAME, "notes").send_keys(notes)
-    firefox_driver.find_element(By.CSS_SELECTOR, '#main-content form button[type="submit"]').click()
-    _wait(firefox_driver).until(ec.presence_of_element_located((By.CSS_SELECTOR, '[data-testid="finalize-button"]')))
 
 
 @when("they finalize the inspection")

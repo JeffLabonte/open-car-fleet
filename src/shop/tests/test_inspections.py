@@ -9,7 +9,7 @@ from django.utils import timezone
 
 from shop.forms import InspectionForm, InspectionPointForm, WorkJobForm
 from shop.inspection_checklist import flatten_checklist
-from shop.models import Attachment, Inspection, WorkJob
+from shop.models import Inspection, WorkJob
 from shop.models.fleet import FleetMembership
 from shop.models.inspection_point import InspectionPoint
 from shop.tests.helpers import PNG_SIGNATURE, ShopTestCase
@@ -125,21 +125,8 @@ class InspectionViewIntegrationTests(ShopTestCase):
         self.car = self.create_car()
         self.client.force_login(self.owner)
 
-    def test_create_inspection_with_photo_document_and_external_link(self):
-        response = self.client.post(
-            reverse("shop-inspection-create", args=[self.car.pk]),
-            data={
-                "inspected_at": "2026-10-20T14:30",
-                "mileage": "12345",
-                "notes": "Brake wear observed.",
-                "external_links": "https://example.com/inspection.pdf",
-                "attachments": SimpleUploadedFile(
-                    "brakes.png",
-                    PNG_SIGNATURE,
-                    content_type="image/png",
-                ),
-            },
-        )
+    def test_create_inspection_redirects_to_update_form(self):
+        response = self.client.post(reverse("shop-inspection-create", args=[self.car.pk]))
 
         inspection = Inspection.objects.get(car=self.car)
         self.assertRedirects(
@@ -147,11 +134,12 @@ class InspectionViewIntegrationTests(ShopTestCase):
             reverse("shop-inspection-update", args=[self.car.pk, inspection.pk]),
         )
         self.assertTrue(inspection.is_draft)
-        self.assertEqual(inspection.inspected_at, timezone.make_aware(datetime(2026, 10, 20, 14, 30)))
         self.assertEqual(inspection.created_by, self.owner)
-        self.assertEqual(inspection.attachments.count(), 2)
-        self.assertEqual(inspection.attachments.filter(source_type=Attachment.SOURCE_UPLOAD).count(), 1)
-        self.assertEqual(inspection.attachments.filter(source_type=Attachment.SOURCE_EXTERNAL).count(), 1)
+        self.assertEqual(inspection.points.count(), len(flatten_checklist()))
+
+    def test_create_inspection_rejects_get(self):
+        response = self.client.get(reverse("shop-inspection-create", args=[self.car.pk]))
+        self.assertEqual(response.status_code, 405)
 
     def test_vehicle_detail_shows_only_latest_inspection_and_recommended_work(self):
         Inspection.objects.create(
@@ -233,11 +221,12 @@ class InspectionViewIntegrationTests(ShopTestCase):
         work_job = WorkJob.objects.get(title="Replace tire")
         self.assertEqual(work_job.inspection, inspection)
 
-    def test_create_inspection_form_renders_with_initial_datetime(self):
-        response = self.client.get(reverse("shop-inspection-create", args=[self.car.pk]))
+    def test_create_inspection_button_is_post_form(self):
+        response = self.client.get(reverse("shop-car-detail", args=[self.car.pk]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertIsNotNone(response.context["form"].fields["inspected_at"].initial)
+        self.assertContains(response, 'action="' + reverse("shop-inspection-create", args=[self.car.pk]) + '"')
+        self.assertContains(response, 'data-testid="add-inspection-button"')
 
     def test_viewer_can_read_history_but_cannot_create_inspection(self):
         viewer = self.create_user(username="inspection-viewer", email="inspection-viewer@example.com")
@@ -249,7 +238,7 @@ class InspectionViewIntegrationTests(ShopTestCase):
         self.client.force_login(viewer)
 
         history_response = self.client.get(reverse("shop-inspection-history", args=[self.car.pk]))
-        create_response = self.client.get(reverse("shop-inspection-create", args=[self.car.pk]))
+        create_response = self.client.post(reverse("shop-inspection-create", args=[self.car.pk]))
 
         self.assertEqual(history_response.status_code, 200)
         self.assertRedirects(create_response, reverse("shop-car-detail", args=[self.car.pk]))
@@ -303,15 +292,7 @@ class InspectionViewIntegrationTests(ShopTestCase):
         self.assertContains(response, "This car cannot be deleted because it has inspection history.")
 
     def test_create_inspection_creates_all_checklist_points_by_default(self):
-        response = self.client.post(
-            reverse("shop-inspection-create", args=[self.car.pk]),
-            data={
-                "inspected_at": "2026-10-20T14:30",
-                "mileage": "12345",
-                "notes": "Detailed inspection.",
-                "external_links": "",
-            },
-        )
+        response = self.client.post(reverse("shop-inspection-create", args=[self.car.pk]))
 
         inspection = Inspection.objects.get(car=self.car)
         self.assertEqual(inspection.points.count(), len(flatten_checklist()))
@@ -509,15 +490,7 @@ class InspectionViewIntegrationTests(ShopTestCase):
         self.assertIn("measurement", form.errors)
 
     def test_create_inspection_starts_as_draft(self):
-        response = self.client.post(
-            reverse("shop-inspection-create", args=[self.car.pk]),
-            data={
-                "inspected_at": "2026-10-20T14:30",
-                "mileage": "12345",
-                "notes": "Draft inspection.",
-                "external_links": "",
-            },
-        )
+        response = self.client.post(reverse("shop-inspection-create", args=[self.car.pk]))
 
         inspection = Inspection.objects.get(car=self.car)
         self.assertTrue(inspection.is_draft)
@@ -720,13 +693,6 @@ class InspectionViewIntegrationTests(ShopTestCase):
         self.assertContains(response, "Brake wear (general)")
         self.assertContains(response, "Needs repair")
         self.assertContains(response, "2mm")
-
-    def test_create_form_shows_create_inspection_button(self):
-        response = self.client.get(reverse("shop-inspection-create", args=[self.car.pk]))
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Create inspection")
-        self.assertNotContains(response, "Finalize inspection")
 
     def test_draft_update_form_shows_save_draft_and_finalize_buttons(self):
         inspection = Inspection.objects.create(car=self.car, is_draft=True)
