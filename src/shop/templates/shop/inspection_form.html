@@ -53,63 +53,69 @@
           <span class="inspection-category__chevron" aria-hidden="true"></span>
         </summary>
         <div class="inspection-category__body">
-          <table class="table inspection-points-table is-fullwidth">
-            <thead>
-              <tr>
-                <th scope="col">{% translate 'Item' %}</th>
-                <th scope="col">{% translate 'Status' %}</th>
-                <th scope="col">{% translate 'Measurement / spec' %}</th>
-                <th scope="col">{% translate 'Notes' %}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for point_form in group.list %}
-                <tr class="inspection-point" data-testid="inspection-point-{{ point_form.instance.code }}">
-                  <td class="inspection-point__label" data-label="{% translate 'Item' %}">
-                    <label class="label" for="{{ point_form.status.id_for_label }}">{{ point_form.instance.label }}</label>
-                  </td>
-                  <td class="inspection-point__status" data-label="{% translate 'Status' %}">
-                    <div class="select is-fullwidth">{{ point_form.status }}</div>
-                  </td>
-                  <td class="inspection-point__measurement" data-label="{% translate 'Measurement / spec' %}">
-                    {% if point_form.instance.code == "rear_brake_type" %}
-                      <div class="select is-fullwidth">
-                        <select name="{{ point_form.measurement.html_name }}" id="{{ point_form.measurement.id_for_label }}" data-rear-brake-type-select>
-                          <option value="" {% if not point_form.measurement.value %}selected{% endif %}>{% translate '— Select —' %}</option>
-                          <option value="disc" {% if point_form.measurement.value == "disc" %}selected{% endif %}>{% translate 'Disc' %}</option>
-                          <option value="drum" {% if point_form.measurement.value == "drum" %}selected{% endif %}>{% translate 'Drum' %}</option>
-                        </select>
-                      </div>
-                    {% elif point_form.instance.code in "cooling_fluid_level,brake_fluid_level,engine_oil_level" %}
-                      <div class="select is-fullwidth">
-                        <select name="{{ point_form.measurement.html_name }}" id="{{ point_form.measurement.id_for_label }}">
-                          <option value="" {% if not point_form.measurement.value %}selected{% endif %}>{% translate '— Select —' %}</option>
-                          <option value="high" {% if point_form.measurement.value == "high" %}selected{% endif %}>{% translate 'High' %}</option>
-                          <option value="ok" {% if point_form.measurement.value == "ok" %}selected{% endif %}>{% translate 'OK' %}</option>
-                          <option value="too low" {% if point_form.measurement.value == "too low" %}selected{% endif %}>{% translate 'Too low' %}</option>
-                          <option value="missing" {% if point_form.measurement.value == "missing" %}selected{% endif %}>{% translate 'Missing' %}</option>
-                        </select>
-                      </div>
-                    {% elif point_form.instance.code == "any_leaks" %}
-                      <div class="select is-fullwidth">
-                        <select name="{{ point_form.measurement.html_name }}" id="{{ point_form.measurement.id_for_label }}">
-                          <option value="" {% if not point_form.measurement.value %}selected{% endif %}>{% translate '— Select —' %}</option>
-                          <option value="none" {% if point_form.measurement.value == "none" %}selected{% endif %}>{% translate 'None' %}</option>
-                          <option value="present" {% if point_form.measurement.value == "present" %}selected{% endif %}>{% translate 'Present' %}</option>
-                        </select>
-                      </div>
-                    {% else %}
-                      {{ point_form.measurement }}
-                    {% endif %}
-                  </td>
-                  <td class="inspection-point__notes" data-label="{% translate 'Notes' %}">
-                    {{ point_form.notes }}
-                  </td>
+          {% regroup group.list by instance.group as grouped_by_subgroup %}
+          {% for subgroup in grouped_by_subgroup %}
+            {% if subgroup.grouper %}
+              <h4 class="inspection-group-heading">{{ subgroup.grouper }}</h4>
+            {% endif %}
+            <table class="table inspection-points-table is-fullwidth">
+              <thead>
+                <tr>
+                  <th scope="col">{% translate 'Item' %}</th>
+                  <th scope="col">{% translate 'Status' %}</th>
+                  <th scope="col">{% translate 'Measurement / spec' %}</th>
+                  <th scope="col">{% translate 'Notes' %}</th>
                 </tr>
-                {% for hidden in point_form.hidden_fields %}{{ hidden }}{% endfor %}
-              {% endfor %}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {% for point_form in subgroup.list %}
+                  <tr class="inspection-point" data-testid="inspection-point-{{ point_form.instance.code }}">
+                    <td class="inspection-point__label" data-label="{% translate 'Item' %}">
+                      <label class="label" for="{{ point_form.status.id_for_label }}">{{ point_form.instance.label }}</label>
+                    </td>
+                    <td class="inspection-point__status" data-label="{% translate 'Status' %}">
+                      <div class="select is-fullwidth">{{ point_form.status }}</div>
+                    </td>
+                    <td class="inspection-point__measurement" data-label="{% translate 'Measurement / spec' %}">
+                      {% if point_form.instance.code == "rear_brake_type" %}
+                        <div class="select is-fullwidth">
+                          <select name="{{ point_form.measurement.html_name }}" id="{{ point_form.measurement.id_for_label }}" data-rear-brake-type-select>
+                            <option value="" {% if not point_form.measurement.value %}selected{% endif %}>{% translate '— Select —' %}</option>
+                            <option value="disc" {% if point_form.measurement.value == "disc" %}selected{% endif %}>{% translate 'Disc' %}</option>
+                            <option value="drum" {% if point_form.measurement.value == "drum" %}selected{% endif %}>{% translate 'Drum' %}</option>
+                          </select>
+                        </div>
+                      {% elif point_form.instance.code == "brake_fluid_level" %}
+                        <div class="select is-fullwidth">
+                          <select name="{{ point_form.measurement.html_name }}" id="{{ point_form.measurement.id_for_label }}">
+                            <option value="" {% if not point_form.measurement.value %}selected{% endif %}>{% translate '— Select —' %}</option>
+                            <option value="high" {% if point_form.measurement.value == "high" %}selected{% endif %}>{% translate 'High' %}</option>
+                            <option value="ok" {% if point_form.measurement.value == "ok" %}selected{% endif %}>{% translate 'OK' %}</option>
+                            <option value="too low" {% if point_form.measurement.value == "too low" %}selected{% endif %}>{% translate 'Too low' %}</option>
+                            <option value="missing" {% if point_form.measurement.value == "missing" %}selected{% endif %}>{% translate 'Missing' %}</option>
+                          </select>
+                        </div>
+                      {% elif point_form.instance.code == "fluid_leaks" %}
+                        <div class="select is-fullwidth">
+                          <select name="{{ point_form.measurement.html_name }}" id="{{ point_form.measurement.id_for_label }}">
+                            <option value="" {% if not point_form.measurement.value %}selected{% endif %}>{% translate '— Select —' %}</option>
+                            <option value="none" {% if point_form.measurement.value == "none" %}selected{% endif %}>{% translate 'None' %}</option>
+                            <option value="present" {% if point_form.measurement.value == "present" %}selected{% endif %}>{% translate 'Present' %}</option>
+                          </select>
+                        </div>
+                      {% else %}
+                        {{ point_form.measurement }}
+                      {% endif %}
+                    </td>
+                    <td class="inspection-point__notes" data-label="{% translate 'Notes' %}">
+                      {{ point_form.notes }}
+                    </td>
+                  </tr>
+                  {% for hidden in point_form.hidden_fields %}{{ hidden }}{% endfor %}
+                {% endfor %}
+              </tbody>
+            </table>
+          {% endfor %}
         </div>
       </details>
     {% endfor %}

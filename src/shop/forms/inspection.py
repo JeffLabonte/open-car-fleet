@@ -235,6 +235,7 @@ def create_inspection_points(inspection: Inspection) -> None:
             inspection=inspection,
             category=item["category"],
             category_label=item["category_label"],
+            group=item.get("group", ""),
             code=item["code"],
             label=item["label"],
             position=item["position"],

@@ -9,7 +9,7 @@ Feature: Vehicle inspection history
     And an inspection car "Inspection Vehicle" exists
     When they start an inspection at "2026-10-20T14:30" with notes "DRAFT_FINDINGS"
     Then the inspection form shows the save draft and finalize buttons
-    And the detailed checklist is visible with fluids and filters items
+    And the detailed checklist is visible with under the hood items
 
   Scenario: Finalizing an inspection saves it and returns to the car page
     Given a running application server for inspections

@@ -1067,6 +1067,21 @@
   display: none;
 }
 
+.inspection-group-heading {
+  margin: var(--space-4) 0 var(--space-2);
+  padding-bottom: var(--space-1);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.inspection-group-heading:first-child {
+  margin-top: 0;
+}
+
 @media (max-width: 39.99rem) {
   .inspection-category__summary {
     flex-wrap: wrap;

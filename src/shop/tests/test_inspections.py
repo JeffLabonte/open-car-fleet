@@ -90,13 +90,13 @@ class InspectionModelAndFormTests(ShopTestCase):
         point = InspectionPoint.objects.create(
             inspection=inspection,
             category="brakes",
-            category_label="Brake system",
-            code="brake_wear",
-            label="Brake wear",
+            category_label="Brakes",
+            code="brake_wear_general",
+            label="Brake wear (general)",
             status=InspectionPoint.STATUS_PASS,
             position=0,
         )
-        self.assertIn("Brake wear", str(point))
+        self.assertIn("Brake wear (general)", str(point))
         self.assertIn("OK / Pass", str(point))
 
     def test_work_job_rejects_inspection_from_another_car(self):
@@ -327,17 +327,17 @@ class InspectionViewIntegrationTests(ShopTestCase):
         InspectionPoint.objects.create(
             inspection=inspection,
             category="brakes",
-            category_label="Brake system",
-            code="brake_wear",
-            label="Brake wear",
+            category_label="Brakes",
+            code="brake_wear_general",
+            label="Brake wear (general)",
             position=0,
         )
 
         response = self.client.get(reverse("shop-inspection-update", args=[self.car.pk, inspection.pk]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Brake system")
-        self.assertContains(response, "Brake wear")
+        self.assertContains(response, "Brakes")
+        self.assertContains(response, "Brake wear (general)")
 
     def test_update_structured_inspection_persists_point_values(self):
         inspection = Inspection.objects.create(
@@ -346,9 +346,9 @@ class InspectionViewIntegrationTests(ShopTestCase):
         point = InspectionPoint.objects.create(
             inspection=inspection,
             category="brakes",
-            category_label="Brake system",
-            code="brake_wear",
-            label="Brake wear",
+            category_label="Brakes",
+            code="brake_wear_general",
+            label="Brake wear (general)",
             position=0,
         )
 
@@ -383,9 +383,9 @@ class InspectionViewIntegrationTests(ShopTestCase):
         point = InspectionPoint.objects.create(
             inspection=inspection,
             category="brakes",
-            category_label="Brake system",
-            code="brake_wear",
-            label="Brake wear",
+            category_label="Brakes",
+            code="brake_wear_general",
+            label="Brake wear (general)",
             position=0,
         )
 
@@ -675,18 +675,18 @@ class InspectionViewIntegrationTests(ShopTestCase):
         InspectionPoint.objects.create(
             inspection=inspection,
             category="brakes",
-            category_label="Brake system",
-            code="brake_wear",
-            label="Brake wear",
+            category_label="Brakes",
+            code="brake_wear_general",
+            label="Brake wear (general)",
             status=InspectionPoint.STATUS_REPAIR,
             position=0,
         )
         InspectionPoint.objects.create(
             inspection=inspection,
-            category="tires_wheels",
-            category_label="Tires & wheels",
-            code="tire_wear",
-            label="Is there any wear",
+            category="tires",
+            category_label="Tires",
+            code="visual_wear_front_right",
+            label="Visual wear - front right",
             status=InspectionPoint.STATUS_PASS,
             position=1,
         )
@@ -705,9 +705,9 @@ class InspectionViewIntegrationTests(ShopTestCase):
         InspectionPoint.objects.create(
             inspection=inspection,
             category="brakes",
-            category_label="Brake system",
-            code="brake_wear",
-            label="Brake wear",
+            category_label="Brakes",
+            code="brake_wear_general",
+            label="Brake wear (general)",
             status=InspectionPoint.STATUS_REPAIR,
             measurement="2mm",
             position=0,
@@ -716,8 +716,8 @@ class InspectionViewIntegrationTests(ShopTestCase):
         response = self.client.get(reverse("shop-inspection-history", args=[self.car.pk]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Brake system")
-        self.assertContains(response, "Brake wear")
+        self.assertContains(response, "Brakes")
+        self.assertContains(response, "Brake wear (general)")
         self.assertContains(response, "Needs repair")
         self.assertContains(response, "2mm")
 

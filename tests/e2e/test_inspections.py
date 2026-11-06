@@ -183,18 +183,17 @@ def inspection_form_shows_draft_actions(firefox_driver: webdriver.Firefox):
     _wait(firefox_driver).until(ec.presence_of_element_located((By.CSS_SELECTOR, '[data-testid="finalize-button"]')))
 
 
-@then("the detailed checklist is visible with fluids and filters items")
-def detailed_checklist_with_fluids_and_filters(firefox_driver: webdriver.Firefox):
+@then("the detailed checklist is visible with under the hood items")
+def detailed_checklist_with_under_hood_items(firefox_driver: webdriver.Firefox):
     _wait(firefox_driver).until(
-        ec.presence_of_element_located((By.CSS_SELECTOR, '[data-testid="inspection-category-fluids_filters"]'))
+        ec.presence_of_element_located((By.CSS_SELECTOR, '[data-testid="inspection-category-under_hood"]'))
     )
     source = firefox_driver.page_source
-    assert "Engine filter" in source
-    assert "Cabin filter" in source
-    assert "Cooling fluid level" in source
+    assert "Brake booster" in source
+    assert "Master cylinder" in source
+    assert "Power steering fluid" in source
     assert "Brake fluid level" in source
-    assert "Engine oil level" in source
-    assert "Any leaks" in source
+    assert "Drive belts" in source
 
 
 @when("they select all checklist sections")

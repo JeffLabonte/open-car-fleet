@@ -26,6 +26,12 @@ class InspectionPoint(models.Model):
     )
     category = models.CharField(max_length=50)
     category_label = models.CharField(max_length=200, blank=True)
+    group = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_("Group"),
+        help_text=_("Wheel/axle subgroup within a category."),
+    )
     code = models.CharField(max_length=50)
     label = models.CharField(max_length=200)
     status = models.CharField(

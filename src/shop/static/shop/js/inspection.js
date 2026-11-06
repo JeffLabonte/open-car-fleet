@@ -94,11 +94,12 @@
 
     const categoryCode = category.dataset.category;
     const enabledCategories = getEnabledCategories();
-    // Sections are enabled by default so mechanics can see the whole checklist.
+    // New inspections enable every section by default, but keep the accordion
+    // collapsed so the page stays tidy and easy to scroll on mobile.
     const isEnabled = enabledCategories.length === 0 || enabledCategories.includes(categoryCode);
 
     toggle.checked = isEnabled;
-    category.open = isEnabled;
+    category.open = false;
     setCategoryEnabled(category, isEnabled);
 
     toggle.addEventListener("change", () => {
