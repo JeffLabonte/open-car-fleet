@@ -81,7 +81,9 @@ jobs:
         run: poetry run pytest -q --cov --junitxml=junit.xml -o junit_family=legacy
 
       - name: Upload coverage
-        run: poetry run codecovcli do-upload --report-type test_results --file junit.xml
+        run: |
+           poetry run codecovcli do-upload --report-type test_results --file junit.xml && \
+           poetry run codecovcli upload-process --file junit.xml
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
