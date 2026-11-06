@@ -11,6 +11,11 @@
   const selectFleetLabel = form.dataset.selectFleetLabel || 'Select a fleet first';
   const placeholderUuid = '00000000-0000-0000-0000-000000000000';
 
+  const isSafeCarPk = (value) => {
+    // Accept UUIDs (current template placeholder format) or numeric IDs.
+    return /^[0-9a-fA-F-]{36}$/.test(value) || /^\d+$/.test(value);
+  };
+
   const setCarOptions = (cars) => {
     carSelect.innerHTML = '';
     if (!cars || cars.length === 0) {
@@ -49,7 +54,7 @@
 
   const updateFormAction = () => {
     const carPk = carSelect.value;
-    if (carPk && createUrlTemplate) {
+    if (carPk && createUrlTemplate && isSafeCarPk(carPk)) {
       form.action = createUrlTemplate.replace(placeholderUuid, carPk);
       submitButton.disabled = false;
     } else {
