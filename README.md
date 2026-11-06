@@ -1,3 +1,5 @@
+[![Quality gate status](https://sonarcloud.io/api/project_badges/measure?project=JeffLabonte_open-car-fleet&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=JeffLabonte_open-car-fleet) | [![codecov](https://codecov.io/github/JeffLabonte/open-car-fleet/branch/main/graph/badge.svg?token=4VNRDDQEBS)](https://codecov.io/github/JeffLabonte/open-car-fleet)
+
 ![Open Car Fleet logo](src/public/logo.png)
 
 # Open Car Fleet
