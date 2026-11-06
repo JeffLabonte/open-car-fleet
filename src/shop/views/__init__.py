@@ -55,10 +55,13 @@ from shop.views.fleet import (
 )
 from shop.views.inspection import (
     inspection_autosave,
+    inspection_cars_for_fleet,
     inspection_create,
     inspection_delete,
     inspection_history,
+    inspection_list,
     inspection_update,
+    inspection_wizard,
 )
 from shop.views.invitations import (
     _render_invitation_response,
@@ -106,10 +109,13 @@ __all__ = [
     "hanko_callback",
     "index",
     "inspection_autosave",
+    "inspection_cars_for_fleet",
     "inspection_create",
     "inspection_delete",
     "inspection_history",
+    "inspection_list",
     "inspection_update",
+    "inspection_wizard",
     "known_shop_create",
     "known_shop_detail",
     "known_shop_list",

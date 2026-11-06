@@ -1,0 +1,52 @@
+{% extends 'shop/base.html' %}
+{% load i18n static %}
+
+{% block title %}
+  <title>{% translate 'New inspection' %} · Open Car Fleet</title>
+{% endblock %}
+
+{% block content %}
+  <header class="page-header">
+    {% include 'shop/partials/_page_header.html' %}
+    <div class="page-actions">
+      <a class="button is-light" href="{% url 'shop-inspection-list' %}">{% translate 'Back to inspections' %}</a>
+    </div>
+  </header>
+
+  <div class="box" data-testid="inspection-wizard">
+    <form
+      id="inspection-wizard-form"
+      method="post"
+      data-cars-url="{% url 'shop-inspection-cars-for-fleet' %}"
+      data-create-url-template="{% url 'shop-inspection-create' '00000000-0000-0000-0000-000000000000' %}"
+      data-no-cars-label="{% translate 'No vehicles available in this fleet' %}"
+      data-select-fleet-label="{% translate 'Select a fleet first' %}"
+    >
+      {% csrf_token %}
+
+      <div class="field">
+        <label class="label" for="{{ form.fleet.id_for_label }}">{{ form.fleet.label }}</label>
+        <div class="control">{{ form.fleet }}</div>
+        {% if form.fleet.errors %}<p class="help is-danger">{{ form.fleet.errors }}</p>{% endif %}
+      </div>
+
+      <div class="field">
+        <label class="label" for="{{ form.car.id_for_label }}">{{ form.car.label }}</label>
+        <div class="control">{{ form.car }}</div>
+        {% if form.car.errors %}<p class="help is-danger">{{ form.car.errors }}</p>{% endif %}
+      </div>
+
+      <div class="field">
+        <div class="control">
+          <button class="button is-primary" type="submit" id="wizard-submit" disabled data-testid="wizard-start-button">
+            {% translate 'Start inspection' %}
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'shop/js/inspection_wizard.js' %}" defer></script>
+{% endblock %}

@@ -13,12 +13,6 @@
         <p class="subtitle mb-0">{{ car.usual_name|default:car.make }} · {% translate 'All recorded inspections and recommended work.' %}</p>
       </div>
       <div class="page-actions">
-        {% if can_edit_fleet_data %}
-          <form method="post" action="{% url 'shop-inspection-create' car.pk %}" class="is-inline">
-            {% csrf_token %}
-            <button class="button is-primary" type="submit" data-testid="add-inspection-button">{% translate 'Add inspection' %}</button>
-          </form>
-        {% endif %}
         <a class="button is-light" href="{% url 'shop-car-detail' car.pk %}">{% translate 'Back to vehicle' %}</a>
       </div>
     </div>

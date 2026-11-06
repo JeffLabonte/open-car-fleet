@@ -154,12 +154,16 @@ def car_detail(request: HttpRequest, pk: str) -> HttpResponse:
     if not show_done:
         work_jobs_qs = work_jobs_qs.exclude(status__in=(WorkJob.STATUS_DONE, WorkJob.STATUS_CANCELLED))
     reports = car.reports.order_by("-date_done", "-created_at")
-    latest_inspection = (
-        Inspection.objects.filter(car=car, is_draft=False)
+    car_inspections = (
+        Inspection.objects.filter(car=car)
         .select_related("created_by")
+        .prefetch_related("points")
+        .order_by(*Inspection.LATEST_ORDERING)
+    )
+    latest_inspection = (
+        car_inspections.filter(is_draft=False)
         .prefetch_related(
             "attachments",
-            "points",
             Prefetch(
                 "recommended_work",
                 queryset=WorkJob.objects.select_related("assigned_to", "assigned_shop").order_by(
@@ -167,10 +171,9 @@ def car_detail(request: HttpRequest, pk: str) -> HttpResponse:
                 ),
             ),
         )
-        .order_by(*Inspection.LATEST_ORDERING)
         .first()
     )
-    inspection_count = Inspection.objects.filter(car=car, is_draft=False).count()
+    inspection_count = car_inspections.filter(is_draft=False).count()
     parts = list(car.parts.order_by("name"))
     related_cars = (
         user_cars_queryset(request.user)
@@ -189,6 +192,7 @@ def car_detail(request: HttpRequest, pk: str) -> HttpResponse:
             "reports": reports,
             "latest_inspection": latest_inspection,
             "inspection_count": inspection_count,
+            "car_inspections": car_inspections,
             "parts": parts,
             "can_edit_fleet_data": can_edit,
             "show_done": show_done,

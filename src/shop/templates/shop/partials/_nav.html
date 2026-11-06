@@ -15,6 +15,12 @@
       {% include 'shop/partials/_icon.html' with name='car' %}
       <span>{% translate 'Cars' %}</span>
     </a>
+    {% if request.user.is_mechanic %}
+      <a class="app-navlink" href="{% url 'shop-inspection-list' %}" data-testid="nav-inspections">
+        {% include 'shop/partials/_icon.html' with name='clipboard' %}
+        <span>{% translate 'Inspections' %}</span>
+      </a>
+    {% endif %}
     <a class="app-navlink" href="{% url 'shop-known-shop-list' %}" data-testid="nav-shops">
       {% include 'shop/partials/_icon.html' with name='shop' %}
       <span>{% translate 'Known shops' %}</span>
@@ -61,6 +67,12 @@
     {% include 'shop/partials/_icon.html' with name='car' %}
     <span>{% translate 'Cars' %}</span>
   </a>
+  {% if request.user.is_mechanic %}
+    <a class="app-tab" href="{% url 'shop-inspection-list' %}" data-testid="nav-inspections-mobile">
+      {% include 'shop/partials/_icon.html' with name='clipboard' %}
+      <span>{% translate 'Inspections' %}</span>
+    </a>
+  {% endif %}
   <a class="app-tab" href="{% url 'shop-known-shop-list' %}">
     {% include 'shop/partials/_icon.html' with name='shop' %}
     <span>{% translate 'Shops' %}</span>

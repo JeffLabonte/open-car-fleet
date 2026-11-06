@@ -3,12 +3,15 @@ from typing import Any
 from urllib.parse import urlparse
 
 from django import forms
+from django.contrib.auth import get_user_model
 from django.forms.models import inlineformset_factory
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from shop.forms.base import AttachmentField, MultipleFileInput, StagedAttachmentsMixin
 from shop.inspection_checklist import flatten_checklist, validation_rule_for_code
+from shop.models.car import Car
+from shop.models.fleet import Fleet, FleetMembership
 from shop.models.inspection import Inspection
 from shop.models.inspection_point import InspectionPoint
 
@@ -243,3 +246,132 @@ def create_inspection_points(inspection: Inspection) -> None:
         for item in flatten_checklist()
     ]
     InspectionPoint.objects.bulk_create(points)
+
+
+class InspectionFilterForm(forms.Form):
+    """Modular filter form for the global inspection list.
+
+    The form is intentionally simple so date-range and fleet filters can be
+    added later without changing the view contract.
+    """
+
+    STATUS_ALL = ""
+    STATUS_DRAFT = "draft"
+    STATUS_FINALIZED = "finalized"
+    STATUS_CHOICES = [
+        (STATUS_ALL, _("All statuses")),
+        (STATUS_DRAFT, _("Draft")),
+        (STATUS_FINALIZED, _("Finalized")),
+    ]
+
+    status = forms.ChoiceField(
+        label=_("Status"),
+        choices=STATUS_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={"class": "input"}),
+    )
+    owner = forms.ChoiceField(
+        label=_("Inspection owner"),
+        required=False,
+        widget=forms.Select(attrs={"class": "input"}),
+    )
+
+    def __init__(self, *args: Any, user: Any = None, **kwargs: Any) -> None:
+        self.user = user
+        super().__init__(*args, **kwargs)
+        self.fields["owner"].choices = self._build_owner_choices()
+
+    def _build_owner_choices(self) -> list[tuple[str, str]]:
+        choices = [("", _("All mechanics"))]
+        if not self.user or not getattr(self.user, "is_authenticated", False):
+            return choices
+
+        User = get_user_model()
+        mechanics = (
+            User.objects.filter(
+                is_mechanic=True,
+                fleet_memberships__fleet__in=self.user.fleets.all(),
+            )
+            .distinct()
+            .order_by("username")
+        )
+        for mechanic in mechanics:
+            choices.append((str(mechanic.pk), mechanic.get_full_name() or mechanic.username))
+        return choices
+
+    def filter_queryset(self, queryset: Any) -> Any:
+        if self.is_valid():
+            status = self.cleaned_data.get("status")
+            owner = self.cleaned_data.get("owner")
+            if status == self.STATUS_DRAFT:
+                queryset = queryset.filter(is_draft=True)
+            elif status == self.STATUS_FINALIZED:
+                queryset = queryset.filter(is_draft=False)
+            if owner:
+                queryset = queryset.filter(created_by_id=owner)
+        return queryset
+
+
+class InspectionCarSelectForm(forms.Form):
+    """Wizard form for choosing a fleet and then a car for a new inspection."""
+
+    fleet = forms.ModelChoiceField(
+        label=_("Fleet"),
+        queryset=Fleet.objects.none(),
+        widget=forms.Select(attrs={"class": "input"}),
+    )
+    car = forms.ModelChoiceField(
+        label=_("Vehicle"),
+        queryset=Car.objects.none(),
+        widget=forms.Select(attrs={"class": "input"}),
+    )
+
+    def __init__(self, *args: Any, user: Any = None, **kwargs: Any) -> None:
+        self._user = user
+        super().__init__(*args, **kwargs)
+
+        if user is not None:
+            self.fields["fleet"].queryset = (
+                Fleet.objects.filter(
+                    memberships__user=user,
+                    memberships__role__in=FleetMembership.WRITE_DATA_ROLES,
+                )
+                .distinct()
+                .order_by("name")
+            )
+
+        selected_fleet = self.initial.get("fleet")
+        if self.data.get("fleet"):
+            selected_fleet = self.data.get("fleet")
+
+        car_field = self.fields["car"]
+        car_field.widget.attrs["class"] = "input"
+        if selected_fleet:
+            try:
+                fleet = self.fields["fleet"].queryset.get(pk=selected_fleet)
+                car_field.queryset = Car.objects.filter(fleet=fleet).order_by("usual_name", "make", "model")
+                car_field.empty_label = _("Select a vehicle")
+            except (Fleet.DoesNotExist, ValueError, TypeError):
+                car_field.queryset = Car.objects.none()
+                car_field.empty_label = _("Select a fleet first")
+                car_field.widget.attrs["disabled"] = True
+        else:
+            car_field.queryset = Car.objects.none()
+            car_field.empty_label = _("Select a fleet first")
+            car_field.widget.attrs["disabled"] = True
+
+    def clean_fleet(self) -> Fleet:
+        fleet = self.cleaned_data.get("fleet")
+        if fleet is None:
+            raise forms.ValidationError(_("Fleet is required."))
+        if self._user is not None and not self._user.fleets.filter(pk=fleet.pk).exists():
+            raise forms.ValidationError(_("You can only select a fleet you are a member of."))
+        return fleet
+
+    def clean(self) -> dict[str, Any]:
+        cleaned = super().clean()
+        fleet = cleaned.get("fleet")
+        car = cleaned.get("car")
+        if fleet and car and car.fleet_id != fleet.pk:
+            self.add_error("car", _("The selected vehicle does not belong to the chosen fleet."))
+        return cleaned

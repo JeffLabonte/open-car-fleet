@@ -13,8 +13,6 @@
         {% if can_edit_fleet_data %}
           <a class="button is-link" href="{% url 'shop-car-update' car.pk %}">{% translate 'Edit' %}</a>
           <button class="button is-danger" type="button" data-dialog-open="dialog-car-delete" data-dialog-action="{% url 'shop-car-delete' car.pk %}" data-testid="delete-car-button">{% translate 'Delete' %}</button>
-        {% endif %}
-        {% if can_edit_fleet_data %}
           <a class="button is-primary" href="{% url 'shop-workjob-create' car.pk %}">
             {% include 'shop/partials/_icon.html' with name='plus' %}
             <span>{% translate 'Add planned work' %}</span>
@@ -55,12 +53,6 @@
         <a class="button is-light is-small" href="{% url 'shop-inspection-history' car.pk %}" data-testid="inspection-history-link">
           {% translate 'View inspection history' %} ({{ inspection_count }})
         </a>
-      {% endif %}
-      {% if can_edit_fleet_data %}
-        <form method="post" action="{% url 'shop-inspection-create' car.pk %}" class="is-inline">
-          {% csrf_token %}
-          <button class="button is-primary is-small" type="submit" data-testid="add-inspection-button">{% translate 'Add inspection' %}</button>
-        </form>
       {% endif %}
     </div>
   </section>
@@ -136,6 +128,58 @@
     </article>
   {% else %}
     <div class="notification is-warning" data-testid="no-inspection">{% translate 'No inspections recorded for this vehicle yet.' %}</div>
+  {% endif %}
+
+  <section class="section-head" data-testid="inspection-history-section">
+    <h2 class="title is-4">{% translate 'Inspection history' %}</h2>
+    <div class="section-actions">
+      <a class="button is-light is-small" href="{% url 'shop-inspection-history' car.pk %}">{% translate 'View full history' %}</a>
+    </div>
+  </section>
+
+  {% if car_inspections %}
+    <div class="table-container">
+      <div class="table-wrap">
+        <table class="table is-fullwidth is-striped is-hoverable table--responsive" data-testid="car-inspection-history-table">
+          <thead>
+            <tr>
+              <th scope="col">{% translate 'Date' %}</th>
+              <th scope="col">{% translate 'Inspection owner' %}</th>
+              <th scope="col">{% translate 'Status' %}</th>
+              <th scope="col">{% translate 'Mileage' %}</th>
+              <th scope="col">{% translate 'Actions' %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for inspection in car_inspections %}
+              <tr data-testid="car-inspection-history-row">
+                <td data-label="{% translate 'Date' %}">{{ inspection.inspected_at|date:'F j, Y, g:i a T' }}</td>
+                <td data-label="{% translate 'Inspection owner' %}">
+                  {% if inspection.created_by %}
+                    <span class="tag is-light">{{ inspection.created_by.get_full_name|default:inspection.created_by.username }}</span>
+                  {% else %}
+                    <span class="tag is-light">—</span>
+                  {% endif %}
+                </td>
+                <td data-label="{% translate 'Status' %}">
+                  {% if inspection.is_draft %}
+                    <span class="tag is-warning">{% translate 'Draft' %}</span>
+                  {% else %}
+                    <span class="tag is-success">{% translate 'Finalized' %}</span>
+                  {% endif %}
+                </td>
+                <td data-label="{% translate 'Mileage' %}">{{ inspection.mileage|default:'—' }}</td>
+                <td data-label="{% translate 'Actions' %}">
+                  <a class="button is-small is-link" href="{% url 'shop-inspection-update' car.pk inspection.pk %}">{% translate 'Edit' %}</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% else %}
+    <div class="notification is-warning">{% translate 'No inspections recorded for this vehicle yet.' %}</div>
   {% endif %}
 
   <section class="section-head" data-testid="parts-section">

@@ -1,0 +1,127 @@
+{% extends 'shop/base.html' %}
+{% load i18n %}
+
+{% block title %}
+  <title>{% translate 'Inspections' %} · Open Car Fleet</title>
+{% endblock %}
+
+{% block content %}
+  <header class="page-header">
+    {% include 'shop/partials/_page_header.html' %}
+    <div class="page-actions">
+      {% if can_create %}
+        <a class="button is-primary" href="{% url 'shop-inspection-new' %}" data-testid="new-inspection-button">
+          {% include 'shop/partials/_icon.html' with name='plus' %}
+          <span>{% translate 'New inspection' %}</span>
+        </a>
+      {% endif %}
+    </div>
+  </header>
+
+  <div class="box" data-testid="inspection-filters">
+    <form method="get" class="form-row">
+      <div class="field">
+        <label class="label" for="{{ filter_form.status.id_for_label }}">{{ filter_form.status.label }}</label>
+        <div class="control">{{ filter_form.status }}</div>
+      </div>
+      <div class="field">
+        <label class="label" for="{{ filter_form.owner.id_for_label }}">{{ filter_form.owner.label }}</label>
+        <div class="control">{{ filter_form.owner }}</div>
+      </div>
+      <div class="field field--align-end">
+        <div class="control">
+          <button class="button is-light" type="submit">{% translate 'Filter' %}</button>
+          <a class="button is-ghost" href="{% url 'shop-inspection-list' %}">{% translate 'Clear' %}</a>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  {% if inspections %}
+    <div class="table-container">
+      <div class="table-wrap">
+        <table class="table is-fullwidth is-striped is-hoverable table--responsive" data-testid="inspections-table">
+          <thead>
+            <tr>
+              <th scope="col">{% translate 'Date' %}</th>
+              <th scope="col">{% translate 'Vehicle' %}</th>
+              <th scope="col">{% translate 'Fleet' %}</th>
+              <th scope="col">{% translate 'Inspection owner' %}</th>
+              <th scope="col">{% translate 'Status' %}</th>
+              <th scope="col">{% translate 'Findings' %}</th>
+              <th scope="col">{% translate 'Actions' %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for inspection in inspections %}
+              <tr data-testid="inspection-row">
+                <td data-label="{% translate 'Date' %}">
+                  <a href="{% url 'shop-inspection-history' inspection.car.pk %}">
+                    {{ inspection.inspected_at|date:'F j, Y, g:i a T' }}
+                  </a>
+                </td>
+                <td data-label="{% translate 'Vehicle' %}">
+                  <a href="{% url 'shop-car-detail' inspection.car.pk %}">
+                    {{ inspection.car.usual_name|default:inspection.car.make }}
+                  </a>
+                  <div class="is-size-7 has-text-grey">
+                    {{ inspection.car.make }} {{ inspection.car.model }} {{ inspection.car.year|default:'' }}
+                  </div>
+                </td>
+                <td data-label="{% translate 'Fleet' %}">{{ inspection.car.fleet }}</td>
+                <td data-label="{% translate 'Inspection owner' %}">
+                  {% if inspection.created_by %}
+                    <span class="tag is-light">{{ inspection.created_by.get_full_name|default:inspection.created_by.username }}</span>
+                  {% else %}
+                    <span class="tag is-light">—</span>
+                  {% endif %}
+                </td>
+                <td data-label="{% translate 'Status' %}">
+                  {% if inspection.is_draft %}
+                    <span class="tag is-warning">{% translate 'Draft' %}</span>
+                  {% else %}
+                    <span class="tag is-success">{% translate 'Finalized' %}</span>
+                  {% endif %}
+                </td>
+                <td data-label="{% translate 'Findings' %}">{{ inspection.notes|truncatewords:15|default:'—' }}</td>
+                <td data-label="{% translate 'Actions' %}">
+                  <a class="button is-small is-link" href="{% url 'shop-inspection-update' inspection.car.pk inspection.pk %}">
+                    {% translate 'Edit' %}
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% if inspections.has_other_pages %}
+      <nav class="pagination" role="navigation" aria-label="{% translate 'Inspection pagination' %}">
+        {% if inspections.has_previous %}
+          <a class="pagination-previous" href="?page={{ inspections.previous_page_number }}{% if query_params.urlencode %}&{{ query_params.urlencode }}{% endif %}">
+            {% translate 'Previous' %}
+          </a>
+        {% else %}
+          <span class="pagination-previous is-disabled">{% translate 'Previous' %}</span>
+        {% endif %}
+        {% if inspections.has_next %}
+          <a class="pagination-next" href="?page={{ inspections.next_page_number }}{% if query_params.urlencode %}&{{ query_params.urlencode }}{% endif %}">
+            {% translate 'Next' %}
+          </a>
+        {% else %}
+          <span class="pagination-next is-disabled">{% translate 'Next' %}</span>
+        {% endif %}
+        <p class="pagination-list">
+          {% blocktranslate with page=inspections.number pages=inspections.paginator.num_pages %}
+            Page {{ page }} of {{ pages }}
+          {% endblocktranslate %}
+        </p>
+      </nav>
+    {% endif %}
+  {% else %}
+    <div class="notification is-info" data-testid="no-inspections">
+      {% translate 'No inspections match your filters.' %}
+    </div>
+  {% endif %}
+{% endblock %}

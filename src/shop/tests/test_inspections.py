@@ -10,7 +10,8 @@ from django.utils import timezone
 from shop.forms import InspectionForm, InspectionPointForm, WorkJobForm
 from shop.inspection_checklist import flatten_checklist
 from shop.models import Inspection, WorkJob
-from shop.models.fleet import FleetMembership
+from shop.models.car import Car
+from shop.models.fleet import Fleet, FleetMembership
 from shop.models.inspection_point import InspectionPoint
 from shop.tests.helpers import PNG_SIGNATURE, ShopTestCase
 
@@ -221,12 +222,12 @@ class InspectionViewIntegrationTests(ShopTestCase):
         work_job = WorkJob.objects.get(title="Replace tire")
         self.assertEqual(work_job.inspection, inspection)
 
-    def test_create_inspection_button_is_post_form(self):
+    def test_create_inspection_button_is_not_on_car_detail(self):
         response = self.client.get(reverse("shop-car-detail", args=[self.car.pk]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'action="' + reverse("shop-inspection-create", args=[self.car.pk]) + '"')
-        self.assertContains(response, 'data-testid="add-inspection-button"')
+        self.assertNotContains(response, 'action="' + reverse("shop-inspection-create", args=[self.car.pk]) + '"')
+        self.assertNotContains(response, 'data-testid="add-inspection-button"')
 
     def test_viewer_can_read_history_but_cannot_create_inspection(self):
         viewer = self.create_user(username="inspection-viewer", email="inspection-viewer@example.com")
@@ -734,3 +735,104 @@ class InspectionViewIntegrationTests(ShopTestCase):
         self.assertContains(response, "Update")
         self.assertNotContains(response, "Save draft")
         self.assertNotContains(response, "Finalize inspection")
+
+
+class InspectionGlobalViewTests(ShopTestCase):
+    def setUp(self) -> None:
+        super().setUp()
+        self.car = self.create_car()
+        self.owner.is_mechanic = True
+        self.owner.save(update_fields=["is_mechanic"])
+        self.client.force_login(self.owner)
+
+    def test_inspection_list_renders_inspections(self):
+        Inspection.objects.create(car=self.car, notes="FIRST")
+        Inspection.objects.create(car=self.car, notes="SECOND")
+
+        response = self.client.get(reverse("shop-inspection-list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "FIRST")
+        self.assertContains(response, "SECOND")
+        self.assertContains(response, reverse("shop-inspection-new"))
+
+    def test_inspection_list_status_filter(self):
+        Inspection.objects.create(car=self.car, notes="DRAFT", is_draft=True)
+        Inspection.objects.create(car=self.car, notes="FINAL", is_draft=False)
+
+        response = self.client.get(reverse("shop-inspection-list") + "?status=draft")
+        self.assertContains(response, "DRAFT")
+        self.assertNotContains(response, "FINAL")
+
+        response = self.client.get(reverse("shop-inspection-list") + "?status=finalized")
+        self.assertContains(response, "FINAL")
+        self.assertNotContains(response, "DRAFT")
+
+    def test_inspection_list_owner_filter_shows_only_mechanics(self):
+        mechanic = self.create_user(username="mechanic", email="mechanic@example.com", is_mechanic=True)
+        FleetMembership.objects.create(fleet=self.fleet, user=mechanic, role=FleetMembership.ROLE_MECHANIC)
+        Inspection.objects.create(car=self.car, notes="BY_MECHANIC", created_by=mechanic)
+        Inspection.objects.create(car=self.car, notes="BY_OWNER", created_by=self.owner)
+
+        response = self.client.get(reverse("shop-inspection-list") + f"?owner={mechanic.pk}")
+        self.assertContains(response, "BY_MECHANIC")
+        self.assertNotContains(response, "BY_OWNER")
+
+    def test_inspection_list_is_scoped_to_user_fleets(self):
+        other_fleet = Fleet.objects.create(name="Other Fleet", created_by=self.owner)
+        other_car = Car.objects.create(fleet=other_fleet, make="Toyota", model="Corolla", vin="2HGFG12698H999999")
+        Inspection.objects.create(car=other_car, notes="OTHER_FLEET")
+        Inspection.objects.create(car=self.car, notes="MY_FLEET")
+
+        response = self.client.get(reverse("shop-inspection-list"))
+        self.assertContains(response, "MY_FLEET")
+        self.assertNotContains(response, "OTHER_FLEET")
+
+    def test_inspection_wizard_renders_with_fleet_preselected(self):
+        response = self.client.get(reverse("shop-inspection-new"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.fleet.name)
+
+        response = self.client.get(reverse("shop-inspection-new") + f"?fleet={self.fleet.pk}")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.car.usual_name or self.car.make)
+
+    def test_inspection_cars_for_fleet_returns_json(self):
+        response = self.client.get(reverse("shop-inspection-cars-for-fleet") + f"?fleet={self.fleet.pk}")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(len(data["cars"]), 1)
+        self.assertEqual(str(data["cars"][0]["pk"]), str(self.car.pk))
+
+    def test_inspection_cars_for_fleet_rejects_inaccessible_fleet(self):
+        other_fleet = Fleet.objects.create(name="Other Fleet")
+        response = self.client.get(reverse("shop-inspection-cars-for-fleet") + f"?fleet={other_fleet.pk}")
+        self.assertEqual(response.status_code, 404)
+
+    def test_car_detail_shows_inspection_history_section(self):
+        Inspection.objects.create(
+            car=self.car,
+            notes="HISTORY_ITEM",
+            is_draft=False,
+            created_by=self.owner,
+        )
+
+        response = self.client.get(reverse("shop-car-detail", args=[self.car.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Inspection history")
+        self.assertContains(response, "HISTORY_ITEM")
+        self.assertContains(response, self.owner.username)
+        self.assertContains(response, "Finalized")
+
+    def test_inspection_nav_visible_for_mechanics(self):
+        response = self.client.get(reverse("shop-index"))
+        self.assertContains(response, 'data-testid="nav-inspections"')
+
+    def test_inspection_nav_hidden_for_non_mechanics(self):
+        non_mechanic = self.create_user(username="non-mech", email="non-mech@example.com")
+        FleetMembership.objects.create(fleet=self.fleet, user=non_mechanic, role=FleetMembership.ROLE_VIEWER)
+        self.client.force_login(non_mechanic)
+
+        response = self.client.get(reverse("shop-index"))
+        self.assertNotContains(response, 'data-testid="nav-inspections"')
