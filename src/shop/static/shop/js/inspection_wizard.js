@@ -16,7 +16,7 @@
     return /^[0-9a-fA-F-]{36}$/.test(value) || /^\d+$/.test(value);
   };
 
-  const setCarOptions = (cars) => {
+  const setCarOptions = (cars, selectedPk) => {
     carSelect.innerHTML = '';
     if (!cars || cars.length === 0) {
       const option = document.createElement('option');
@@ -38,6 +38,9 @@
       const option = document.createElement('option');
       option.value = car.pk;
       option.textContent = car.name;
+      if (car.pk === selectedPk) {
+        option.selected = true;
+      }
       carSelect.appendChild(option);
     });
   };
@@ -62,11 +65,13 @@
     }
   };
 
-  const loadCarsForFleet = async (fleetPk) => {
+  const loadCarsForFleet = async (fleetPk, preserveSelection) => {
     if (!fleetPk) {
       resetCarSelect();
       return;
     }
+
+    const selectedPk = preserveSelection ? carSelect.value : '';
 
     try {
       const response = await fetch(`${carsUrl}?fleet=${encodeURIComponent(fleetPk)}`, {
@@ -74,7 +79,7 @@
       });
       if (!response.ok) throw new Error('Failed to load vehicles');
       const data = await response.json();
-      setCarOptions(data.cars);
+      setCarOptions(data.cars, selectedPk);
       updateFormAction();
     } catch (error) {
       carSelect.innerHTML = '';
@@ -89,12 +94,13 @@
 
   if (fleetSelect) {
     fleetSelect.addEventListener('change', () => {
-      loadCarsForFleet(fleetSelect.value);
+      loadCarsForFleet(fleetSelect.value, false);
     });
 
     // Pre-populate when the page is rendered with an initial fleet.
+    // Preserve any car that was preselected server-side.
     if (fleetSelect.value) {
-      loadCarsForFleet(fleetSelect.value);
+      loadCarsForFleet(fleetSelect.value, true);
     }
   }
 

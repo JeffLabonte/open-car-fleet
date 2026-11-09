@@ -1151,6 +1151,16 @@
   resize: vertical;
 }
 
+.inspection-point__measurement .is-required,
+.inspection-point__label.is-required .label {
+  border-color: var(--danger);
+}
+
+.inspection-point__label.is-required .label::after {
+  content: " *";
+  color: var(--danger);
+}
+
 @media (max-width: 47.99rem) {
   .inspection-points-table,
   .inspection-points-table thead,

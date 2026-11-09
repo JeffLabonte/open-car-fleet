@@ -108,7 +108,7 @@ async function finishLogin() {
       try {
         const safeUrl = new URL(nextUrl, window.location.origin);
         if (safeUrl.origin === window.location.origin) {
-          redirectTarget = safeUrl.href;
+          redirectTarget = safeUrl.pathname + safeUrl.search + safeUrl.hash;
         }
       } catch (error) {
         redirectTarget = '/';

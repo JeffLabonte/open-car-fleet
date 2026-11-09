@@ -51,7 +51,7 @@
 
   function isEmptyPoint(point) {
     const status = point.querySelector('select[name$="-status"]');
-    const measurement = point.querySelector('input[name$="-measurement"]');
+    const measurement = point.querySelector('input[name$="-measurement"], select[name$="-measurement"]');
     const notes = point.querySelector('textarea[name$="-notes"]');
 
     const statusEmpty = !status || status.value === NA_VALUE;
@@ -63,7 +63,7 @@
 
   function resetPoint(point) {
     const status = point.querySelector('select[name$="-status"]');
-    const measurement = point.querySelector('input[name$="-measurement"]');
+    const measurement = point.querySelector('input[name$="-measurement"], select[name$="-measurement"]');
     const notes = point.querySelector('textarea[name$="-notes"]');
 
     if (status) {
@@ -74,6 +74,21 @@
     }
     if (notes) {
       notes.value = "";
+    }
+    updatePointRequiredState(point);
+  }
+
+  function updatePointRequiredState(point) {
+    const status = point.querySelector('select[name$="-status"]');
+    const measurement = point.querySelector('input[name$="-measurement"], select[name$="-measurement"]');
+    const labelCell = point.querySelector(".inspection-point__label");
+    if (!status || !measurement) {
+      return;
+    }
+    const required = status.value !== NA_VALUE;
+    measurement.classList.toggle("is-required", required);
+    if (labelCell) {
+      labelCell.classList.toggle("is-required", required);
     }
   }
 
@@ -94,13 +109,19 @@
 
     const categoryCode = category.dataset.category;
     const enabledCategories = getEnabledCategories();
-    // New inspections enable every section by default, but keep the accordion
-    // collapsed so the page stays tidy and easy to scroll on mobile.
-    const isEnabled = enabledCategories.length === 0 || enabledCategories.includes(categoryCode);
+    const isEnabled = enabledCategories.includes(categoryCode);
 
     toggle.checked = isEnabled;
     category.open = false;
     setCategoryEnabled(category, isEnabled);
+
+    category.querySelectorAll(".inspection-point").forEach((point) => {
+      const status = point.querySelector('select[name$="-status"]');
+      if (status) {
+        status.addEventListener("change", () => updatePointRequiredState(point));
+      }
+      updatePointRequiredState(point);
+    });
 
     toggle.addEventListener("change", () => {
       const enabled = toggle.checked;
@@ -153,8 +174,11 @@
 
   function init() {
     const categories = document.querySelectorAll(".inspection-category");
-    // If no enabled-categories state exists yet, default to all categories enabled.
-    if (getEnabledCategories().length === 0 && categories.length > 0) {
+    const input = getEnabledCategoriesInput();
+    // Only when the hidden input is completely absent or blank (e.g. an old
+    // unstructured inspection) do we default to all categories. An explicit
+    // empty JSON array ([]) means the mechanic disabled every section.
+    if ((!input || input.value === "") && categories.length > 0) {
       setEnabledCategories(Array.from(categories).map((category) => category.dataset.category));
     }
     categories.forEach(initCategory);

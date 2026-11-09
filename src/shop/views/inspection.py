@@ -11,6 +11,7 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET, require_POST
 
 from shop.forms import (
+    DraftInspectionPointFormSet,
     InspectionCarSelectForm,
     InspectionFilterForm,
     InspectionForm,
@@ -46,6 +47,10 @@ def inspection_create(request: HttpRequest, car_pk: str) -> HttpResponse:
             is_draft=True,
         )
         create_inspection_points(inspection)
+        inspection.enabled_categories = list(
+            dict.fromkeys(point.category for point in inspection.points.order_by("position"))
+        )
+        inspection.save(update_fields=["enabled_categories"])
 
     return redirect(reverse("shop-inspection-update", args=[car.pk, inspection.pk]))
 
@@ -65,7 +70,8 @@ def _save_inspection_from_request(
     is_structured = inspection.points.exists()
     point_formset = None
     if is_structured:
-        point_formset = InspectionPointFormSet(request.POST, instance=inspection, prefix="points")
+        formset_class = InspectionPointFormSet if finalize else DraftInspectionPointFormSet
+        point_formset = formset_class(request.POST, instance=inspection, prefix="points")
 
     if not form.is_valid() or (point_formset is not None and not point_formset.is_valid()):
         return form, point_formset, False
@@ -96,7 +102,7 @@ def inspection_update(request: HttpRequest, car_pk: str, pk: int) -> HttpRespons
     is_structured = inspection.points.exists()
 
     if request.method == "POST":
-        action = request.POST.get("action", "finalize")
+        action = request.POST.get("action", "save_draft")
         finalize = action == "finalize"
         form, point_formset, success = _save_inspection_from_request(request, inspection, car, finalize=finalize)
         if success:
@@ -246,6 +252,7 @@ def inspection_wizard(request: HttpRequest) -> HttpResponse:
 
     initial: dict[str, Any] = {}
     fleet_pk = request.GET.get("fleet")
+    car_pk = request.GET.get("car")
     if fleet_pk:
         if editable_fleets.filter(pk=fleet_pk).exists():
             initial["fleet"] = fleet_pk
@@ -253,6 +260,11 @@ def inspection_wizard(request: HttpRequest) -> HttpResponse:
         selected_fleet = get_selected_fleet(request)
         if selected_fleet and editable_fleets.filter(pk=selected_fleet.pk).exists():
             initial["fleet"] = selected_fleet.pk
+
+    if initial.get("fleet") and car_pk:
+        car = user_cars_queryset(request.user).filter(pk=car_pk, fleet_id=initial["fleet"]).first()
+        if car:
+            initial["car"] = car.pk
 
     form = InspectionCarSelectForm(user=request.user, initial=initial)
     return render(

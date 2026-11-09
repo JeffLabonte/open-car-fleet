@@ -3,6 +3,7 @@ import gzip
 import os
 import shutil
 import subprocess
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -278,8 +279,8 @@ class Command(BaseCommand):
 
     def _restore_media(self) -> None:
         self._step(f"Restoring media snapshot: {self.media_snapshot}")
-        remote_tarball = "/tmp/media-snapshot.tar.gz"
-        self._compose_cp(str(self.media_snapshot), f"web:{remote_tarball}", direction="to")
+        remote_tarball = tempfile.mktemp(suffix=".tar.gz", prefix="media-snapshot-", dir="/tmp")
+        self._compose_cp(str(self.media_snapshot), f"web:{remote_tarball}")
         self._compose_exec("web", ["tar", "xzf", remote_tarball, "-C", "/app/src/media"], user="root")
         self._compose_exec("web", ["chown", "-R", "django:django", "/app/src/media"], user="root")
         self._compose_exec("web", ["rm", "-f", remote_tarball], user="root")

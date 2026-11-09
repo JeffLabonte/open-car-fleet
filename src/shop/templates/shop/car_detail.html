@@ -49,6 +49,11 @@
   <section class="section-head" data-testid="inspection-section">
     <h2 class="title is-4">{% translate 'Latest inspection' %}</h2>
     <div class="section-actions">
+      {% if can_edit_fleet_data %}
+        <a class="button is-primary is-small" href="{% url 'shop-inspection-new' %}?fleet={{ car.fleet.pk }}&car={{ car.pk }}" data-testid="add-inspection-button">
+          {% translate 'New inspection' %}
+        </a>
+      {% endif %}
       {% if inspection_count %}
         <a class="button is-light is-small" href="{% url 'shop-inspection-history' car.pk %}" data-testid="inspection-history-link">
           {% translate 'View inspection history' %} ({{ inspection_count }})

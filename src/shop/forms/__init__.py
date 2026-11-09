@@ -12,6 +12,7 @@ from shop.forms.fleet import (
 )
 from shop.forms.import_data import CarImportForm, FleetImportForm
 from shop.forms.inspection import (
+    DraftInspectionPointFormSet,
     InspectionCarSelectForm,
     InspectionFilterForm,
     InspectionForm,
@@ -36,6 +37,7 @@ __all__ = [
     "FleetMembershipRoleForm",
     "CarImportForm",
     "FleetImportForm",
+    "DraftInspectionPointFormSet",
     "InspectionCarSelectForm",
     "InspectionFilterForm",
     "InspectionForm",

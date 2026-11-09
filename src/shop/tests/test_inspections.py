@@ -222,12 +222,12 @@ class InspectionViewIntegrationTests(ShopTestCase):
         work_job = WorkJob.objects.get(title="Replace tire")
         self.assertEqual(work_job.inspection, inspection)
 
-    def test_create_inspection_button_is_not_on_car_detail(self):
+    def test_create_inspection_button_links_to_wizard(self):
         response = self.client.get(reverse("shop-car-detail", args=[self.car.pk]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, 'action="' + reverse("shop-inspection-create", args=[self.car.pk]) + '"')
-        self.assertNotContains(response, 'data-testid="add-inspection-button"')
+        self.assertContains(response, 'data-testid="add-inspection-button"')
+        self.assertContains(response, reverse("shop-inspection-new") + f"?fleet={self.car.fleet.pk}&car={self.car.pk}")
 
     def test_viewer_can_read_history_but_cannot_create_inspection(self):
         viewer = self.create_user(username="inspection-viewer", email="inspection-viewer@example.com")
@@ -393,6 +393,105 @@ class InspectionViewIntegrationTests(ShopTestCase):
         self.assertRedirects(response, reverse("shop-car-detail", args=[self.car.pk]))
         inspection.refresh_from_db()
         self.assertEqual(inspection.enabled_categories, ["brakes"])
+
+    def test_save_draft_allows_missing_measurement(self):
+        inspection = Inspection.objects.create(car=self.car, is_draft=True)
+        point = InspectionPoint.objects.create(
+            inspection=inspection,
+            category="tires",
+            category_label="Tires",
+            code="tread_depth_front_right",
+            label="Tread depth - front right (1/32)",
+            position=0,
+        )
+
+        response = self.client.post(
+            reverse("shop-inspection-update", args=[self.car.pk, inspection.pk]),
+            data={
+                "inspected_at": "2026-10-20T14:30",
+                "mileage": "12345",
+                "notes": "Draft with incomplete point.",
+                "action": "save_draft",
+                "points-TOTAL_FORMS": "1",
+                "points-INITIAL_FORMS": "1",
+                "points-MIN_NUM_FORMS": "0",
+                "points-MAX_NUM_FORMS": "1000",
+                "points-0-id": str(point.pk),
+                "points-0-inspection": str(inspection.pk),
+                "points-0-status": InspectionPoint.STATUS_REPAIR,
+                "points-0-measurement": "",
+                "points-0-notes": "",
+            },
+        )
+
+        self.assertRedirects(response, reverse("shop-car-detail", args=[self.car.pk]))
+        point.refresh_from_db()
+        self.assertEqual(point.status, InspectionPoint.STATUS_REPAIR)
+        self.assertEqual(point.measurement, "")
+        self.assertTrue(inspection.is_draft)
+
+    def test_finalize_requires_measurement_for_non_na_status(self):
+        inspection = Inspection.objects.create(car=self.car, is_draft=True)
+        point = InspectionPoint.objects.create(
+            inspection=inspection,
+            category="tires",
+            category_label="Tires",
+            code="tread_depth_front_right",
+            label="Tread depth - front right (1/32)",
+            position=0,
+        )
+
+        response = self.client.post(
+            reverse("shop-inspection-update", args=[self.car.pk, inspection.pk]),
+            data={
+                "inspected_at": "2026-10-20T14:30",
+                "mileage": "12345",
+                "notes": "Finalize with incomplete point.",
+                "action": "finalize",
+                "points-TOTAL_FORMS": "1",
+                "points-INITIAL_FORMS": "1",
+                "points-MIN_NUM_FORMS": "0",
+                "points-MAX_NUM_FORMS": "1000",
+                "points-0-id": str(point.pk),
+                "points-0-inspection": str(inspection.pk),
+                "points-0-status": InspectionPoint.STATUS_REPAIR,
+                "points-0-measurement": "",
+                "points-0-notes": "",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "point-formset-errors")
+        point.refresh_from_db()
+        self.assertEqual(point.status, InspectionPoint.STATUS_NA)
+        self.assertTrue(inspection.is_draft)
+
+    def test_save_draft_preserves_empty_enabled_categories(self):
+        inspection = Inspection.objects.create(car=self.car, is_draft=True, enabled_categories=[])
+        InspectionPoint.objects.create(
+            inspection=inspection,
+            category="brakes",
+            category_label="Brakes",
+            code="brake_wear_general",
+            label="Brake wear (general)",
+            position=0,
+        )
+
+        response = self.client.get(reverse("shop-inspection-update", args=[self.car.pk, inspection.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'value="[]"')
+
+    def test_create_inspection_sets_enabled_categories_to_all(self):
+        response = self.client.post(reverse("shop-inspection-create", args=[self.car.pk]))
+
+        inspection = Inspection.objects.get(car=self.car)
+        self.assertTrue(len(inspection.enabled_categories) > 0)
+        self.assertIn("brakes", inspection.enabled_categories)
+        self.assertRedirects(
+            response,
+            reverse("shop-inspection-update", args=[self.car.pk, inspection.pk]),
+        )
 
     def test_inspection_point_form_rejects_invalid_measurement(self):
         inspection = Inspection.objects.create(car=self.car)

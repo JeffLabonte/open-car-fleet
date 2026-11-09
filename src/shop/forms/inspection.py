@@ -17,7 +17,7 @@ from shop.models.inspection_point import InspectionPoint
 
 
 class InspectionForm(StagedAttachmentsMixin, forms.ModelForm):
-    enabled_categories = forms.CharField(
+    enabled_categories = forms.JSONField(
         required=False,
         widget=forms.HiddenInput(),
     )
@@ -69,11 +69,17 @@ class InspectionForm(StagedAttachmentsMixin, forms.ModelForm):
         super().__init__(*args, **kwargs)
         if not self.is_bound and not self.instance.pk:
             self.fields["inspected_at"].initial = timezone.localtime(timezone.now()).replace(second=0, microsecond=0)
-        # Persist enabled categories as JSON in a hidden input.
-        # For inspections created before this feature, default to all categories
-        # that already have points so we don't accidentally discard data.
+        # Persist enabled categories as JSON in a hidden input. Drafts must keep
+        # the exact list the mechanic saved (including an empty list). For
+        # finalized inspections that pre-date this feature, fall back to all
+        # categories that have points so historical data is not hidden.
         if not self.is_bound:
-            if self.instance.pk and self.instance.points.exists() and not self.instance.enabled_categories:
+            if (
+                not self.instance.is_draft
+                and self.instance.pk
+                and self.instance.points.exists()
+                and not self.instance.enabled_categories
+            ):
                 self.fields["enabled_categories"].initial = list(
                     dict.fromkeys(point.category for point in self.instance.points.all())
                 )
@@ -85,15 +91,7 @@ class InspectionForm(StagedAttachmentsMixin, forms.ModelForm):
         )
 
     def clean_enabled_categories(self) -> list[str]:
-        raw = self.cleaned_data.get("enabled_categories", "")
-        if not raw:
-            return []
-        try:
-            import json
-
-            value = json.loads(raw)
-        except (TypeError, ValueError) as exc:
-            raise forms.ValidationError(_("Enabled categories must be valid JSON.")) from exc
+        value = self.cleaned_data.get("enabled_categories") or []
         if not isinstance(value, list):
             raise forms.ValidationError(_("Enabled categories must be a list."))
         return [str(item) for item in value]
@@ -109,6 +107,14 @@ class InspectionForm(StagedAttachmentsMixin, forms.ModelForm):
 
 
 class InspectionPointForm(forms.ModelForm):
+    """Strict point form used when finalizing an inspection.
+
+    Measurements are required for every non-N/A status so finalized records are
+    complete and consistent.
+    """
+
+    require_measurement = True
+
     class Meta:
         model = InspectionPoint
         fields = ["status", "measurement", "notes"]
@@ -140,10 +146,11 @@ class InspectionPointForm(forms.ModelForm):
             return cleaned
 
         if status != InspectionPoint.STATUS_NA and not measurement:
-            self.add_error(
-                "measurement",
-                _("A measurement is required when the status is not N/A."),
-            )
+            if self.require_measurement:
+                self.add_error(
+                    "measurement",
+                    _("A measurement is required when the status is not N/A."),
+                )
             return cleaned
 
         error, normalized = _validate_measurement(measurement, rule)
@@ -153,6 +160,17 @@ class InspectionPointForm(forms.ModelForm):
             cleaned["measurement"] = normalized
 
         return cleaned
+
+
+class DraftInspectionPointForm(InspectionPointForm):
+    """Lenient point form used while a draft is being edited.
+
+    Mechanics can save incomplete points (e.g. status chosen but measurement not
+    yet filled) and come back to finish them later. Any provided measurement is
+    still validated and normalized.
+    """
+
+    require_measurement = False
 
 
 def _validate_measurement(value: str, rule: str) -> tuple[str | None, str]:
@@ -225,6 +243,15 @@ InspectionPointFormSet = inlineformset_factory(
     Inspection,
     InspectionPoint,
     form=InspectionPointForm,
+    extra=0,
+    can_delete=False,
+    can_order=False,
+)
+
+DraftInspectionPointFormSet = inlineformset_factory(
+    Inspection,
+    InspectionPoint,
+    form=DraftInspectionPointForm,
     extra=0,
     can_delete=False,
     can_order=False,

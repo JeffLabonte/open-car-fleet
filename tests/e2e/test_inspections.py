@@ -89,6 +89,7 @@ def create_inspection_fleet(
     name_input.send_keys(unique_name)
     firefox_driver.find_element(By.CSS_SELECTOR, '#main-content form button[type="submit"]').click()
     _wait(firefox_driver).until(ec.url_contains("/fleets/"))
+    inspection_state["fleet_pk"] = firefox_driver.current_url.rstrip("/").rsplit("/", 1)[-1]
 
 
 @given(parsers.parse('an inspection car "{car_name}" exists'))
@@ -123,11 +124,14 @@ def start_an_inspection(
     inspected_at: str,
     notes: str,
 ):
-    firefox_driver.get(_url(f"/cars/{inspection_state['car_pk']}/"))
+    fleet_pk = inspection_state.get("fleet_pk", "")
+    car_pk = inspection_state.get("car_pk", "")
+    firefox_driver.get(_url(f"/inspections/new/?fleet={fleet_pk}&car={car_pk}"))
     _wait(firefox_driver).until(
-        ec.presence_of_element_located((By.CSS_SELECTOR, '[data-testid="add-inspection-button"]'))
+        ec.presence_of_element_located((By.CSS_SELECTOR, '[data-testid="wizard-start-button"]'))
     )
-    firefox_driver.find_element(By.CSS_SELECTOR, '[data-testid="add-inspection-button"]').click()
+    _wait(firefox_driver).until(ec.element_to_be_clickable((By.CSS_SELECTOR, '[data-testid="wizard-start-button"]')))
+    firefox_driver.find_element(By.CSS_SELECTOR, '[data-testid="wizard-start-button"]').click()
     _wait(firefox_driver).until(ec.presence_of_element_located((By.NAME, "inspected_at")))
     firefox_driver.execute_script(
         """

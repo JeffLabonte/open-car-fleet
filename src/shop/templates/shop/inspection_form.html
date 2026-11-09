@@ -31,6 +31,11 @@
         {{ point_formset.non_form_errors }}
       </div>
     {% endif %}
+    {% if point_formset.errors %}
+      <div class="notification is-danger mb-4" data-testid="point-formset-errors">
+        {% translate 'Some checklist items need your attention before the inspection can be finalized.' %}
+      </div>
+    {% endif %}
 
     <div class="field is-grouped mb-4">
       <div class="control">
@@ -75,6 +80,9 @@
                     </td>
                     <td class="inspection-point__status" data-label="{% translate 'Status' %}">
                       <div class="select is-fullwidth">{{ point_form.status }}</div>
+                      {% for error in point_form.status.errors %}
+                        <p class="help is-danger">{{ error }}</p>
+                      {% endfor %}
                     </td>
                     <td class="inspection-point__measurement" data-label="{% translate 'Measurement / spec' %}">
                       {% if point_form.instance.code == "rear_brake_type" %}
@@ -106,9 +114,15 @@
                       {% else %}
                         {{ point_form.measurement }}
                       {% endif %}
+                      {% for error in point_form.measurement.errors %}
+                        <p class="help is-danger">{{ error }}</p>
+                      {% endfor %}
                     </td>
                     <td class="inspection-point__notes" data-label="{% translate 'Notes' %}">
                       {{ point_form.notes }}
+                      {% for error in point_form.notes.errors %}
+                        <p class="help is-danger">{{ error }}</p>
+                      {% endfor %}
                     </td>
                   </tr>
                   {% for hidden in point_form.hidden_fields %}{{ hidden }}{% endfor %}
