@@ -104,15 +104,8 @@ async function finishLogin() {
     let redirectTarget = '/';
     if (isSafeRedirectUrl(callbackPayload.redirect_url)) {
       redirectTarget = callbackPayload.redirect_url.trim();
-    } else if (typeof nextUrl === 'string' && nextUrl.trim() !== '') {
-      try {
-        const safeUrl = new URL(nextUrl, window.location.origin);
-        if (safeUrl.origin === window.location.origin) {
-          redirectTarget = safeUrl.pathname + safeUrl.search + safeUrl.hash;
-        }
-      } catch (error) {
-        redirectTarget = '/';
-      }
+    } else if (isSafeRedirectUrl(nextUrl)) {
+      redirectTarget = nextUrl.trim();
     }
 
     window.location.href = redirectTarget;
