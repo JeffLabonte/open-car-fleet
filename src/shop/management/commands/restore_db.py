@@ -3,8 +3,8 @@ import gzip
 import os
 import shutil
 import subprocess
-import tempfile
 import time
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -279,11 +279,17 @@ class Command(BaseCommand):
 
     def _restore_media(self) -> None:
         self._step(f"Restoring media snapshot: {self.media_snapshot}")
-        remote_tarball = tempfile.mktemp(suffix=".tar.gz", prefix="media-snapshot-", dir="/tmp")
-        self._compose_cp(str(self.media_snapshot), f"web:{remote_tarball}")
-        self._compose_exec("web", ["tar", "xzf", remote_tarball, "-C", "/app/src/media"], user="root")
-        self._compose_exec("web", ["chown", "-R", "django:django", "/app/src/media"], user="root")
-        self._compose_exec("web", ["rm", "-f", remote_tarball], user="root")
+        # Stage the tarball inside a private temp directory in the web container
+        # (mode 0700) instead of directly in the world-writable /tmp directory.
+        remote_temp_dir = f"/tmp/media-restore-{self.timestamp}-{uuid.uuid4().hex[:16]}"
+        remote_tarball = f"{remote_temp_dir}/media-snapshot.tar.gz"
+        self._compose_exec("web", ["mkdir", "-m", "700", remote_temp_dir], user="root")
+        try:
+            self._compose_cp(str(self.media_snapshot), f"web:{remote_tarball}")
+            self._compose_exec("web", ["tar", "xzf", remote_tarball, "-C", "/app/src/media"], user="root")
+            self._compose_exec("web", ["chown", "-R", "django:django", "/app/src/media"], user="root")
+        finally:
+            self._compose_exec("web", ["rm", "-rf", remote_temp_dir], user="root", check=False)
         self._compose(["up", "-d", "--build", "web"])
 
     def _verify(self) -> None:
