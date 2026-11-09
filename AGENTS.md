@@ -112,3 +112,4 @@ src/
 - Templates use `{% translate %}` (en-ca/fr-ca). After adding user-facing strings, run `makemessages` + `compilemessages`, and update `src/locale/*/LC_MESSAGES/django.po`.
 - CSV import is all-or-nothing: any invalid row aborts the whole import; unknown fields are warned and ignored; `car` references resolve by UUID, VIN, license plate, or usual name.
 - Deploy: `scripts/prepare-env.sh` (writes `src/.env.production`) then `make ansible-deploy` (Ansible + Docker Compose over Tailscale).
+- **Never assign untrusted input directly to `window.location`.** Redirect targets from JSON responses (e.g. `redirect_url` in `login.js`) must be validated as same-origin relative paths (start with `/`, not `//`, and contain no protocol scheme) or parsed with `new URL(..., origin)` and checked against `window.location.origin`. This prevents open-redirect and `javascript:` URL vulnerabilities.

@@ -25,6 +25,38 @@ if (loggedOut) {
   }
 }
 
+/**
+ * Validate a redirect URL supplied by an untrusted source (e.g. a JSON
+ * response). Only same-origin relative paths are accepted so that assigning
+ * the value to window.location cannot be abused as an open redirect or
+ * javascript: URL sink.
+ */
+function isSafeRedirectUrl(value) {
+  if (typeof value !== 'string') {
+    return false;
+  }
+  const url = value.trim();
+  if (!url) {
+    return false;
+  }
+  // Reject protocol-relative URLs and any string that begins with a URL
+  // scheme (e.g. http:, https:, javascript:, data:).
+  if (/^\/\//.test(url) || /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(url)) {
+    return false;
+  }
+  // Require a relative path.
+  if (!url.startsWith('/')) {
+    return false;
+  }
+  // Final same-origin sanity check.
+  try {
+    const parsed = new URL(url, window.location.origin);
+    return parsed.origin === window.location.origin;
+  } catch {
+    return false;
+  }
+}
+
 async function finishLogin() {
   try {
     const session = await hanko.validateSession();
@@ -70,8 +102,8 @@ async function finishLogin() {
     const callbackPayload = await response.json().catch(() => ({}));
 
     let redirectTarget = '/';
-    if (typeof callbackPayload.redirect_url === 'string' && callbackPayload.redirect_url.trim() !== '') {
-      redirectTarget = callbackPayload.redirect_url;
+    if (isSafeRedirectUrl(callbackPayload.redirect_url)) {
+      redirectTarget = callbackPayload.redirect_url.trim();
     } else if (typeof nextUrl === 'string' && nextUrl.trim() !== '') {
       try {
         const safeUrl = new URL(nextUrl, window.location.origin);
