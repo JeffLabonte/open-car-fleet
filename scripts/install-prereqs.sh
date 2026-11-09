@@ -64,7 +64,7 @@ ensure_brew() {
     return 0
   fi
   log "Homebrew not found. Installing ..."
-  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  /bin/bash -c "$(curl -fsSL --proto-redir "=https" https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   # Try to activate brew in the current shell for the rest of the script.
   if [[ -f /opt/homebrew/bin/brew ]]; then
     eval "$(/opt/homebrew/bin/brew shellenv)"
@@ -138,7 +138,7 @@ install_poetry_linux() {
     error "python3 is required to install Poetry but was not found."
     exit 1
   fi
-  curl -sSL https://install.python-poetry.org | python3 -
+  curl -sSL --proto-redir "=https" https://install.python-poetry.org | python3 -
   export PATH="$HOME/.local/bin:$PATH"
   if ! command_exists poetry; then
     warn "Poetry was installed to ~/.local/bin. Add it to your PATH or restart your shell."
@@ -150,7 +150,7 @@ install_docker_linux_apt() {
   sudo apt-get update
   sudo apt-get install -y ca-certificates curl gnupg
   sudo install -m 0755 -d /etc/apt/keyrings
-  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo tee /etc/apt/keyrings/docker.asc >/dev/null
+  curl -fsSL --proto-redir "=https" https://download.docker.com/linux/ubuntu/gpg | sudo tee /etc/apt/keyrings/docker.asc >/dev/null
   local distro_id distro_codename
   # shellcheck source=/dev/null
   . /etc/os-release
