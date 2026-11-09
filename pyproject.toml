@@ -39,7 +39,7 @@ optional = true
 selenium = ">=4.52.0,<5.0.0"
 
 [tool.poetry.group.lint.dependencies]
-ruff = ">=0.17.3,<1.0.0"
+ruff = ">=0.17.4,<1.0.0"
 pre-commit = ">=4.0.0,<5.0.0"
 
 [tool.ruff]
