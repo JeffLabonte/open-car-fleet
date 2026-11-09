@@ -109,7 +109,7 @@ The server and pytest must never use different databases: fixtures that create u
 Browser setup:
 
 - Firefox is launched headless; override the binary with `FIREFOX_BIN=/path/to/firefox` (CI installs Firefox with `browser-actions/setup-firefox@v1`).
-- Sessions are signed in through the DEBUG-only `/set-test-session/?email=...` helper, which creates a session without a Hanko token so the auth middleware skips revalidation.
+- Sessions are signed in through the DEBUG-only `/set-test-session/` helper, which accepts the email in the POST body and creates a session without a Hanko token so the auth middleware skips revalidation.
 
 ### CI
 

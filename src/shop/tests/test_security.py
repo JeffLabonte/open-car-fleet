@@ -218,12 +218,12 @@ class SecurityHardeningTests(TestCase):
         self.assertIn("attachments", form.errors)
 
     def test_set_test_session_is_disabled_in_production(self):
-        response = self.client.get(reverse("shop-set-test-session"), {"email": "e2e@example.com"})
+        response = self.client.post(reverse("shop-set-test-session"), {"email": "e2e@example.com"})
         self.assertEqual(response.status_code, 404)
 
     @override_settings(DEBUG=True)
     def test_set_test_session_signs_user_in_when_debug(self):
-        response = self.client.get(
+        response = self.client.post(
             reverse("shop-set-test-session"),
             {"email": "e2e-user@example.com", "next": "/cars/"},
         )
@@ -233,7 +233,7 @@ class SecurityHardeningTests(TestCase):
 
     @override_settings(DEBUG=True)
     def test_set_test_session_requires_email(self):
-        response = self.client.get(reverse("shop-set-test-session"), {"next": "/cars/"})
+        response = self.client.post(reverse("shop-set-test-session"), {"next": "/cars/"})
         self.assertEqual(response.status_code, 400)
 
     def test_excel_export_neutralizes_formula_injection(self):

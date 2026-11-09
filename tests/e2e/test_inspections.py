@@ -11,6 +11,8 @@ from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
 
+from tests.e2e.conftest import sign_in_with_test_session
+
 scenarios("features/inspections.feature")
 
 
@@ -72,7 +74,7 @@ def running_server_for_inspections():
 @given(parsers.parse('an inspection owner "{email}" is signed in'))
 def inspection_owner_signed_in(firefox_driver: webdriver.Firefox, inspection_state: dict[str, str], email: str):
     inspection_state["email"] = email
-    firefox_driver.get(_url(f"/set-test-session/?email={email}&next=/fleets/add/"))
+    sign_in_with_test_session(firefox_driver, email, "/fleets/add/")
     _wait(firefox_driver).until(ec.url_contains("/fleets/add/"))
 
 

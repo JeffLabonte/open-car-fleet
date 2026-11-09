@@ -10,7 +10,8 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _
-from django.views.decorators.http import require_GET
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 
 from shop.auth import HankoAuthenticationError, complete_hanko_login, fetch_hanko_userinfo
@@ -19,15 +20,23 @@ from shop.middleware import hanko_login_required
 from shop.theme import get_theme_from_request, normalize_theme
 
 
-def safe_next_url(request: HttpRequest, default: str = "/") -> str:
-    """Return a local, scheme-safe redirect target from ?next=, else the default."""
-    candidate = request.GET.get("next", default) or default
+def safe_next_url(
+    request: HttpRequest,
+    default: str = "/",
+    candidate: str | None = None,
+) -> str:
+    """Return a local, scheme-safe redirect target, else the default.
+
+    By default the candidate is read from the ``next`` query parameter. Pass
+    ``candidate`` to validate a value from another source (e.g. the POST body).
+    """
+    next_candidate = candidate if candidate is not None else request.GET.get("next", default) or default
     if url_has_allowed_host_and_scheme(
-        candidate,
+        next_candidate,
         allowed_hosts={request.get_host()},
         require_https=request.is_secure(),
     ):
-        return candidate
+        return next_candidate
     return default
 
 
@@ -91,18 +100,22 @@ def theme_view(request: HttpRequest, theme: str) -> HttpResponse:
     return response
 
 
-@require_GET
+@csrf_exempt
+@require_POST
 def set_test_session(request: HttpRequest) -> HttpResponse:
     """DEBUG-only helper that signs a user in by email for Selenium suites.
 
     The session is created without a Hanko session token, so the
     authentication middleware skips Hanko revalidation for these browser
     sessions. The endpoint is disabled entirely outside DEBUG mode.
+
+    Sensitive data (email) is read from the POST body rather than the query
+    string so it is not exposed in URLs or server logs.
     """
     if not getattr(settings, "DEBUG", False):
         raise Http404(_("Not found."))
 
-    email = (request.GET.get("email") or "").strip().lower()
+    email = (request.POST.get("email") or "").strip().lower()
     if not email or "@" not in email or len(email) > 254:
         return JsonResponse({"ok": False, "error": "A valid email is required."}, status=400)
 
@@ -115,7 +128,8 @@ def set_test_session(request: HttpRequest) -> HttpResponse:
             "provider": "local",
         },
     )
-    return redirect(safe_next_url(request, default=reverse("shop-index")))
+    next_url = (request.POST.get("next") or "").strip()
+    return redirect(safe_next_url(request, default=reverse("shop-index"), candidate=next_url))
 
 
 @ratelimit(key="ip", rate="10/m", method="POST")

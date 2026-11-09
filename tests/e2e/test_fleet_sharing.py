@@ -12,6 +12,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 from shop.auth import sync_hanko_user
 from shop.models import Car, Fleet, FleetMembership
+from tests.e2e.conftest import sign_in_with_test_session
 
 scenarios("features/fleet_sharing.feature")
 
@@ -113,17 +114,17 @@ def daily_driver_car(shared_fleet: Fleet, django_db_blocker):
 
 @given('"viewer@example.com" is signed in')
 def sign_in_viewer(firefox_driver: webdriver.Firefox):
-    firefox_driver.get(_url("/set-test-session/?email=viewer@example.com"))
+    sign_in_with_test_session(firefox_driver, "viewer@example.com")
 
 
 @given('"admin@example.com" is signed in')
 def sign_in_admin(firefox_driver: webdriver.Firefox):
-    firefox_driver.get(_url("/set-test-session/?email=admin@example.com"))
+    sign_in_with_test_session(firefox_driver, "admin@example.com")
 
 
 @given('"owner@example.com" is signed in')
 def sign_in_owner(firefox_driver: webdriver.Firefox):
-    firefox_driver.get(_url("/set-test-session/?email=owner@example.com"))
+    sign_in_with_test_session(firefox_driver, "owner@example.com")
 
 
 @given('a user "stranger@example.com"')
@@ -133,7 +134,7 @@ def user_stranger():
 
 @given('"stranger@example.com" is signed in')
 def sign_in_stranger(firefox_driver: webdriver.Firefox):
-    firefox_driver.get(_url("/set-test-session/?email=stranger@example.com"))
+    sign_in_with_test_session(firefox_driver, "stranger@example.com")
 
 
 @when('they visit the share page for "Shared Fleet"')

@@ -11,6 +11,8 @@ from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
 
+from tests.e2e.conftest import sign_in_with_test_session
+
 scenarios("features/unified_attachments.feature")
 
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n" + b"\x00\x00\x00\x0dIHDR" + b"\x00" * 32
@@ -78,7 +80,7 @@ def running_server():
 @given(parsers.parse('"{email}" is signed in'))
 def sign_in(firefox_driver: webdriver.Firefox, state: dict[str, str], email: str):
     state["email"] = email
-    firefox_driver.get(_url(f"/set-test-session/?email={email}&next=/fleets/add/"))
+    sign_in_with_test_session(firefox_driver, email, "/fleets/add/")
     _wait(firefox_driver).until(ec.url_contains("/fleets/add/"))
 
 

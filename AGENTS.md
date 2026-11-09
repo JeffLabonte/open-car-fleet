@@ -75,7 +75,7 @@ All protected views in both apps use `@hanko_login_required` from `shop.middlewa
 
 1. Hanko JS frontend POSTs `/auth/hanko/callback/` → `complete_hanko_login()` (`src/shop/auth.py`) → Django session gains `hanko_session_token`.
 2. `HankoAuthenticationMiddleware` revalidates that token against `HANKO_API_URL` (`GET <api>/userinfo`) on every unauthenticated request; API failure logs the user out.
-3. `PUBLIC_PATHS` (`/login`, `/theme`, `/auth/hanko/callback/`, `/set-test-session/`) and `PUBLIC_PREFIXES` (`/static/`, `/admin/`) bypass auth. `/set-test-session/` is a DEBUG-only helper for the Selenium suites: it signs a user in by email without a Hanko session token (so the middleware skips revalidation) and 404s when `settings.DEBUG` is false.
+3. `PUBLIC_PATHS` (`/login`, `/theme`, `/auth/hanko/callback/`, `/set-test-session/`) and `PUBLIC_PREFIXES` (`/static/`, `/admin/`) bypass auth. `/set-test-session/` is a DEBUG-only helper for the Selenium suites: it signs a user in by email (sent in the POST body) without a Hanko session token (so the middleware skips revalidation) and 404s when `settings.DEBUG` is false.
 
 ## Data access
 
