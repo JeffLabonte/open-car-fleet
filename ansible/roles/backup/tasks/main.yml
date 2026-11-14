@@ -25,7 +25,7 @@
     state: directory
     owner: "{{ ansible_user }}"
     group: root
-    mode: '0755'
+    mode: '0750'
 
 - name: Install media backup script
   ansible.builtin.copy:

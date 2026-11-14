@@ -3,7 +3,7 @@
   ansible.builtin.file:
     path: "{{ app_dir }}"
     state: directory
-    mode: '0755'
+    mode: '0750'
 
 - name: Synchronize application source to remote host
   ansible.posix.synchronize:
