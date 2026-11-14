@@ -29,7 +29,7 @@ upload component. Include at the bottom of every create/update form.
      data-upload-url="{% url 'shop-attachment-upload' %}"
      data-delete-url="{% url 'shop-attachment-delete' 0 %}">
   {{ form.staged_attachments }}
-  <label class="label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+  <p class="label">{{ field.label }}</p>
   <div class="control">
     <div class="file is-boxed is-fullwidth" id="attachment-dropzone">
       <label class="file-label">
