@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     '.mp4', '.webm', '.mov',
     '.pdf', '.doc', '.docx',
   ]);
-  const ALLOWED_CONTENT_TYPES = /^image\/(jpeg|png|gif|webp)|video\/(mp4|webm|quicktime)|application\/(pdf|msword|vnd\.openxmlformats-officedocument\.wordprocessingml\.document)$/;
+  const ALLOWED_CONTENT_TYPES = /^(image\/(jpeg|png|gif|webp)|video\/(mp4|webm|quicktime)|application\/(pdf|msword|vnd\.openxmlformats-officedocument\.wordprocessingml\.document))$/;
 
   const csrfToken = (form.querySelector('input[name="csrfmiddlewaretoken"]') || {}).value || '';
   const hiddenInput = form.querySelector('input[name="staged_attachments"]');
@@ -340,12 +340,19 @@ document.addEventListener('DOMContentLoaded', () => {
       items.push(item);
       known.add(key);
       if (!error) {
-        maybeCompressImage(file).then((uploadFile) => {
-          if (item.status === 'compressing') {
-            item.file = uploadFile;
-            enqueue(item);
-          }
-        });
+        maybeCompressImage(file)
+          .then((uploadFile) => {
+            if (item.status === 'compressing') {
+              item.file = uploadFile;
+              enqueue(item);
+            }
+          })
+          .catch(() => {
+            item.status = 'failed';
+            item.error = 'Image compression failed.';
+            render();
+            pump();
+          });
       }
     });
     clearInputFiles();
