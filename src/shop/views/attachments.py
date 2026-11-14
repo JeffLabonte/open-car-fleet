@@ -90,6 +90,30 @@ def attachment_delete(request: HttpRequest, pk: int) -> JsonResponse:
     return JsonResponse({"ok": True})
 
 
+@hanko_login_required
+@require_GET
+def attachment_staged_list(request: HttpRequest) -> JsonResponse:
+    """Return metadata for staged uploads owned by the requesting user.
+
+    The client sends a comma-separated list of attachment IDs it recovered
+    from localStorage; only IDs that are still staged and owned by the user
+    are returned.
+    """
+    ids = []
+    for raw in request.GET.get("ids", "").split(","):
+        raw = raw.strip()
+        if raw.isdigit():
+            ids.append(int(raw))
+
+    attachments = Attachment.objects.filter(
+        pk__in=ids,
+        uploaded_by=request.user,
+        content_type__isnull=True,
+    ).values("pk", "display_name", "kind", "mime_type", "created_at")
+
+    return JsonResponse({"attachments": list(attachments)})
+
+
 def _user_can_view_attachment(user: Any, attachment: Attachment) -> bool:
     """Authorize attachment downloads through their parent object's permissions."""
     parent = attachment.parent

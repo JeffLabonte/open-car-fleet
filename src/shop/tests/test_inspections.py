@@ -825,6 +825,30 @@ class InspectionViewIntegrationTests(ShopTestCase):
         self.assertGreater(delete_form_open, 0)
         self.assertGreater(delete_form_open, main_form_close)
 
+    def test_draft_update_form_includes_autosave_data_attributes(self):
+        inspection = Inspection.objects.create(car=self.car, is_draft=True)
+
+        response = self.client.get(reverse("shop-inspection-update", args=[self.car.pk, inspection.pk]))
+        content = response.content.decode()
+
+        self.assertIn(
+            f'data-autosave-url="{reverse("shop-inspection-autosave", args=[self.car.pk, inspection.pk])}"', content
+        )
+        self.assertIn(f'data-user-pk="{self.owner.pk}"', content)
+        self.assertIn(f'data-car-pk="{self.car.pk}"', content)
+        self.assertIn(f'data-inspection-pk="{inspection.pk}"', content)
+        self.assertIn('data-staged-list-url="/attachments/staged/"', content)
+
+    def test_draft_update_form_shows_restore_banner(self):
+        inspection = Inspection.objects.create(car=self.car, is_draft=True)
+
+        response = self.client.get(reverse("shop-inspection-update", args=[self.car.pk, inspection.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-testid="inspection-restore-banner"')
+        self.assertContains(response, 'data-testid="inspection-restore-button"')
+        self.assertContains(response, 'data-testid="inspection-discard-button"')
+
     def test_finalized_update_form_shows_update_button(self):
         inspection = Inspection.objects.create(car=self.car, is_draft=False)
 

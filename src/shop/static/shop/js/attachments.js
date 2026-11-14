@@ -207,6 +207,9 @@ document.addEventListener('DOMContentLoaded', () => {
       .filter((item) => item.stagedId)
       .map((item) => item.stagedId)
       .join(',');
+    if (window.InspectionAutosave && window.InspectionAutosave.backup) {
+      window.InspectionAutosave.backup();
+    }
   };
 
   const clearInputFiles = () => {
@@ -392,6 +395,65 @@ document.addEventListener('DOMContentLoaded', () => {
       acceptFiles(fileInput.files);
     }
   });
+
+  const restoreStaged = (stagedIdsString, metadataUrl) => {
+    const ids = String(stagedIdsString || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s && !isNaN(parseInt(s, 10)));
+    if (!ids.length || !metadataUrl) {
+      render();
+      return;
+    }
+    const existingIds = new Set(items.filter((item) => item.stagedId).map((item) => String(item.stagedId)));
+    const missingIds = ids.filter((id) => !existingIds.has(id));
+    if (!missingIds.length) {
+      render();
+      return;
+    }
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', metadataUrl + '?ids=' + encodeURIComponent(missingIds.join(',')));
+    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+    xhr.addEventListener('load', () => {
+      if (xhr.status !== 200) {
+        render();
+        return;
+      }
+      let response;
+      try {
+        response = JSON.parse(xhr.responseText);
+      } catch {
+        render();
+        return;
+      }
+      (response.attachments || []).forEach((attachment) => {
+        const stagedId = attachment.pk;
+        if (existingIds.has(String(stagedId))) return;
+        const file = {
+          name: attachment.display_name || ('attachment-' + stagedId),
+          size: 0,
+          type: attachment.mime_type || '',
+          lastModified: attachment.created_at ? new Date(attachment.created_at).getTime() : Date.now(),
+        };
+        items.push({
+          key: fileKey(file) + ':' + stagedId,
+          file,
+          status: 'done',
+          error: null,
+          stagedId,
+          xhr: null,
+        });
+        existingIds.add(String(stagedId));
+      });
+      render();
+    });
+    xhr.addEventListener('error', () => render());
+    xhr.send();
+  };
+
+  window.AttachmentUploader = {
+    restoreStaged,
+  };
 
   clearInputFiles();
   updateHiddenInput();

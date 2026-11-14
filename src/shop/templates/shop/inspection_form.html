@@ -5,6 +5,21 @@
 {% block form_title %}{% if is_create %}{% translate 'Add Inspection' %}{% else %}{% translate 'Edit Inspection' %}{% endif %}{% endblock %}
 {% block form_subtitle %}
   <p class="has-text-grey mb-4">{% translate 'Record the exact time, findings, photos, and documents for this vehicle inspection.' %}</p>
+
+  <div id="inspection-restore-banner" class="notification is-warning is-light mb-4 is-hidden" data-testid="inspection-restore-banner">
+    <div class="is-flex is-flex-wrap-wrap is-justify-content-space-between is-align-items-center gap-2">
+      <span>{% translate 'Unsaved changes were found on this device.' %}</span>
+      <div class="buttons mb-0">
+        <button type="button" class="button is-small is-primary" id="inspection-restore-button" data-testid="inspection-restore-button">
+          {% translate 'Restore' %}
+        </button>
+        <button type="button" class="button is-small is-light" id="inspection-discard-button" data-testid="inspection-discard-button">
+          {% translate 'Discard' %}
+        </button>
+      </div>
+    </div>
+  </div>
+
   {% if inspection and inspection.is_draft %}
     <div class="notification is-info is-light mb-4">
       {% translate 'This inspection is a draft. It will not appear in the vehicle history until it is finalized.' %}
@@ -14,7 +29,7 @@
 {% endblock %}
 {% block cancel_url %}{% url 'shop-car-detail' car.pk %}{% endblock %}
 {% block submit_label %}{% if is_create %}{% translate 'Create inspection' %}{% else %}{% translate 'Update' %}{% endif %}{% endblock %}
-{% block form_attrs %}{% if not is_create and inspection and inspection.is_draft %}enctype="multipart/form-data" novalidate data-autosave-url="{% url 'shop-inspection-autosave' car.pk inspection.pk %}"{% else %}enctype="multipart/form-data" novalidate{% endif %}{% endblock %}
+{% block form_attrs %}{% if not is_create and inspection and inspection.is_draft %}enctype="multipart/form-data" novalidate data-autosave-url="{% url 'shop-inspection-autosave' car.pk inspection.pk %}" data-user-pk="{{ request.user.pk }}" data-car-pk="{{ car.pk }}" data-inspection-pk="{{ inspection.pk }}" data-staged-list-url="{% url 'shop-attachment-staged-list' %}"{% else %}enctype="multipart/form-data" novalidate{% endif %}{% endblock %}
 
 {% block form_fields %}
   {% for field in form.visible_fields %}

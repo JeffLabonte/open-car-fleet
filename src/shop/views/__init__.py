@@ -14,6 +14,7 @@ from shop.views.attachments import (
     _user_can_view_attachment,
     attachment_delete,
     attachment_file,
+    attachment_staged_list,
     attachment_upload,
 )
 from shop.views.auth import (
@@ -85,6 +86,7 @@ __all__ = [
     "_user_can_view_attachment",
     "attachment_delete",
     "attachment_file",
+    "attachment_staged_list",
     "attachment_upload",
     "car_create",
     "car_delete",

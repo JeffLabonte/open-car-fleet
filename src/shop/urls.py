@@ -75,6 +75,7 @@ urlpatterns = [
     path("cars/<uuid:car_pk>/reports/add/", views.report_create, name="shop-report-create"),
     path("cars/<uuid:car_pk>/reports/<int:pk>/edit/", views.report_update, name="shop-report-update"),
     path("attachments/upload/", views.attachment_upload, name="shop-attachment-upload"),
+    path("attachments/staged/", views.attachment_staged_list, name="shop-attachment-staged-list"),
     path("attachments/<int:pk>/file/", views.attachment_file, name="shop-attachment-file"),
     path("attachments/<int:pk>/delete/", views.attachment_delete, name="shop-attachment-delete"),
     path("set-test-session/", views.set_test_session, name="shop-set-test-session"),

@@ -172,6 +172,19 @@
     }
   }
 
+  function refreshFromInput() {
+    const categories = document.querySelectorAll(".inspection-category");
+    const enabledCategories = getEnabledCategories();
+    categories.forEach((category) => {
+      const toggle = category.querySelector(".category-enable-toggle");
+      if (!toggle) return;
+      const enabled = enabledCategories.includes(category.dataset.category);
+      toggle.checked = enabled;
+      setCategoryEnabled(category, enabled);
+      category.querySelectorAll(".inspection-point").forEach(updatePointRequiredState);
+    });
+  }
+
   function init() {
     const categories = document.querySelectorAll(".inspection-category");
     const input = getEnabledCategoriesInput();
@@ -183,6 +196,9 @@
     }
     categories.forEach(initCategory);
     initGlobalToggles();
+
+    document.addEventListener("inspection:restored", refreshFromInput);
+    window.InspectionUI = { refreshFromInput };
   }
 
   if (document.readyState === "loading") {

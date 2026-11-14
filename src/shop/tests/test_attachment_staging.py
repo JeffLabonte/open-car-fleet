@@ -340,3 +340,92 @@ class StagedAttachmentClaimTests(TestCase):
 
         self.assertIn("Purged 1", buffer.getvalue())
         self.assertFalse(Attachment.objects.filter(pk=stale.pk).exists())
+
+
+class StagedAttachmentListTests(TestCase):
+    def setUp(self) -> None:
+        self.user = ShopUser.objects.create_user(
+            username="list-owner",
+            email="list-owner@example.com",
+            password="pass1234",
+        )
+        self.stranger = ShopUser.objects.create_user(
+            username="list-stranger",
+            email="list-stranger@example.com",
+            password="pass1234",
+        )
+        self.fleet = Fleet.objects.create(name="List Fleet", created_by=self.user)
+        FleetMembership.objects.create(
+            fleet=self.fleet,
+            user=self.user,
+            role=FleetMembership.ROLE_OWNER,
+        )
+        self.car = Car.objects.create(
+            fleet=self.fleet,
+            make="Toyota",
+            model="Prius",
+            vin="JTDKB20U929483756",
+        )
+
+    def test_staged_list_returns_own_staged_attachments(self):
+        self.client.force_login(self.user)
+        upload_response = self.client.post(
+            reverse("shop-attachment-upload"),
+            data={"file": SimpleUploadedFile("mine.png", PNG_SIGNATURE, content_type="image/png")},
+        )
+        self.assertEqual(upload_response.status_code, 201)
+        attachment_id = upload_response.json()["id"]
+
+        response = self.client.get(reverse("shop-attachment-staged-list") + f"?ids={attachment_id}")
+
+        self.assertEqual(response.status_code, 200)
+        attachments = response.json()["attachments"]
+        self.assertEqual(len(attachments), 1)
+        self.assertEqual(attachments[0]["pk"], attachment_id)
+        self.assertEqual(attachments[0]["display_name"], "mine.png")
+        self.assertEqual(attachments[0]["kind"], "image")
+
+    def test_staged_list_ignores_claimed_attachments(self):
+        self.client.force_login(self.user)
+        report = Report.objects.create(car=self.car, job_name="Claimed", date_done="2026-09-14")
+        claimed = Attachment.objects.create(
+            content_type=ContentType.objects.get_for_model(report),
+            object_id=str(report.pk),
+            source_type=Attachment.SOURCE_UPLOAD,
+            uploaded_by=self.user,
+            file=SimpleUploadedFile("claimed.png", PNG_SIGNATURE, content_type="image/png"),
+            display_name="claimed.png",
+            mime_type="image/png",
+        )
+
+        response = self.client.get(reverse("shop-attachment-staged-list") + f"?ids={claimed.pk}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["attachments"], [])
+        claimed.file.delete(save=False)
+
+    def test_staged_list_ignores_other_users_attachments(self):
+        attachment = Attachment.objects.create(
+            source_type=Attachment.SOURCE_UPLOAD,
+            uploaded_by=self.user,
+            file=SimpleUploadedFile("theirs.png", PNG_SIGNATURE, content_type="image/png"),
+            display_name="theirs.png",
+            mime_type="image/png",
+        )
+        self.client.force_login(self.stranger)
+
+        response = self.client.get(reverse("shop-attachment-staged-list") + f"?ids={attachment.pk}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["attachments"], [])
+        attachment.file.delete(save=False)
+
+    def test_staged_list_requires_authentication(self):
+        response = self.client.get(reverse("shop-attachment-staged-list"))
+        self.assertEqual(response.status_code, 302)
+
+    def test_staged_list_ignores_invalid_ids(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("shop-attachment-staged-list") + "?ids=abc,,")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["attachments"], [])

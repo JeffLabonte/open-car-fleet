@@ -91,6 +91,7 @@
 
     updateVisibility();
     select.addEventListener("change", updateVisibility);
+    document.addEventListener("inspection:restored", updateVisibility);
   }
 
   if (document.readyState === "loading") {

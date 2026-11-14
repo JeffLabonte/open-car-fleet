@@ -56,11 +56,7 @@ PY
     for host in $HOSTS; do
       # Try a short Tailscale ping (requires host to be online in tailnet).
       # Fall back to a plain ping if tailscale ping is unavailable.
-      if ! tailscale ping --c=1 --timeout=5s "$host" >/dev/null 2>&1; then
-        echo "Warning: tailscale ping to '$host' failed. The host may be offline or not in your tailnet." >&2
-      else
-        echo "Tailscale ping to '$host': OK"
-      fi
+      ssh $USER@$host "echo 'Ok $host'"
     done
   fi
 else
