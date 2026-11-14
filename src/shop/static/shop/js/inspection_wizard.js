@@ -94,13 +94,13 @@
 
   if (fleetSelect) {
     fleetSelect.addEventListener('change', () => {
-      loadCarsForFleet(fleetSelect.value, false);
+      loadCarsForFleet(fleetSelect.value, false).catch(() => {});
     });
 
     // Pre-populate when the page is rendered with an initial fleet.
     // Preserve any car that was preselected server-side.
     if (fleetSelect.value) {
-      loadCarsForFleet(fleetSelect.value, true);
+      loadCarsForFleet(fleetSelect.value, true).catch(() => {});
     }
   }
 
