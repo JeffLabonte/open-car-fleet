@@ -23,8 +23,23 @@ including `form` and `is_create`.
     <form method="post" {% block form_attrs %}novalidate{% endblock %}>
       {% csrf_token %}
       {% if form.non_field_errors %}
-        <div class="notification is-danger mb-4">
+        <div class="notification is-danger mb-4" role="alert">
           {{ form.non_field_errors }}
+        </div>
+      {% endif %}
+      {% if form.errors %}
+        <div class="notification is-danger mb-4" role="alert" data-testid="form-error-summary" tabindex="-1">
+          <p class="mb-2">{% translate 'Please correct the highlighted fields and try again.' %}</p>
+          <ul class="mb-0">
+            {% for field in form %}
+              {% if field.errors %}
+                <li><a href="#{{ field.id_for_label }}">{{ field.label }}</a></li>
+              {% endif %}
+            {% endfor %}
+            {% if form.non_field_errors %}
+              <li>{% translate 'Form-level errors are listed above.' %}</li>
+            {% endif %}
+          </ul>
         </div>
       {% endif %}
 
