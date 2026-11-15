@@ -198,6 +198,53 @@ class TestDeploymentHardening(TestCase):
         self.assertNotIn("--mount=type=secret", dockerfile)
         self.assertNotIn("env_file:\n    file:", compose)
 
+    def test_security_logger_uses_console_locally_and_syslog_in_production(self):
+        from settings.settings import DEBUG, LOGGING
+
+        self.assertTrue(DEBUG)
+        self.assertEqual(LOGGING["loggers"]["security"]["handlers"], ["security_console"])
+
+        env = os.environ.copy()
+        env.update(
+            {
+                "DEBUG": "False",
+                "DJANGO_SECRET_KEY": "test-production-logging-key",
+                "SECURE_SSL_REDIRECT": "False",
+            }
+        )
+        result = subprocess.run(
+            [
+                "python",
+                "-c",
+                (
+                    "from settings.settings import LOGGING; "
+                    "logger = LOGGING['loggers']['security']; "
+                    "handler = LOGGING['handlers']['security_syslog']; "
+                    "assert logger['handlers'] == ['security_syslog']; "
+                    "assert handler['class'] == 'settings.settings.SecuritySysLogHandler'; "
+                    "assert handler['address'] == '/dev/log'; "
+                    "assert handler['facility'] == 'local0'"
+                ),
+            ],
+            cwd=str(REPO_ROOT / "src"),
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_production_audit_logs_use_persistent_restricted_journald(self):
+        compose = (REPO_ROOT / "docker-compose.prod.yml").read_text()
+        deploy = (REPO_ROOT / "ansible" / "roles" / "deploy" / "tasks" / "main.yml").read_text()
+        audit_docs = (REPO_ROOT / "docs" / "security" / "audit-logging.md").read_text()
+
+        self.assertIn("- /dev/log:/dev/log", compose)
+        self.assertIn("Storage=persistent", deploy)
+        self.assertIn("MaxRetentionSec=90day", deploy)
+        self.assertIn("SystemMaxUse=2G", deploy)
+        self.assertIn("systemd-journal", deploy)
+        self.assertIn("review security events at least daily", audit_docs)
+
     def test_ssl_redirect_without_trusted_proxy_raises(self):
         env = os.environ.copy()
         env["DJANGO_SECRET_KEY"] = "test-secret-key-for-subprocess"

@@ -11,12 +11,19 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 import os
+from logging.handlers import SysLogHandler
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.translation import gettext_lazy as _
 
 from settings.vault import load_vault_secrets
+
+
+class SecuritySysLogHandler(SysLogHandler):
+    def handleError(self, record):
+        pass
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -357,10 +364,17 @@ LOGGING = {
             "class": "logging.StreamHandler",
             "formatter": "security",
         },
+        "security_syslog": {
+            "level": "INFO",
+            "class": "settings.settings.SecuritySysLogHandler",
+            "address": "/dev/log",
+            "facility": "local0",
+            "formatter": "security",
+        },
     },
     "loggers": {
         "security": {
-            "handlers": ["security_console"],
+            "handlers": ["security_console"] if DEBUG else ["security_syslog"],
             "level": "INFO",
             "propagate": False,
         },

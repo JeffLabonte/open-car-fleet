@@ -1,4 +1,7 @@
-from io import BytesIO
+import logging
+from contextlib import redirect_stderr
+from io import BytesIO, StringIO
+from unittest.mock import patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
@@ -17,6 +20,28 @@ from shop.tests.helpers import PNG_SIGNATURE
 
 class SecurityHardeningTests(TestCase):
     """Regression tests for security audit fixes."""
+
+    def test_syslog_failure_does_not_emit_event_or_raise(self):
+        from settings.settings import SecuritySysLogHandler
+
+        with patch.object(SecuritySysLogHandler, "createSocket"):
+            handler = SecuritySysLogHandler(address="/dev/log")
+        record = logging.LogRecord(
+            "security",
+            logging.WARNING,
+            __file__,
+            1,
+            "hanko_auth_failed: reason=invalid_session",
+            (),
+            None,
+        )
+        error_output = StringIO()
+
+        with patch.object(handler, "createSocket", side_effect=OSError("syslog unavailable")):
+            with redirect_stderr(error_output):
+                handler.emit(record)
+
+        self.assertEqual(error_output.getvalue(), "")
 
     def setUp(self) -> None:
         self.owner = ShopUser.objects.create_user(

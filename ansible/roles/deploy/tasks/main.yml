@@ -1,4 +1,29 @@
 ---
+- name: Ensure persistent system journal directory exists
+  ansible.builtin.file:
+    path: /var/log/journal
+    state: directory
+    owner: root
+    group: systemd-journal
+    mode: '2755'
+
+- name: Configure persistent journal retention for security audit events
+  ansible.builtin.copy:
+    dest: /etc/systemd/journald.conf.d/open-car-fleet-audit.conf
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      [Journal]
+      Storage=persistent
+      MaxRetentionSec=90day
+      SystemMaxUse=2G
+
+- name: Restart systemd journal with persistent retention settings
+  ansible.builtin.systemd:
+    name: systemd-journald
+    state: restarted
+
 - name: Build and start services with Docker Compose
   community.docker.docker_compose_v2:
     project_src: "{{ app_dir }}"
