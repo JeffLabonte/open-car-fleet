@@ -44,9 +44,8 @@ def require_fleet_permission(
             if not getattr(perms, permission, False):
                 if log_reason:
                     security_log.warning(
-                        "access_denied: user=%s path=%s reason=%s fleet=%s",
+                        "access_denied: user=%s reason=%s fleet=%s",
                         request.user.pk,
-                        request.path,
                         log_reason,
                         fleet.pk,
                     )

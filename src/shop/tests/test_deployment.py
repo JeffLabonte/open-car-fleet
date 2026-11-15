@@ -156,3 +156,30 @@ class TestDeploymentHardening(TestCase):
         )
         self.assertEqual(result.returncode, 1)
         self.assertIn("DJANGO_TRUSTED_PROXY", result.stderr)
+
+    def test_collectstatic_does_not_require_vault_credentials(self):
+        env = os.environ.copy()
+        env.update(
+            {
+                "DEBUG": "False",
+                "DJANGO_SECRET_KEY": "build-only-secret",
+                "SECRETS_BACKEND": "vault",
+                "SECURE_SSL_REDIRECT": "False",
+            }
+        )
+        for key in ("VAULT_ADDR", "VAULT_ROLE_ID", "VAULT_SECRET_ID"):
+            env.pop(key, None)
+
+        result = subprocess.run(
+            [
+                "python",
+                "-c",
+                "import sys; sys.argv = ['manage.py', 'collectstatic']; import settings.settings",
+            ],
+            cwd=str(REPO_ROOT / "src"),
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)

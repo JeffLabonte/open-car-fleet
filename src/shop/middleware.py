@@ -37,6 +37,8 @@ class RatelimitMiddleware(MiddlewareMixin):
 
     def process_exception(self, request: HttpRequest, exception: BaseException) -> Optional[HttpResponse]:
         if isinstance(exception, Ratelimited):
+            route = getattr(getattr(request, "resolver_match", None), "view_name", None) or "unknown"
+            security_log.warning("rate_limit_exceeded: method=%s route=%s", request.method, route)
             return HttpResponse("Too Many Requests", status=429)
         return None
 
@@ -91,10 +93,8 @@ class HankoAuthenticationMiddleware(MiddlewareMixin):
                     remote_hanko_id = user_info.get("id")
                     if local_hanko_id and remote_hanko_id != local_hanko_id:
                         security_log.warning(
-                            "hanko_session_mismatch: user=%s local_hanko_id=%s remote_hanko_id=%s",
+                            "hanko_session_mismatch: user=%s",
                             request.user.pk,
-                            local_hanko_id,
-                            remote_hanko_id,
                         )
                         logout(request)
                         return cast(HttpResponse, redirect_to_login(request.get_full_path()))
@@ -117,10 +117,8 @@ class HankoAuthenticationMiddleware(MiddlewareMixin):
         # Bind the remote Hanko identity to the local user we just authenticated.
         if request.user.hanko_id != user_info.get("id"):
             security_log.warning(
-                "hanko_session_mismatch: user=%s local_hanko_id=%s remote_hanko_id=%s",
+                "hanko_session_mismatch: user=%s",
                 request.user.pk,
-                request.user.hanko_id,
-                user_info.get("id"),
             )
             logout(request)
             return cast(HttpResponse, redirect_to_login(request.get_full_path()))

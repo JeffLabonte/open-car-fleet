@@ -279,9 +279,8 @@ def fleet_member_role(request: HttpRequest, pk: str, membership_pk: int) -> Http
     membership = get_object_or_404(fleet.memberships, pk=membership_pk)
     if not perms.can_manage_member(membership.role):
         security_log.warning(
-            "access_denied: user=%s path=%s reason=role_change_hierarchy_violation target_user=%s target_role=%s",
+            "access_denied: user=%s reason=role_change_hierarchy_violation target_user=%s target_role=%s",
             request.user.pk,
-            request.path,
             membership.user_id,
             membership.role,
         )
@@ -326,9 +325,8 @@ def fleet_member_remove(request: HttpRequest, pk: str, membership_pk: int) -> Ht
     membership = get_object_or_404(fleet.memberships, pk=membership_pk)
     if not perms.can_manage_member(membership.role):
         security_log.warning(
-            "access_denied: user=%s path=%s reason=member_remove_hierarchy_violation target_user=%s target_role=%s",
+            "access_denied: user=%s reason=member_remove_hierarchy_violation target_user=%s target_role=%s",
             request.user.pk,
-            request.path,
             membership.user_id,
             membership.role,
         )

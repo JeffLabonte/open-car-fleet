@@ -88,15 +88,18 @@ class SecurityHardeningTests(TestCase):
 
     @override_settings(RATELIMIT_ENABLE=True)
     def test_hanko_callback_rate_limited_after_many_requests(self):
-        for index in range(11):
-            response = self.client.post(
-                reverse("shop-hanko-callback"),
-                data="{}",
-                content_type="application/json",
-            )
-            if response.status_code == 429:
-                break
+        with self.assertLogs("security", level="WARNING") as captured:
+            for index in range(11):
+                response = self.client.post(
+                    reverse("shop-hanko-callback"),
+                    data="{}",
+                    content_type="application/json",
+                )
+                if response.status_code == 429:
+                    break
         self.assertEqual(response.status_code, 429)
+        self.assertTrue(any("rate_limit_exceeded" in message for message in captured.output))
+        self.assertNotIn("session_token", "\n".join(captured.output))
 
     @override_settings(RATELIMIT_ENABLE=True)
     def test_attachment_upload_rate_limited_after_many_requests(self):
