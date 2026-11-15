@@ -87,6 +87,7 @@
     }
     const required = status.value !== NA_VALUE;
     measurement.classList.toggle("is-required", required);
+    measurement.setAttribute("aria-required", required ? "true" : "false");
     if (labelCell) {
       labelCell.classList.toggle("is-required", required);
     }

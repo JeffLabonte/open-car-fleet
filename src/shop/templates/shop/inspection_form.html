@@ -100,6 +100,7 @@
                       {% endfor %}
                     </td>
                     <td class="inspection-point__measurement" data-label="{% translate 'Measurement / spec' %}">
+                      <label class="is-sr-only" for="{{ point_form.measurement.id_for_label }}">{% blocktranslate with item=point_form.instance.label %}{{ item }} measurement{% endblocktranslate %}</label>
                       {% if point_form.instance.code == "rear_brake_type" %}
                         <div class="select is-fullwidth">
                           <select name="{{ point_form.measurement.html_name }}" id="{{ point_form.measurement.id_for_label }}" data-rear-brake-type-select>
@@ -134,6 +135,7 @@
                       {% endfor %}
                     </td>
                     <td class="inspection-point__notes" data-label="{% translate 'Notes' %}">
+                      <label class="is-sr-only" for="{{ point_form.notes.id_for_label }}">{% blocktranslate with item=point_form.instance.label %}{{ item }} notes{% endblocktranslate %}</label>
                       {{ point_form.notes }}
                       {% for error in point_form.notes.errors %}
                         <p class="help is-danger">{{ error }}</p>
