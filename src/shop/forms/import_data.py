@@ -14,7 +14,8 @@ class BaseImportForm(forms.Form):
     dry_run = forms.BooleanField(
         label=_("Validate only"),
         required=False,
-        initial=True,
+        initial=False,
+        widget=forms.HiddenInput,
         help_text=_("Validate the file without saving imported records."),
     )
 

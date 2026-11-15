@@ -18,6 +18,10 @@
         {% translate 'The selected car is applied automatically. The CSV file does not need a car field unless you want an explicit self-check.' %}
       </div>
 
+      <div class="notification is-warning mb-4">
+        {% translate 'Imports are all-or-nothing: if any row is invalid, nothing is saved. Use Validate first to preview the results.' %}
+      </div>
+
       <div class="form-grid">
         {% for field in form.visible_fields %}
           {% include 'shop/partials/_form_field.html' %}
@@ -26,7 +30,10 @@
 
       <div class="field is-grouped">
         <div class="control">
-          <button class="button is-primary" type="submit">{% translate 'Run import' %}</button>
+          <button class="button is-light" type="submit" name="dry_run" value="on">{% translate 'Validate' %}</button>
+        </div>
+        <div class="control">
+          <button class="button is-primary" type="submit">{% translate 'Import' %}</button>
         </div>
         <div class="control">
           <a class="button is-light" href="{% url 'shop-car-detail' car.pk %}">{% translate 'Cancel' %}</a>

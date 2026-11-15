@@ -140,6 +140,10 @@ class CSVImporter:
             requested_records=len(records),
         )
 
+        if not records:
+            result.errors.append(ImportIssue(0, _("The import file is empty or contains no data rows.")))
+            return result
+
         objects, attachment_plans = self._validate_records(model, records, normalized_context, result)
 
         if result.has_errors:

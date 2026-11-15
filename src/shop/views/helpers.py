@@ -104,10 +104,17 @@ def process_import_form(
         )
 
     if result.has_errors:
-        for error in result.errors:
+        error_cap = 25
+        for error in result.errors[:error_cap]:
             messages.error(
                 request,
                 _("Record %(number)s: %(message)s") % {"number": error.record_number, "message": error.message},
+            )
+        if len(result.errors) > error_cap:
+            messages.error(
+                request,
+                _("...and %(count)s more validation errors. Fix the issues above and try again.")
+                % {"count": len(result.errors) - error_cap},
             )
         form.add_error("import_file", _("Import validation failed. Fix the file and try again."))
         return None
