@@ -34,12 +34,14 @@ def car_doc_list(request, car_pk):
 def car_doc_detail(request, car_pk, pk):
     car = get_object_or_404(user_cars_queryset(request.user), pk=car_pk)
     doc = get_object_or_404(user_car_docs_queryset(request.user), pk=pk, car=car)
+    can_edit = FleetSharingPermissions(request.user, car.fleet).can_edit_fleet_data
     return render(
         request,
         "car_docs/detail.html",
         {
             "car": car,
             "doc": doc,
+            "can_edit_fleet_data": can_edit,
             "title": doc.title,
             "subtitle": _("Document details"),
         },

@@ -5,10 +5,12 @@
   <header class="page-header">
     {% include 'shop/partials/_page_header.html' %}
     <div class="page-actions">
-      <a class="button is-primary" href="{% url 'shop-known-shop-proof-create' shop.pk %}">
-        {% include 'shop/partials/_icon.html' with name='plus' %}
-        <span>{% translate 'Add proof' %}</span>
-      </a>
+      {% if can_manage_known_shop %}
+        <a class="button is-primary" href="{% url 'shop-known-shop-proof-create' shop.pk %}">
+          {% include 'shop/partials/_icon.html' with name='plus' %}
+          <span>{% translate 'Add proof' %}</span>
+        </a>
+      {% endif %}
       <a class="button is-light" href="{% url 'shop-known-shop-list' %}">{% translate 'Back to shops' %}</a>
     </div>
   </header>

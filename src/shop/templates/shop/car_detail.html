@@ -177,7 +177,11 @@
                 </td>
                 <td data-label="{% translate 'Mileage' %}">{{ inspection.mileage|default:'—' }}</td>
                 <td data-label="{% translate 'Actions' %}">
-                  <a class="button is-small is-link" href="{% url 'shop-inspection-update' car.pk inspection.pk %}">{% translate 'Edit' %}</a>
+                  {% if can_edit_fleet_data %}
+                    <a class="button is-small is-link" href="{% url 'shop-inspection-update' car.pk inspection.pk %}">{% translate 'Edit' %}</a>
+                  {% else %}
+                    <span class="has-text-grey">{% translate 'View only' %}</span>
+                  {% endif %}
                 </td>
               </tr>
             {% endfor %}
@@ -258,11 +262,13 @@
         <a class="button is-light is-small" href="{% url 'shop-car-detail' car.pk %}?show_done=1">{% translate 'Show done/cancelled' %}</a>
       {% endif %}
       {% if can_edit_fleet_data %}
+        <a class="button is-primary is-small" href="{% url 'shop-workjob-create' car.pk %}">{% translate 'Add planned work' %}</a>
+      {% endif %}
+      {% if can_manage_fleet %}
         <a class="button is-info is-small" href="{% url 'shop-car-import' car.pk %}?type=workjob">
           {% include 'shop/partials/_icon.html' with name='upload' %}
           <span>{% translate 'Import work jobs' %}</span>
         </a>
-        <a class="button is-primary is-small" href="{% url 'shop-workjob-create' car.pk %}">{% translate 'Add planned work' %}</a>
       {% endif %}
     </div>
   </section>
