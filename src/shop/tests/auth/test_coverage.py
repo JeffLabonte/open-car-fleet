@@ -178,10 +178,13 @@ class AuthAndInputCoverageTests(TestCase):
 
     @override_settings(HANKO_API_URL="https://hanko.example.com")
     def test_auth_failure_audit_event_does_not_log_session_token_or_provider_error(self):
-        with patch(
-            "shop.auth.requests.post",
-            return_value=FakeHankoResponse({"is_valid": False}),
-        ), self.assertLogs("security", level="WARNING") as captured:
+        with (
+            patch(
+                "shop.auth.requests.post",
+                return_value=FakeHankoResponse({"is_valid": False}),
+            ),
+            self.assertLogs("security", level="WARNING") as captured,
+        ):
             with self.assertRaises(HankoAuthenticationError):
                 fetch_hanko_userinfo("sensitive-session-token")
 

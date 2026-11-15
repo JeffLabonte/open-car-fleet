@@ -87,9 +87,7 @@ def load_vault_secrets(
         raise ImproperlyConfigured("Vault KV v2 secret data must be an object.")
 
     secrets = {
-        key: value
-        for key, value in values.items()
-        if key in VAULT_SECRET_KEYS and isinstance(value, str) and value
+        key: value for key, value in values.items() if key in VAULT_SECRET_KEYS and isinstance(value, str) and value
     }
     for key in VAULT_SECRET_KEYS:
         secrets.setdefault(key, "")
