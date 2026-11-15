@@ -46,7 +46,11 @@ class FleetInviteForm(forms.Form):
         initial=FleetMembership.ROLE_VIEWER,
         required=False,
         widget=forms.Select(attrs={"class": "input"}),
-        help_text=_("Role the invited user will receive after accepting."),
+        help_text=_(
+            "Fleet role controls what this member can do in the fleet. "
+            "Separate from the global mechanic mode (profile), which controls "
+            "access to inspections."
+        ),
     )
 
     def __init__(self, *args: object, allowed_roles: set[str] | None = None, **kwargs: object) -> None:

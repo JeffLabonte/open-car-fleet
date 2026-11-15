@@ -16,7 +16,7 @@
       <span>{% translate 'Cars' %}</span>
     </a>
     {% if request.user.is_mechanic %}
-      <a class="app-navlink" href="{% url 'shop-inspection-list' %}" data-testid="nav-inspections">
+      <a class="app-navlink" href="{% url 'shop-inspection-list' %}" data-testid="nav-inspections" title="{% translate 'Inspections require mechanic mode (profile) and fleet edit permission.' %}">
         {% include 'shop/partials/_icon.html' with name='clipboard' %}
         <span>{% translate 'Inspections' %}</span>
       </a>
@@ -68,7 +68,7 @@
     <span>{% translate 'Cars' %}</span>
   </a>
   {% if request.user.is_mechanic %}
-    <a class="app-tab" href="{% url 'shop-inspection-list' %}" data-testid="nav-inspections-mobile">
+    <a class="app-tab" href="{% url 'shop-inspection-list' %}" data-testid="nav-inspections-mobile" title="{% translate 'Inspections require mechanic mode (profile) and fleet edit permission.' %}">
       {% include 'shop/partials/_icon.html' with name='clipboard' %}
       <span>{% translate 'Inspections' %}</span>
     </a>
