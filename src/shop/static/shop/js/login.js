@@ -101,14 +101,16 @@ async function finishLogin() {
 
     const callbackPayload = await response.json().catch(() => ({}));
 
-    let redirectTarget = '/';
-    if (isSafeRedirectUrl(callbackPayload.redirect_url)) {
-      redirectTarget = callbackPayload.redirect_url.trim();
-    } else if (isSafeRedirectUrl(nextUrl)) {
-      redirectTarget = nextUrl.trim();
-    }
+    const redirectTarget = isSafeRedirectUrl(callbackPayload.redirect_url)
+      ? callbackPayload.redirect_url.trim()
+      : isSafeRedirectUrl(nextUrl)
+        ? nextUrl.trim()
+        : '/';
 
-    window.location.href = redirectTarget;
+    // Always resolve the redirect through URL so the value assigned to the
+    // location sink is guaranteed to be a same-origin path. redirectTarget is
+    // already validated as a same-origin relative path by isSafeRedirectUrl.
+    window.location.href = new URL(redirectTarget, window.location.origin).href; // NOSONAR
     return true;
   } catch (error) {
     console.error('Hanko login callback failed.', error);

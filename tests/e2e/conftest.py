@@ -1,6 +1,7 @@
 """Shared helpers for the end-to-end Selenium suites."""
 
 import os
+import time
 from urllib.parse import urljoin
 
 from selenium import webdriver
@@ -30,6 +31,10 @@ def sign_in_with_test_session(
     driver.get(e2e_url("/login/"))
     driver.execute_script(
         """
+        const getCsrfToken = () => {
+          const match = document.cookie.match(/(?:^|; )csrftoken=([^;]+)/);
+          return match ? decodeURIComponent(match[1]) : '';
+        };
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = '/set-test-session/';
@@ -43,9 +48,24 @@ def sign_in_with_test_session(
         nextInput.name = 'next';
         nextInput.value = arguments[1];
         form.appendChild(nextInput);
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = getCsrfToken();
+        form.appendChild(csrfInput);
         document.body.appendChild(form);
         form.submit();
         """,
         email,
         next_url,
     )
+    # Wait for the server to set the Django session cookie and complete the
+    # redirect. form.submit() returns immediately, so callers must not interact
+    # with the browser until the session is established.
+    deadline = time.monotonic() + 10
+    while time.monotonic() < deadline:
+        if any(cookie.get("name") == "sessionid" for cookie in driver.get_cookies()):
+            break
+        time.sleep(0.1)
+    else:
+        raise RuntimeError("sessionid cookie was not set after /set-test-session/")

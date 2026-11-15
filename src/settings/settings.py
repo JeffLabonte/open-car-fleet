@@ -107,8 +107,6 @@ if csrf_trusted_origins_raw:
             origins.append(item)
         else:
             origins.append(f"https://{item}")
-            if DEBUG and item.startswith(("localhost", "127.0.0.1", "[::1]")):
-                origins.append(f"http://{item}")
     CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(origins))
 else:
     CSRF_TRUSTED_ORIGINS = []
