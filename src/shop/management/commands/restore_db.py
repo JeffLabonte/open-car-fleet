@@ -279,18 +279,39 @@ class Command(BaseCommand):
 
     def _restore_media(self) -> None:
         self._step(f"Restoring media snapshot: {self.media_snapshot}")
-        # Stage the tarball inside a private temp directory in the web container
-        # (mode 0700) instead of directly in the world-writable /tmp directory.
-        remote_temp_dir = f"/tmp/media-restore-{self.timestamp}-{uuid.uuid4().hex[:16]}"
+        # Stage the tarball inside a private temp directory under /app (mode 0700)
+        # rather than in the world-writable /tmp directory.
+        staging_parent = "/app/.restore-staging"
+        remote_temp_dir = f"{staging_parent}/media-restore-{self.timestamp}-{uuid.uuid4().hex[:16]}"
         remote_tarball = f"{remote_temp_dir}/media-snapshot.tar.gz"
+        self._compose_exec("web", ["mkdir", "-p", "-m", "700", staging_parent], user="root")
         self._compose_exec("web", ["mkdir", "-m", "700", remote_temp_dir], user="root")
         try:
             self._compose_cp(str(self.media_snapshot), f"web:{remote_tarball}")
+            self._validate_tarball_members(remote_tarball)
             self._compose_exec("web", ["tar", "xzf", remote_tarball, "-C", "/app/src/media"], user="root")
             self._compose_exec("web", ["chown", "-R", "django:django", "/app/src/media"], user="root")
         finally:
             self._compose_exec("web", ["rm", "-rf", remote_temp_dir], user="root", check=False)
         self._compose(["up", "-d", "--build", "web"])
+
+    def _validate_tarball_members(self, tarball_path: str) -> None:
+        """Reject tarball entries that attempt path traversal or absolute paths."""
+        result = self._compose_exec(
+            "web",
+            ["tar", "tzf", tarball_path],
+            user="root",
+            capture=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            raise CommandError(f"Unable to list tarball contents: {tarball_path}")
+        for line in result.stdout.decode("utf-8", errors="replace").splitlines():
+            member = line.strip()
+            if not member:
+                continue
+            if member.startswith("/") or ".." in member.split("/"):
+                raise CommandError(f"Refusing to extract unsafe tarball member: {member}")
 
     def _verify(self) -> None:
         self._step("Running verification")
