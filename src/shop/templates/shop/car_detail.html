@@ -425,7 +425,7 @@
                     {% elif attachment.kind == 'video' and attachment.file %}
                       <a href="{% url 'shop-attachment-file' attachment.pk %}" target="_blank" rel="noopener noreferrer">{{ attachment.display_name|default:attachment.file.name }}</a>
                       <div class="mt-2 report-attachment-media">
-                        <video controls preload="metadata" style="max-width: 20rem; width: 100%;">
+                        <video controls preload="metadata" style="max-width: 20rem; width: 100%;" aria-label="{{ attachment.display_name|default:attachment.file.name }}">
                           <source src="{% url 'shop-attachment-file' attachment.pk %}" type="{{ attachment.mime_type|default:'video/mp4' }}" />
                           {% translate 'Your browser does not support embedded videos.' %}
                         </video>
