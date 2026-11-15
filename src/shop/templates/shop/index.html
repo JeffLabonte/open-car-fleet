@@ -13,7 +13,16 @@
         {% endfor %}
       </ul>
     {% else %}
-      <p class="has-text-grey">{% translate 'No fleets yet.' %}</p>
+      <div class="notification is-info mb-4">
+        <p class="mb-2"><strong>{% translate 'Get started' %}</strong></p>
+        <ol class="mb-2">
+          <li>{% translate 'Create your first fleet.' %}</li>
+          <li>{% translate 'Add a vehicle to the fleet.' %}</li>
+          <li>{% translate 'Record an inspection or maintenance report.' %}</li>
+          <li>{% translate 'Invite a collaborator.' %}</li>
+        </ol>
+        <a class="button is-primary is-small" href="{% url 'shop-fleet-create' %}">{% translate 'Create fleet' %}</a>
+      </div>
     {% endif %}
 
     <h2 class="title is-5">{% translate 'Open work jobs' %}</h2>
