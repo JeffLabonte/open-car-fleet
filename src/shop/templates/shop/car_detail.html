@@ -354,13 +354,12 @@
       </div>
     </div>
   {% else %}
-    <div class="notification is-warning">
-      {% if show_done %}
-        {% translate 'No planned jobs or assignments for this car.' %}
-      {% else %}
-        {% translate 'No open planned jobs or assignments for this car. Done or cancelled items are hidden.' %}
-      {% endif %}
-    </div>
+    {% if show_done %}
+      {% include 'shop/partials/_empty_state.html' with empty_message=_('No planned jobs or assignments for this car.') %}
+    {% else %}
+      {% url 'shop-workjob-create' car.pk as workjob_create_url %}
+      {% include 'shop/partials/_empty_state.html' with empty_message=_('No open planned jobs or assignments for this car. Done or cancelled items are hidden.') empty_action_url=workjob_create_url empty_action_label=_('Add planned work') %}
+    {% endif %}
   {% endif %}
 
   <section class="section-head" data-testid="reports-section">
