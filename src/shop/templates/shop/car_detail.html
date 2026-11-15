@@ -309,6 +309,21 @@
                 <td data-label="">
                   {% if can_edit_fleet_data %}
                     <a class="button is-small is-link" href="{% url 'shop-workjob-update' car.pk job.pk %}">{% translate 'Edit' %}</a>
+                    {% if job.status != 'done' and job.status != 'cancelled' %}
+                      <form method="post" action="{% url 'shop-workjob-status-update' car.pk job.pk %}" class="is-inline-block ml-1">
+                        {% csrf_token %}
+                        <input type="hidden" name="status" value="done">
+                        <button class="button is-small is-success" type="submit">{% translate 'Mark done' %}</button>
+                      </form>
+                      <form method="post" action="{% url 'shop-workjob-status-update' car.pk job.pk %}" class="is-inline-block ml-1">
+                        {% csrf_token %}
+                        <input type="hidden" name="status" value="cancelled">
+                        <button class="button is-small is-warning" type="submit">{% translate 'Cancel' %}</button>
+                      </form>
+                    {% endif %}
+                    {% if job.status == 'done' %}
+                      <a class="button is-small is-info" href="{% url 'shop-report-create' car.pk %}?workjob={{ job.pk }}">{% translate 'Create report' %}</a>
+                    {% endif %}
                   {% endif %}
                 </td>
               </tr>
