@@ -203,6 +203,7 @@ class TestDeploymentHardening(TestCase):
 
         self.assertTrue(DEBUG)
         self.assertEqual(LOGGING["loggers"]["security"]["handlers"], ["security_console"])
+        self.assertNotIn("security_syslog", LOGGING["handlers"])
 
         env = os.environ.copy()
         env.update(

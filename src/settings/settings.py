@@ -364,13 +364,19 @@ LOGGING = {
             "class": "logging.StreamHandler",
             "formatter": "security",
         },
-        "security_syslog": {
-            "level": "INFO",
-            "class": "settings.settings.SecuritySysLogHandler",
-            "address": "/dev/log",
-            "facility": "local0",
-            "formatter": "security",
-        },
+        **(
+            {
+                "security_syslog": {
+                    "level": "INFO",
+                    "class": "settings.settings.SecuritySysLogHandler",
+                    "address": "/dev/log",
+                    "facility": "local0",
+                    "formatter": "security",
+                }
+            }
+            if not DEBUG
+            else {}
+        ),
     },
     "loggers": {
         "security": {
