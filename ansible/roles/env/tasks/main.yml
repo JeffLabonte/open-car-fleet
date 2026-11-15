@@ -31,5 +31,7 @@
     set -euo pipefail
     grep -E '^POSTGRES_' "{{ app_dir }}/src/.env" > "{{ app_dir }}/src/.env.database"
     chmod 600 "{{ app_dir }}/src/.env.database"
+  args:
+    executable: /bin/bash
   # Always regenerate so password rotations in src/.env propagate to the DB container.
   changed_when: true
