@@ -425,7 +425,8 @@ docker compose -f docker-compose.prod.yml config
 
 ## Remaining / Future Work
 
-- **Vault integration (decision made):** The team decided to use HashiCorp Vault via AppRole for secrets. This was not implemented in this remediation because it requires infrastructure outside the application repository.
+- **Vault integration (decision made):** The application now supports HashiCorp Vault KV v2 via AppRole for `DJANGO_SECRET_KEY` and `MAILERSEND_API_TOKEN`, with a least-privilege read contract and operator procedures in `docs/security/secrets-management.md`. The Postgres bootstrap password remains in the protected deployment env file because the database container is started independently.
+- **Durable security audit storage:** Security event definitions and data-minimization requirements are documented in `docs/security/audit-logging.md`; the production deployment still routes these events to console output and needs a persistent append-only destination before the logs are suitable as an incident record.
 - **Traefik TLS:** Tailscale HTTPS is used now; Traefik will be introduced later.
 - **Anymail `MAILERS` migration:** Django 6.1 deprecates `EMAIL_BACKEND`; revisit when Anymail supports the new `MAILERS` framework.
 

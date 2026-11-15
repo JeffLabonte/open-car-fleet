@@ -128,9 +128,8 @@ def car_delete(request: HttpRequest, pk: str) -> HttpResponse:
     car = get_object_or_404(user_cars_queryset(request.user).select_related("fleet"), pk=pk)
     if not user_can_manage_fleet(request.user, car.fleet):
         security_log.warning(
-            "access_denied: user=%s path=%s reason=car_delete_not_manager car=%s fleet=%s",
+            "access_denied: user=%s reason=car_delete_not_manager car=%s fleet=%s",
             request.user.pk,
-            request.path,
             car.pk,
             car.fleet_id,
         )

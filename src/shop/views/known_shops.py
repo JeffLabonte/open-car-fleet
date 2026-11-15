@@ -78,9 +78,8 @@ def known_shop_update(request: HttpRequest, pk: int) -> HttpResponse:
     shop = get_object_or_404(user_known_shops_queryset(request.user), pk=pk)
     if not user_can_manage_known_shop(request.user, shop):
         security_log.warning(
-            "access_denied: user=%s path=%s reason=known_shop_not_manager shop=%s",
+            "access_denied: user=%s reason=known_shop_not_manager shop=%s",
             request.user.pk,
-            request.path,
             shop.pk,
         )
         messages.error(request, _("You do not have permission to edit this shop."))
@@ -104,9 +103,8 @@ def known_shop_proof_create(request: HttpRequest, shop_pk: int) -> HttpResponse:
     shop = get_object_or_404(user_known_shops_queryset(request.user), pk=shop_pk)
     if not user_can_manage_known_shop(request.user, shop):
         security_log.warning(
-            "access_denied: user=%s path=%s reason=known_shop_proof_not_manager shop=%s",
+            "access_denied: user=%s reason=known_shop_proof_not_manager shop=%s",
             request.user.pk,
-            request.path,
             shop.pk,
         )
         messages.error(request, _("You do not have permission to add proof for this shop."))
@@ -147,9 +145,8 @@ def known_shop_proof_update(request: HttpRequest, shop_pk: int, proof_pk: int) -
     proof = get_object_or_404(KnownShopProof, pk=proof_pk, shop=shop)
     if not user_can_manage_known_shop(request.user, shop):
         security_log.warning(
-            "access_denied: user=%s path=%s reason=known_shop_proof_not_manager shop=%s proof=%s",
+            "access_denied: user=%s reason=known_shop_proof_not_manager shop=%s proof=%s",
             request.user.pk,
-            request.path,
             shop.pk,
             proof.pk,
         )

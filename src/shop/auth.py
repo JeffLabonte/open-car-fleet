@@ -57,17 +57,20 @@ def fetch_hanko_userinfo(session_token: str) -> dict[str, Any]:
         response.raise_for_status()
         data = response.json()
     except (requests.RequestException, ValueError, TypeError) as exc:
-        security_log.warning("hanko_auth_failed: reason=api_error error=%s", exc)
+        security_log.warning("hanko_auth_failed: reason=api_error")
         raise HankoAuthenticationError("Unable to verify the Hanko session.") from exc
 
     if not isinstance(data, dict):
+        security_log.warning("hanko_auth_failed: reason=invalid_response")
         raise HankoAuthenticationError("Hanko returned an invalid session response.")
 
     if data.get("is_valid") is not True:
+        security_log.warning("hanko_auth_failed: reason=invalid_session")
         raise HankoAuthenticationError("Hanko session is not valid.")
 
     claims = data.get("claims")
     if not isinstance(claims, dict):
+        security_log.warning("hanko_auth_failed: reason=invalid_claims")
         raise HankoAuthenticationError("Hanko returned invalid session claims.")
 
     user_id = next(
@@ -80,6 +83,7 @@ def fetch_hanko_userinfo(session_token: str) -> dict[str, Any]:
         "",
     )
     if not user_id:
+        security_log.warning("hanko_auth_failed: reason=missing_user_id")
         raise HankoAuthenticationError("Hanko returned no user identifier.")
 
     email = _extract_hanko_email(claims.get("email"))
@@ -172,10 +176,8 @@ def _verify_email_identity_match(user: ShopUser, hanko_id: str) -> None:
     existing_hanko_id = (user.hanko_id or "").strip()
     if existing_hanko_id and existing_hanko_id != hanko_id:
         security_log.warning(
-            "hanko_auth_failed: reason=hanko_id_mismatch email=%s existing_hanko_id=%s attempted_hanko_id=%s",
-            user.email,
-            existing_hanko_id,
-            hanko_id,
+            "hanko_auth_failed: reason=hanko_id_mismatch user=%s",
+            user.pk,
         )
         raise HankoAuthenticationError("Hanko identity does not match the account linked to this email.")
     if not existing_hanko_id and hanko_id:
@@ -183,9 +185,8 @@ def _verify_email_identity_match(user: ShopUser, hanko_id: str) -> None:
         # attached. Do not silently link identities; require explicit,
         # verified linking to prevent account takeover.
         security_log.warning(
-            "hanko_auth_failed: reason=silent_link_prevented email=%s attempted_hanko_id=%s",
-            user.email,
-            hanko_id,
+            "hanko_auth_failed: reason=silent_link_prevented user=%s",
+            user.pk,
         )
         raise HankoAuthenticationError(
             "An account with this email already exists. Please contact an administrator to link Hanko sign-in."
@@ -278,9 +279,8 @@ def complete_hanko_login(request: HttpRequest, user_data: dict[str, Any]) -> Sho
     )
     if not user.is_active:
         security_log.warning(
-            "hanko_auth_failed: reason=disabled_account user=%s hanko_id=%s",
+            "hanko_auth_failed: reason=disabled_account user=%s",
             user.pk,
-            user.hanko_id,
         )
         raise HankoAuthenticationError("Account is disabled.")
     login(request, user, backend="django.contrib.auth.backends.ModelBackend")
@@ -291,4 +291,5 @@ def complete_hanko_login(request: HttpRequest, user_data: dict[str, Any]) -> Sho
     request.session["hanko_avatar_url"] = user.avatar_url or ""
     request.session["hanko_provider"] = user.auth_provider
     request.session.save()
+    security_log.info("hanko_auth_succeeded: user=%s", user.pk)
     return user

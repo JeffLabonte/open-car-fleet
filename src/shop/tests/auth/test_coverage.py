@@ -59,18 +59,20 @@ class AuthAndInputCoverageTests(TestCase):
         request = factory.get("/auth/hanko/callback/")
         SessionMiddleware(lambda _request: None).process_request(request)
 
-        user = complete_hanko_login(
-            request,
-            {
-                "id": "hanko-session-1",
-                "email": "session-user@example.com",
-                "name": "Session User",
-                "avatar_url": "https://img.example.com/session.png",
-                "provider": "hanko",
-            },
-        )
+        with self.assertLogs("security", level="INFO") as captured:
+            user = complete_hanko_login(
+                request,
+                {
+                    "id": "hanko-session-1",
+                    "email": "session-user@example.com",
+                    "name": "Session User",
+                    "avatar_url": "https://img.example.com/session.png",
+                    "provider": "hanko",
+                },
+            )
 
         self.assertTrue(request.user.is_authenticated)
+        self.assertTrue(any("hanko_auth_succeeded" in message for message in captured.output))
         self.assertEqual(user.email, "session-user@example.com")
         self.assertEqual(request.session["hanko_user_id"], "hanko-session-1")
         self.assertEqual(request.session["hanko_email"], "session-user@example.com")
@@ -173,6 +175,39 @@ class AuthAndInputCoverageTests(TestCase):
             ):
                 info = fetch_hanko_userinfo("token")
                 self.assertEqual(info["email"], "")
+
+    @override_settings(HANKO_API_URL="https://hanko.example.com")
+    def test_auth_failure_audit_event_does_not_log_session_token_or_provider_error(self):
+        with (
+            patch(
+                "shop.auth.requests.post",
+                return_value=FakeHankoResponse({"is_valid": False}),
+            ),
+            self.assertLogs("security", level="WARNING") as captured,
+        ):
+            with self.assertRaises(HankoAuthenticationError):
+                fetch_hanko_userinfo("sensitive-session-token")
+
+        self.assertTrue(any("reason=invalid_session" in message for message in captured.output))
+        self.assertNotIn("sensitive-session-token", "\n".join(captured.output))
+        self.assertNotIn("example.com", "\n".join(captured.output))
+
+    @override_settings(HANKO_API_URL="https://hanko.example.com")
+    def test_auth_failure_audit_events_cover_invalid_claims(self):
+        for response_data, reason in (
+            ({"is_valid": True, "claims": []}, "invalid_claims"),
+            ({"is_valid": True, "claims": {}}, "missing_user_id"),
+        ):
+            with (
+                patch("shop.auth.requests.post", return_value=FakeHankoResponse(response_data)),
+                self.assertLogs("security", level="WARNING") as captured,
+                self.subTest(reason=reason),
+            ):
+                with self.assertRaises(HankoAuthenticationError):
+                    fetch_hanko_userinfo("session-token")
+
+            self.assertTrue(any(f"reason={reason}" in message for message in captured.output))
+            self.assertNotIn("session-token", "\n".join(captured.output))
 
     @override_settings(HANKO_API_URL="")
     def test_fetch_hanko_userinfo_requires_api_url(self):
