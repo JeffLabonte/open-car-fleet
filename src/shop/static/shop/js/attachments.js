@@ -400,7 +400,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const ids = String(stagedIdsString || '')
       .split(',')
       .map((s) => s.trim())
-      .filter((s) => s && !isNaN(parseInt(s, 10)));
+      .filter((s) => s && !Number.isNaN(Number.parseInt(s, 10)));
     if (!ids.length || !metadataUrl) {
       render();
       return;
