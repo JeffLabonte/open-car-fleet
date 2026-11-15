@@ -11,7 +11,6 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 import os
-import sys
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
@@ -86,7 +85,7 @@ SECRETS_BACKEND = _env("SECRETS_BACKEND", "environment").strip().lower()
 if SECRETS_BACKEND not in {"environment", "vault"}:
     raise ImproperlyConfigured("SECRETS_BACKEND must be either 'environment' or 'vault'.")
 
-if SECRETS_BACKEND == "vault" and sys.argv[1:2] != ["collectstatic"]:
+if SECRETS_BACKEND == "vault":
     _vault_secrets = load_vault_secrets(
         address=_env("VAULT_ADDR").strip(),
         role_id=_env("VAULT_ROLE_ID").strip(),

@@ -8,6 +8,19 @@
     # Docker Compose reads env_file values through the daemon, so the container
     # user does not need direct access. Restrict to root to protect secrets.
     mode: '0600'
+  no_log: true
+
+- name: Require Vault for production deployment
+  ansible.builtin.shell: |
+    awk -F= '$1 == "SECRETS_BACKEND" {value = $2} END {exit value != "vault"}' "{{ app_dir }}/src/.env"
+  changed_when: false
+  failed_when: vault_backend_check.rc != 0
+  register: vault_backend_check
+
+- name: Require DEBUG=False for production deployment
+  ansible.builtin.shell: |
+    awk -F= '$1 == "DEBUG" {value = $2} END {exit value != "False"}' "{{ app_dir }}/src/.env"
+  changed_when: false
 
 - name: Derive database-only env file from deployed env
   ansible.builtin.shell: |
