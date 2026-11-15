@@ -28,12 +28,12 @@ class ShopUserProfileForm(forms.ModelForm):
             "is_mechanic": _("Mechanic mode"),
         }
         widgets = {
-            "first_name": forms.TextInput(attrs={"class": "input"}),
-            "last_name": forms.TextInput(attrs={"class": "input"}),
-            "username": forms.TextInput(attrs={"class": "input"}),
-            "email": forms.EmailInput(attrs={"class": "input"}),
-            "phone_number": forms.TextInput(attrs={"class": "input"}),
-            "display_name": forms.TextInput(attrs={"class": "input"}),
+            "first_name": forms.TextInput(attrs={"class": "input", "autocomplete": "given-name"}),
+            "last_name": forms.TextInput(attrs={"class": "input", "autocomplete": "family-name"}),
+            "username": forms.TextInput(attrs={"class": "input", "autocomplete": "username"}),
+            "email": forms.EmailInput(attrs={"class": "input", "autocomplete": "email"}),
+            "phone_number": forms.TextInput(attrs={"class": "input", "autocomplete": "tel"}),
+            "display_name": forms.TextInput(attrs={"class": "input", "autocomplete": "nickname"}),
             "is_mechanic": forms.CheckboxInput(attrs={"class": "checkbox"}),
         }
         help_texts = {

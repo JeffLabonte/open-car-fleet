@@ -1,0 +1,13 @@
+{% extends 'shop/base.html' %}
+{% load i18n %}
+{% block content %}
+  <section class="box has-text-centered" data-testid="error-404">
+    <h1 class="title">404</h1>
+    <p class="subtitle">{% translate 'The page you were looking for could not be found.' %}</p>
+    <div class="buttons is-centered mt-4">
+      <a class="button is-primary" href="{% url 'shop-index' %}">{% translate 'My fleets' %}</a>
+      <a class="button is-light" href="{% url 'shop-car-list' %}">{% translate 'Cars' %}</a>
+      <a class="button is-light" href="{% url 'shop-login' %}">{% translate 'Sign in' %}</a>
+    </div>
+  </section>
+{% endblock %}

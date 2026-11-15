@@ -1,0 +1,13 @@
+{% extends 'shop/base.html' %}
+{% load i18n %}
+{% block content %}
+  <section class="box has-text-centered" data-testid="error-403">
+    <h1 class="title">403</h1>
+    <p class="subtitle">{% translate 'You do not have permission to view this page.' %}</p>
+    <div class="buttons is-centered mt-4">
+      <a class="button is-primary" href="{% url 'shop-index' %}">{% translate 'My fleets' %}</a>
+      <a class="button is-light" href="{% url 'shop-car-list' %}">{% translate 'Cars' %}</a>
+      <a class="button is-light" href="{% url 'shop-login' %}">{% translate 'Sign in' %}</a>
+    </div>
+  </section>
+{% endblock %}

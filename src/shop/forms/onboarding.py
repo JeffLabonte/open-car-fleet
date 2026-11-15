@@ -9,13 +9,13 @@ class OnboardingForm(forms.Form):
         label=_("First name"),
         max_length=150,
         required=False,
-        widget=forms.TextInput(attrs={"class": "input"}),
+        widget=forms.TextInput(attrs={"class": "input", "autocomplete": "given-name"}),
     )
     last_name = forms.CharField(
         label=_("Last name"),
         max_length=150,
         required=False,
-        widget=forms.TextInput(attrs={"class": "input"}),
+        widget=forms.TextInput(attrs={"class": "input", "autocomplete": "family-name"}),
     )
     is_mechanic = forms.BooleanField(
         label=_("I am a mechanic"),
