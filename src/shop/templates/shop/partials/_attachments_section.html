@@ -47,7 +47,7 @@ upload component. Include at the bottom of every create/update form.
     <p class="is-size-7 has-text-grey mb-0">{% translate 'Up to 10 files, 100 MB each. Accepted: images, videos, PDF, Word documents.' %}</p>
     <button class="button is-small is-light" type="button" id="attachment-clear-button">{% translate 'Clear selected files' %}</button>
   </div>
-  <div id="attachment-preview-list" class="content mt-3"></div>
+  <div id="attachment-preview-list" class="content mt-3" role="status" aria-live="polite" aria-atomic="false"></div>
   {% if field.help_text %}
     <p class="help">{{ field.help_text }}</p>
   {% endif %}

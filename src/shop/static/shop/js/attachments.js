@@ -283,6 +283,7 @@ document.addEventListener('DOMContentLoaded', () => {
       bar.className = 'progress is-small is-primary ml-2 attachment-progress';
       bar.max = 100;
       bar.value = 0;
+      bar.setAttribute('aria-label', 'Upload progress for ' + item.file.name);
       row.appendChild(bar);
     } else if (item.status === 'done') {
       const tag = document.createElement('span');
@@ -310,8 +311,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const removeButton = document.createElement('button');
     removeButton.type = 'button';
-    removeButton.className = 'delete ml-2';
+    removeButton.className = 'button is-small is-danger ml-2';
+    removeButton.textContent = 'Remove';
     removeButton.setAttribute('aria-label', 'Remove ' + item.file.name);
+    removeButton.style.minWidth = '24px';
+    removeButton.style.minHeight = '24px';
     removeButton.addEventListener('click', () => removeItem(item));
     row.appendChild(removeButton);
     return row;
