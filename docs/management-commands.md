@@ -12,13 +12,14 @@ Import normalized CSV datasets into the database.
 
 ```bash
 poetry run python ./src/manage.py import_csv Car src/imports/cars.csv --fleet <fleet-uuid>
-poetry run python ./src/manage.py import_csv WorkJob src/imports/workjobs.csv
-poetry run python ./src/manage.py import_csv Report src/imports/reports_FMG3809.csv
+poetry run python ./src/manage.py import_csv WorkJob src/imports/workjobs.csv --fleet <fleet-uuid>
+poetry run python ./src/manage.py import_csv Report src/imports/reports_FMG3809.csv --fleet <fleet-uuid>
 ```
 
 - The importer supports normalized UTF-8 CSV files for `Car`, `WorkJob`, and `Report`.
+- Every command-line import requires `--fleet <fleet-uuid>`, which scopes imported records to the target fleet.
 - Automatic dialect detection via Python's `csv.Sniffer` supports comma, semicolon, tab, or pipe delimited CSV files.
-- Car imports require a single target fleet. In the web UI, use the fleet detail page and choose `Import cars`; in the CLI, pass `--fleet <fleet-uuid>`.
+- Car imports use a single target fleet. In the web UI, use the fleet detail page and choose `Import cars`; in the CLI, pass `--fleet <fleet-uuid>`.
 - Work jobs and reports are imported from the selected car page in the web UI. In that flow, the selected car is applied automatically, so the CSV file can omit `car`.
 - In the CLI or any non-car-scoped flow, the `car` field can reference an existing car by UUID, VIN, license plate, or usual name.
 - List fields such as `required_items`, `documents`, and `photos` accept newline-delimited strings in quoted CSV cells.
@@ -83,7 +84,7 @@ Notes:
 
 ## Work job import schema
 
-Use this from a car page in the web UI or with `import_csv WorkJob ...` in the CLI.
+Use this from a car page in the web UI or with `import_csv WorkJob ... --fleet <fleet-uuid>` in the CLI.
 
 Required fields:
 - `title`: string
@@ -123,7 +124,7 @@ Notes:
 
 ## Report import schema
 
-Use this from a car page in the web UI or with `import_csv Report ...` in the CLI.
+Use this from a car page in the web UI or with `import_csv Report ... --fleet <fleet-uuid>` in the CLI.
 
 Required fields:
 - `job_name`: string
