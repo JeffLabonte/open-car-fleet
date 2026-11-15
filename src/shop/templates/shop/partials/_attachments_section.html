@@ -7,7 +7,7 @@ upload component. Include at the bottom of every create/update form.
 {% endcomment %}
 {% if current_attachments %}
   <div class="field" data-testid="current-attachments">
-    <label class="label">{% translate 'Current attachments' %}</label>
+    <p class="label">{% translate 'Current attachments' %}</p>
     <ul>
       {% for attachment in current_attachments %}
         <li data-testid="current-attachment">
@@ -32,7 +32,7 @@ upload component. Include at the bottom of every create/update form.
   <p class="label">{{ field.label }}</p>
   <div class="control">
     <div class="file is-boxed is-fullwidth" id="attachment-dropzone">
-      <label class="file-label">
+      <label class="file-label" for="{{ field.id_for_label }}">
         {{ field }}
         <span class="file-cta">
           <span class="file-label">{% translate 'Choose files or drag and drop here' %}</span>
