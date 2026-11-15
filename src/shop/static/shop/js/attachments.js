@@ -25,6 +25,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const MAX_UPLOAD_BYTES = parseInt(section.dataset.maxUploadBytes || '104857600', 10); // keep in sync with shop.forms.base
   const MAX_FILES = parseInt(section.dataset.maxFiles || '10', 10); // keep in sync with shop.forms.base
+  const I18N = {
+    waiting: section.dataset.i18nWaiting || 'Waiting',
+    uploaded: section.dataset.i18nUploaded || 'Uploaded',
+    retry: section.dataset.i18nRetry || 'Retry',
+    remove: section.dataset.i18nRemove || 'Remove',
+  };
   const MAX_CONCURRENT_UPLOADS = 2;
   const IMAGE_MAX_DIMENSION = 2560;
   const IMAGE_COMPRESS_MIN_BYTES = 1.5 * 1024 * 1024;
@@ -276,7 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (item.status === 'queued' || item.status === 'compressing') {
       const tag = document.createElement('span');
       tag.className = 'tag is-info is-light ml-2';
-      tag.textContent = 'Waiting';
+      tag.textContent = I18N.waiting;
       row.appendChild(tag);
     } else if (item.status === 'uploading') {
       const bar = document.createElement('progress');
@@ -288,7 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (item.status === 'done') {
       const tag = document.createElement('span');
       tag.className = 'tag is-success ml-2';
-      tag.textContent = 'Uploaded';
+      tag.textContent = I18N.uploaded;
       row.appendChild(tag);
     } else if (item.status === 'failed' || item.status === 'rejected') {
       const tag = document.createElement('span');
@@ -299,7 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const retry = document.createElement('button');
         retry.type = 'button';
         retry.className = 'button is-small is-warning ml-2';
-        retry.textContent = 'Retry';
+        retry.textContent = I18N.retry;
         retry.addEventListener('click', () => enqueue(item));
         row.appendChild(retry);
       }
@@ -312,7 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const removeButton = document.createElement('button');
     removeButton.type = 'button';
     removeButton.className = 'button is-small is-danger ml-2';
-    removeButton.textContent = 'Remove';
+    removeButton.textContent = I18N.remove;
     removeButton.setAttribute('aria-label', 'Remove ' + item.file.name);
     removeButton.style.minWidth = '24px';
     removeButton.style.minHeight = '24px';

@@ -30,7 +30,11 @@ upload component. Include at the bottom of every create/update form.
      data-delete-url="{% url 'shop-attachment-delete' 0 %}"
      data-staged-list-url="{% url 'shop-attachment-staged-list' %}"
      data-max-upload-bytes="104857600"
-     data-max-files="10">
+     data-max-files="10"
+     data-i18n-waiting="{% translate 'Waiting' %}"
+     data-i18n-uploaded="{% translate 'Uploaded' %}"
+     data-i18n-retry="{% translate 'Retry' %}"
+     data-i18n-remove="{% translate 'Remove' %}">
   {{ form.staged_attachments }}
   <p class="label">{{ field.label }}</p>
   <div class="control">
