@@ -4,7 +4,7 @@
   become: yes
   roles:
     - docker
-    - app
     - env
+    - app
     - deploy
     - backup

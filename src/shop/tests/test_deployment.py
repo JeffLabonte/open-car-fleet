@@ -92,6 +92,23 @@ class TestDeploymentHardening(TestCase):
         self.assertIn("src/.env.database", text)
         self.assertIn("grep -E '^POSTGRES_'", text)
 
+    def test_production_env_is_validated_on_controller_before_sync_and_upload(self):
+        playbook = (REPO_ROOT / "ansible" / "playbook.yml").read_text()
+        env_role = (REPO_ROOT / "ansible" / "roles" / "env" / "tasks" / "main.yml").read_text()
+
+        self.assertLess(playbook.index("    - env"), playbook.index("    - app"))
+        upload_index = env_role.index("- name: Upload production env file to server")
+        for check in (
+            "- name: Require Vault for production deployment",
+            "- name: Require DEBUG=False for production deployment",
+        ):
+            check_index = env_role.index(check)
+            task_end = env_role.find("\n- name:", check_index + 1)
+            if task_end == -1:
+                task_end = len(env_role)
+            self.assertLess(check_index, upload_index)
+            self.assertIn("delegate_to: localhost", env_role[check_index:task_end])
+
     def test_database_env_file_contains_only_postgres_variables(self):
         db_env = REPO_ROOT / "src" / ".env.database"
         if not db_env.exists():
