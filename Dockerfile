@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1
 
 # Use the official Python image with a slim base for production.
-FROM python:3.13-slim AS base
+# python:3.13-slim
+FROM python:3.13-slim@sha256:48d884813cf44e927cf64c5529dd630dd3b18338c6dc727991eef9b71e934a20 AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -18,8 +19,9 @@ WORKDIR /app
 COPY pyproject.toml poetry.lock /app/
 
 # Install dependencies with Poetry in a virtual environment.
-RUN pip install --no-cache-dir --only-binary :all: poetry \
+RUN pip install --no-cache-dir --only-binary :all: poetry==2.5.1 \
     && poetry config virtualenvs.create false \
+    && poetry config installer.no-binary false \
     && poetry install --no-root --no-interaction --no-ansi
 
 # Copy application code.
@@ -33,7 +35,8 @@ RUN --mount=type=secret,id=env_file,target=/app/src/.env \
     DJANGO_TRUSTED_PROXY=True DJANGO_SECRET_KEY=build-only-secret python src/manage.py collectstatic --noinput
 
 # Use a lean runtime image.
-FROM python:3.13-slim AS final
+# python:3.13-slim
+FROM python:3.13-slim@sha256:48d884813cf44e927cf64c5529dd630dd3b18338c6dc727991eef9b71e934a20 AS final
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app/src \
@@ -53,7 +56,7 @@ COPY --from=base /staticfiles /staticfiles
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl gnupg lsb-release \
     && install -m 0755 -d /etc/apt/keyrings \
-    && curl -fsSL --proto-redir "=https" https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc \
+    && curl -fsSL --proto "=https" --proto-redir "=https" --tlsv1.2 https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc \
     && chmod a+r /etc/apt/keyrings/docker.asc \
     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list \
     && apt-get update \
