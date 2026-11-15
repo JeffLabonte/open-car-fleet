@@ -28,8 +28,9 @@ class VaultAppRoleTests(SimpleTestCase):
 
     def test_rejects_invalid_vault_addresses(self):
         for address in ("http:///vault", "ftp://vault.example.com", "https://vault.example.com?token=x"):
-            with self.subTest(address=address), self.assertRaisesMessage(
-                ImproperlyConfigured, "valid HTTP or HTTPS URL"
+            with (
+                self.subTest(address=address),
+                self.assertRaisesMessage(ImproperlyConfigured, "valid HTTP or HTTPS URL"),
             ):
                 load_vault_secrets(**{**self.config, "address": address, "require_tls": False})
 
@@ -40,8 +41,9 @@ class VaultAppRoleTests(SimpleTestCase):
             ("secret_path", ""),
             ("secret_path", "open-car-fleet/../other"),
         ):
-            with self.subTest(key=key, value=value), self.assertRaisesMessage(
-                ImproperlyConfigured, "VAULT_KV_MOUNT and VAULT_SECRET_PATH"
+            with (
+                self.subTest(key=key, value=value),
+                self.assertRaisesMessage(ImproperlyConfigured, "VAULT_KV_MOUNT and VAULT_SECRET_PATH"),
             ):
                 load_vault_secrets(**{**self.config, key: value})
 
@@ -135,8 +137,9 @@ class VaultAppRoleTests(SimpleTestCase):
         for response_data in ({}, {"data": {}}):
             get.return_value = Mock(status_code=200, json=lambda: response_data)
 
-            with self.subTest(response_data=response_data), self.assertRaisesMessage(
-                ImproperlyConfigured, "Vault returned an invalid KV v2 secret response"
+            with (
+                self.subTest(response_data=response_data),
+                self.assertRaisesMessage(ImproperlyConfigured, "Vault returned an invalid KV v2 secret response"),
             ):
                 load_vault_secrets(**self.config)
 
