@@ -185,12 +185,14 @@ def inspection_history(request: HttpRequest, car_pk: str) -> HttpResponse:
         )
         .order_by(*Inspection.LATEST_ORDERING)
     )
+    can_edit = FleetSharingPermissions(request.user, car.fleet).can_edit_fleet_data
     return render(
         request,
         "shop/inspection_history.html",
         {
             "car": car,
             "inspections": inspections,
+            "can_edit_fleet_data": can_edit,
             "title": _("Inspection history"),
             "subtitle": _("All recorded inspections and the work discovered during them."),
         },

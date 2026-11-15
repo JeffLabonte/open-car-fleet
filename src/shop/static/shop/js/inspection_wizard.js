@@ -85,7 +85,7 @@
       carSelect.innerHTML = '';
       const option = document.createElement('option');
       option.value = '';
-      option.textContent = noCarsLabel;
+      option.textContent = 'Could not load vehicles. Reselect the fleet to retry.';
       carSelect.appendChild(option);
       carSelect.disabled = true;
       submitButton.disabled = true;
