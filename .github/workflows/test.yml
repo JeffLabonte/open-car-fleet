@@ -88,8 +88,8 @@ jobs:
 
       - name: Upload coverage
         run: |
-           poetry run codecovcli do-upload --report-type test_results --file junit.xml && \
-           poetry run codecovcli upload-process --file junit.xml
+           poetry run codecovcli do-upload --git-service github --report-type test_results --file junit.xml && \
+           poetry run codecovcli upload-process --git-service github --file junit.xml
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
