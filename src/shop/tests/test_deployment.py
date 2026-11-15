@@ -157,6 +157,59 @@ class TestDeploymentHardening(TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("DJANGO_TRUSTED_PROXY", result.stderr)
 
+    def test_vault_backend_loads_secrets_before_settings(self):
+        env = os.environ.copy()
+        env.update(
+            {
+                "DEBUG": "True",
+                "SECRETS_BACKEND": "vault",
+                "VAULT_ADDR": "https://vault.example.com",
+                "VAULT_ROLE_ID": "role-id",
+                "VAULT_SECRET_ID": "secret-id",
+                "VAULT_KV_MOUNT": "secret",
+                "VAULT_SECRET_PATH": "open-car-fleet/production",
+            }
+        )
+        script = """
+from unittest.mock import patch
+with patch(
+    "settings.vault.load_vault_secrets",
+    return_value={"DJANGO_SECRET_KEY": "vault-key", "MAILERSEND_API_TOKEN": "mail-token"},
+) as load_secrets:
+    import settings.settings as configured
+    assert configured.SECRET_KEY == "vault-key"
+    assert configured.MAILERS["default"]["OPTIONS"]["api_token"] == "mail-token"
+    load_secrets.assert_called_once_with(
+        address="https://vault.example.com",
+        role_id="role-id",
+        secret_id="secret-id",
+        mount="secret",
+        secret_path="open-car-fleet/production",
+        require_tls=False,
+    )
+"""
+        result = subprocess.run(
+            ["python", "-c", script],
+            cwd=str(REPO_ROOT / "src"),
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_unknown_secrets_backend_fails_closed(self):
+        env = os.environ.copy()
+        env.update({"DEBUG": "True", "DJANGO_SECRET_KEY": "test-secret", "SECRETS_BACKEND": "unknown"})
+        result = subprocess.run(
+            ["python", "-c", "import settings.settings"],
+            cwd=str(REPO_ROOT / "src"),
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("SECRETS_BACKEND must be either", result.stderr)
+
     def test_collectstatic_does_not_require_vault_credentials(self):
         env = os.environ.copy()
         env.update(

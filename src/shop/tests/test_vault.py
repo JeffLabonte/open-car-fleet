@@ -26,11 +26,44 @@ class VaultAppRoleTests(SimpleTestCase):
         with self.assertRaisesMessage(ImproperlyConfigured, "valid HTTPS URL"):
             load_vault_secrets(**{**self.config, "address": "http://vault.example.com"})
 
+    def test_rejects_invalid_vault_addresses(self):
+        for address in ("http:///vault", "ftp://vault.example.com", "https://vault.example.com?token=x"):
+            with self.subTest(address=address), self.assertRaisesMessage(
+                ImproperlyConfigured, "valid HTTP or HTTPS URL"
+            ):
+                load_vault_secrets(**{**self.config, "address": address, "require_tls": False})
+
+    def test_rejects_invalid_kv_mount_and_secret_paths(self):
+        for key, value in (
+            ("mount", ""),
+            ("mount", "secret/../other"),
+            ("secret_path", ""),
+            ("secret_path", "open-car-fleet/../other"),
+        ):
+            with self.subTest(key=key, value=value), self.assertRaisesMessage(
+                ImproperlyConfigured, "VAULT_KV_MOUNT and VAULT_SECRET_PATH"
+            ):
+                load_vault_secrets(**{**self.config, key: value})
+
     @patch("settings.vault.requests.post")
     def test_rejects_denied_approle_authentication_without_leaking_response(self, post):
         post.return_value = Mock(status_code=403, text="sensitive denial detail")
 
         with self.assertRaisesMessage(ImproperlyConfigured, "Vault AppRole authentication failed (HTTP 403)"):
+            load_vault_secrets(**self.config)
+
+    @patch("settings.vault.requests.post")
+    def test_rejects_invalid_approle_response(self, post):
+        post.return_value = Mock(status_code=200, json=Mock(side_effect=ValueError("invalid response")))
+
+        with self.assertRaisesMessage(ImproperlyConfigured, "Vault returned an invalid AppRole response"):
+            load_vault_secrets(**self.config)
+
+    @patch("settings.vault.requests.post")
+    def test_requires_client_token_in_approle_response(self, post):
+        post.return_value = Mock(status_code=200, json=lambda: {"auth": {}})
+
+        with self.assertRaisesMessage(ImproperlyConfigured, "did not contain a client token"):
             load_vault_secrets(**self.config)
 
     @patch("settings.vault.requests.post", side_effect=requests.ConnectionError("network down"))
@@ -93,6 +126,27 @@ class VaultAppRoleTests(SimpleTestCase):
         post.return_value = Mock(status_code=200, json=lambda: {"auth": {"client_token": "vault-token"}})
 
         with self.assertRaisesMessage(ImproperlyConfigured, "Unable to retrieve application secrets from Vault"):
+            load_vault_secrets(**self.config)
+
+    @patch("settings.vault.requests.get")
+    @patch("settings.vault.requests.post")
+    def test_rejects_invalid_kv_v2_response_shapes(self, post, get):
+        post.return_value = Mock(status_code=200, json=lambda: {"auth": {"client_token": "vault-token"}})
+        for response_data in ({}, {"data": {}}):
+            get.return_value = Mock(status_code=200, json=lambda: response_data)
+
+            with self.subTest(response_data=response_data), self.assertRaisesMessage(
+                ImproperlyConfigured, "Vault returned an invalid KV v2 secret response"
+            ):
+                load_vault_secrets(**self.config)
+
+    @patch("settings.vault.requests.get")
+    @patch("settings.vault.requests.post")
+    def test_rejects_non_object_kv_v2_secret_data(self, post, get):
+        post.return_value = Mock(status_code=200, json=lambda: {"auth": {"client_token": "vault-token"}})
+        get.return_value = Mock(status_code=200, json=lambda: {"data": {"data": []}})
+
+        with self.assertRaisesMessage(ImproperlyConfigured, "KV v2 secret data must be an object"):
             load_vault_secrets(**self.config)
 
     @patch("settings.vault.requests.get")

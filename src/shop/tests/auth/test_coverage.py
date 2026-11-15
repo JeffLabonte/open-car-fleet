@@ -192,6 +192,23 @@ class AuthAndInputCoverageTests(TestCase):
         self.assertNotIn("sensitive-session-token", "\n".join(captured.output))
         self.assertNotIn("example.com", "\n".join(captured.output))
 
+    @override_settings(HANKO_API_URL="https://hanko.example.com")
+    def test_auth_failure_audit_events_cover_invalid_claims(self):
+        for response_data, reason in (
+            ({"is_valid": True, "claims": []}, "invalid_claims"),
+            ({"is_valid": True, "claims": {}}, "missing_user_id"),
+        ):
+            with (
+                patch("shop.auth.requests.post", return_value=FakeHankoResponse(response_data)),
+                self.assertLogs("security", level="WARNING") as captured,
+                self.subTest(reason=reason),
+            ):
+                with self.assertRaises(HankoAuthenticationError):
+                    fetch_hanko_userinfo("session-token")
+
+            self.assertTrue(any(f"reason={reason}" in message for message in captured.output))
+            self.assertNotIn("session-token", "\n".join(captured.output))
+
     @override_settings(HANKO_API_URL="")
     def test_fetch_hanko_userinfo_requires_api_url(self):
         with patch.dict("os.environ", {"HANKO_API_URL": ""}):
