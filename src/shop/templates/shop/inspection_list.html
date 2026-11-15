@@ -78,9 +78,9 @@
                 </td>
                 <td data-label="{% translate 'Status' %}">
                   {% if inspection.is_draft %}
-                    <span class="tag is-warning">{% translate 'Draft' %}</span>
+                    {% include 'shop/partials/_status_badge.html' with status='pending' label=_('Draft') %}
                   {% else %}
-                    <span class="tag is-success">{% translate 'Finalized' %}</span>
+                    {% include 'shop/partials/_status_badge.html' with status='done' label=_('Finalized') %}
                   {% endif %}
                 </td>
                 <td data-label="{% translate 'Findings' %}">{{ inspection.notes|truncatewords:15|default:'—' }}</td>

@@ -24,7 +24,7 @@
         <div class="message-header">
           <p>
             {% if inspection.is_draft %}
-              <span class="tag is-light mr-2">{% translate 'Draft' %}</span>
+              {% include 'shop/partials/_status_badge.html' with status='pending' label=_('Draft') %}
             {% endif %}
             {% translate 'Inspection' %} — {{ inspection.inspected_at|date:'F j, Y, g:i a T' }}
           </p>
@@ -48,10 +48,10 @@
 
           {% with counts=inspection.point_status_counts %}
             <div class="tags are-medium mt-3" data-testid="inspection-summary-{{ inspection.pk }}">
-              <span class="tag is-success">{% translate 'OK' %}: {{ counts.pass }}</span>
-              <span class="tag is-warning">{% translate 'Attention' %}: {{ counts.attention }}</span>
-              <span class="tag is-danger">{% translate 'Needs repair' %}: {{ counts.repair }}</span>
-              <span class="tag is-light">{% translate 'N/A' %}: {{ counts.na }}</span>
+              <span class="badge badge--ok">{% translate 'OK' %}: {{ counts.pass }}</span>
+              <span class="badge badge--soon">{% translate 'Attention' %}: {{ counts.attention }}</span>
+              <span class="badge badge--cancelled">{% translate 'Needs repair' %}: {{ counts.repair }}</span>
+              <span class="badge badge--viewer">{% translate 'N/A' %}: {{ counts.na }}</span>
             </div>
           {% endwith %}
 
