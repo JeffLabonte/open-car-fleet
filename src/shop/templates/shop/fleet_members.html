@@ -60,7 +60,7 @@
                     <span class="has-text-grey">{% translate 'Role cannot be changed' %}</span>
                   {% endif %}
                   {% if row.can_remove %}
-                    <form method="post" action="{% url 'shop-fleet-member-remove' fleet.pk membership.pk %}" class="is-inline-block ml-2">
+                    <form method="post" action="{% url 'shop-fleet-member-remove' fleet.pk membership.pk %}" class="is-inline-block ml-2" onsubmit="return confirm('{% blocktranslate with name=membership.user.display_name|default:membership.user.username %}Remove {{ name }} from this fleet?{% endblocktranslate %}');">
                       {% csrf_token %}
                       <button class="button is-small is-danger" type="submit" formaction="{% url 'shop-fleet-member-remove' fleet.pk membership.pk %}" aria-label="{% blocktranslate with name=membership.user.display_name|default:membership.user.username %}Remove {{ name }} from this fleet?{% endblocktranslate %}" data-testid="remove-member-button">{% translate 'Remove' %}</button>
                     </form>
