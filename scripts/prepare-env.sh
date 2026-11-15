@@ -167,7 +167,6 @@ for key, value in updates.items():
         if line.startswith(f"{key}="):
             lines[idx] = f"{key}={value}"
             replaced = True
-            break
     if not replaced:
         lines.append(f"{key}={value}")
 

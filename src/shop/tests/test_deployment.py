@@ -137,6 +137,39 @@ class TestDeploymentHardening(TestCase):
             self.assertIn("MAILERSEND_API_TOKEN=\n", content)
             self.assertEqual(output.stat().st_mode & 0o777, 0o600)
 
+    def test_prepare_env_replaces_duplicate_production_assignments(self):
+        script = REPO_ROOT / "scripts" / "prepare-env.sh"
+        with tempfile.TemporaryDirectory() as tmp:
+            template = Path(tmp) / ".env.template"
+            template.write_text(
+                "SECRETS_BACKEND=environment\n"
+                "SECRETS_BACKEND=environment\n"
+                "DEBUG=True\n"
+                "DEBUG=True\n"
+                "DJANGO_SECRET_KEY=first-secret\n"
+                "DJANGO_SECRET_KEY=second-secret\n"
+                "MAILERSEND_API_TOKEN=first-token\n"
+                "MAILERSEND_API_TOKEN=second-token\n"
+            )
+            output = Path(tmp) / ".env.production"
+            result = subprocess.run(
+                ["bash", str(script), "--output", str(output), "--template", str(template)],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            content = output.read_text()
+
+        self.assertEqual(content.count("SECRETS_BACKEND=vault\n"), 2)
+        self.assertEqual(content.count("DEBUG=False\n"), 2)
+        self.assertEqual(content.count("DJANGO_SECRET_KEY=\n"), 2)
+        self.assertEqual(content.count("MAILERSEND_API_TOKEN=\n"), 2)
+        self.assertNotIn("SECRETS_BACKEND=environment", content)
+        self.assertNotIn("first-secret", content)
+        self.assertNotIn("second-secret", content)
+        self.assertNotIn("first-token", content)
+        self.assertNotIn("second-token", content)
+
     def test_production_deploy_requires_vault_and_build_excludes_credentials(self):
         env_role = (REPO_ROOT / "ansible" / "roles" / "env" / "tasks" / "main.yml").read_text()
         dockerfile = (REPO_ROOT / "Dockerfile").read_text()
