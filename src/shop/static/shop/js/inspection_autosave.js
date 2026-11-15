@@ -26,6 +26,11 @@
   const carPk = form.dataset.carPk;
   const inspectionPk = form.dataset.inspectionPk;
   const statusEl = document.querySelector("[data-testid='autosave-status']");
+  if (statusEl) {
+    statusEl.setAttribute("role", "status");
+    statusEl.setAttribute("aria-live", "polite");
+    statusEl.setAttribute("aria-atomic", "true");
+  }
   const restoreBanner = document.getElementById("inspection-restore-banner");
   const restoreButton = document.getElementById("inspection-restore-button");
   const discardButton = document.getElementById("inspection-discard-button");
@@ -251,10 +256,33 @@
       .then(async (response) => {
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(payload.error || "Autosave failed.");
+          const errors = payload.errors || {};
+          const messages = [];
+          Object.keys(errors).forEach((field) => {
+            const fieldErrors = Array.isArray(errors[field]) ? errors[field] : [errors[field]];
+            fieldErrors.forEach((message) => {
+              messages.push(field === "points" ? message : field + ": " + message);
+              const control = form.querySelector('[name="' + CSS.escape(field) + '"]');
+              if (control) {
+                control.setAttribute("aria-invalid", "true");
+                let help = control.parentElement && control.parentElement.querySelector(".help.is-danger.autosave-error");
+                if (!help) {
+                  help = document.createElement("p");
+                  help.className = "help is-danger autosave-error";
+                  if (control.parentElement) control.parentElement.appendChild(help);
+                }
+                help.textContent = Array.isArray(errors[field]) ? errors[field].join(" ") : String(errors[field]);
+              }
+            });
+          });
+          const summary = messages.length ? messages.join("; ") : (payload.error || "Autosave failed.");
+          throw new Error(summary);
         }
         setStatus("Draft saved", false);
         clearLocalDraft();
+        // Clear any stale autosave error markers on success.
+        form.querySelectorAll(".autosave-error").forEach((el) => el.remove());
+        form.querySelectorAll("[aria-invalid='true']").forEach((el) => el.removeAttribute("aria-invalid"));
       })
       .catch((error) => {
         setStatus(error.message || "Autosave failed", true);
