@@ -92,10 +92,10 @@
   </div>
 
   {% if can_manage_fleet %}
-    <dialog class="dialog dialog--fleet-edit" id="dialog-fleet-edit" data-testid="fleet-edit-dialog" data-open-on-error="{{ form.errors|yesno:'true,false' }}">
+    <dialog class="dialog dialog--fleet-edit" id="dialog-fleet-edit" aria-labelledby="dialog-fleet-edit-title" data-testid="fleet-edit-dialog" data-open-on-error="{{ form.errors|yesno:'true,false' }}">
       <form method="post" action="{% url 'shop-fleet-update' fleet.pk %}">
         {% csrf_token %}
-        <h2 class="dialog__title">{% translate 'Edit fleet' %}</h2>
+        <h2 class="dialog__title" id="dialog-fleet-edit-title">{% translate 'Edit fleet' %}</h2>
 
         {% if form.non_field_errors %}
           <div class="notification is-danger mb-4">

@@ -11,10 +11,10 @@ Parameters:
   - submit_label (optional): Defaults to "Delete".
   - cancel_label (optional): Defaults to "Cancel".
 {% endcomment %}
-<dialog class="dialog" id="{{ dialog_id }}">
+<dialog class="dialog" id="{{ dialog_id }}" aria-labelledby="{{ dialog_id }}-title">
   <form method="post" action="{{ form_action|default:'#' }}" data-dialog-action-form>
     {% csrf_token %}
-    <h2 class="dialog__title">{{ title }}</h2>
+    <h2 class="dialog__title" id="{{ dialog_id }}-title">{{ title }}</h2>
     <p>{{ message }}</p>
     <div class="dialog-actions">
       <button class="button is-light" type="button" data-dialog-close>{{ cancel_label|default:_('Cancel') }}</button>

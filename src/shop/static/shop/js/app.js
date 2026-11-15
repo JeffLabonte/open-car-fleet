@@ -50,14 +50,28 @@
 
   const initAccountMenu = () => {
     document.querySelectorAll('details[data-menu]').forEach((menu) => {
+      const summary = menu.querySelector('summary');
+      let lastFocus = null;
+      menu.addEventListener('toggle', () => {
+        if (menu.open) {
+          lastFocus = document.activeElement;
+        } else if (lastFocus && menu.contains(lastFocus)) {
+          if (summary) summary.focus();
+          lastFocus = null;
+        }
+      });
       document.addEventListener('click', (event) => {
         if (!menu.contains(event.target)) {
           menu.removeAttribute('open');
         }
       });
       document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') {
+        if (event.key === 'Escape' && menu.open) {
+          const hadFocusInside = menu.contains(document.activeElement);
           menu.removeAttribute('open');
+          if (hadFocusInside && summary) {
+            summary.focus();
+          }
         }
       });
       menu.querySelectorAll('a, button').forEach((item) => {
