@@ -107,8 +107,9 @@ async function finishLogin() {
         ? nextUrl.trim()
         : '/';
 
-    // Final same-origin guard before assigning to the location sink.
-    window.location.href = isSafeRedirectUrl(redirectTarget) ? redirectTarget : '/';
+    // Always resolve the redirect through URL so the value assigned to the
+    // location sink is guaranteed to be a same-origin path.
+    window.location.href = new URL(redirectTarget, window.location.origin).href;
     return true;
   } catch (error) {
     console.error('Hanko login callback failed.', error);
