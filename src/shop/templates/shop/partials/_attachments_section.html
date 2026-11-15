@@ -27,7 +27,9 @@ upload component. Include at the bottom of every create/update form.
 {% endif %}
 <div class="field" data-testid="attachment-upload-section"
      data-upload-url="{% url 'shop-attachment-upload' %}"
-     data-delete-url="{% url 'shop-attachment-delete' 0 %}">
+     data-delete-url="{% url 'shop-attachment-delete' 0 %}"
+     data-max-upload-bytes="104857600"
+     data-max-files="10">
   {{ form.staged_attachments }}
   <p class="label">{{ field.label }}</p>
   <div class="control">
@@ -41,7 +43,7 @@ upload component. Include at the bottom of every create/update form.
     </div>
   </div>
   <div class="is-flex is-justify-content-space-between is-align-items-center mt-3">
-    <p class="is-size-7 has-text-grey mb-0">{% translate 'You can add more files by dropping them multiple times.' %}</p>
+    <p class="is-size-7 has-text-grey mb-0">{% translate 'Up to 10 files, 100 MB each. Accepted: images, videos, PDF, Word documents.' %}</p>
     <button class="button is-small is-light" type="button" id="attachment-clear-button">{% translate 'Clear selected files' %}</button>
   </div>
   <div id="attachment-preview-list" class="content mt-3"></div>

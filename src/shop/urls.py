@@ -72,6 +72,9 @@ urlpatterns = [
     path("cars/<uuid:car_pk>/parts/<int:pk>/edit/", views.part_update, name="shop-part-update"),
     path("cars/<uuid:car_pk>/work-jobs/add/", views.workjob_create, name="shop-workjob-create"),
     path("cars/<uuid:car_pk>/work-jobs/<int:pk>/edit/", views.workjob_update, name="shop-workjob-update"),
+    path(
+        "cars/<uuid:car_pk>/work-jobs/<int:pk>/status/", views.workjob_status_update, name="shop-workjob-status-update"
+    ),
     path("cars/<uuid:car_pk>/reports/add/", views.report_create, name="shop-report-create"),
     path("cars/<uuid:car_pk>/reports/<int:pk>/edit/", views.report_update, name="shop-report-update"),
     path("attachments/upload/", views.attachment_upload, name="shop-attachment-upload"),

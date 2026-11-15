@@ -57,6 +57,13 @@ function isSafeRedirectUrl(value) {
   }
 }
 
+function showCallbackError() {
+  const errorBox = document.getElementById('hanko-callback-error');
+  if (errorBox) {
+    errorBox.classList.remove('is-hidden');
+  }
+}
+
 async function finishLogin() {
   try {
     const session = await hanko.validateSession();
@@ -79,6 +86,7 @@ async function finishLogin() {
       avatar_url: user?.avatar_url || user?.avatar || '',
       provider: 'hanko',
       session_token: sessionToken,
+      next: nextUrl,
     };
 
     const csrfToken = document.cookie
@@ -96,6 +104,7 @@ async function finishLogin() {
     });
 
     if (!response.ok) {
+      showCallbackError();
       throw new Error(`Login callback failed with status ${response.status}`);
     }
 
@@ -114,6 +123,7 @@ async function finishLogin() {
     return true;
   } catch (error) {
     console.error('Hanko login callback failed.', error);
+    showCallbackError();
     return false;
   }
 }
@@ -132,5 +142,17 @@ try {
   const message = 'Unable to load the Hanko login form. Please check your internet connection, disable ad blockers for this site, and verify HANKO_API_URL is correct.';
   console.error(message, error);
   authContainer.textContent = message;
+  showCallbackError();
   throw error;
+}
+
+const retryButton = document.getElementById('hanko-retry-button');
+if (retryButton) {
+  retryButton.addEventListener('click', () => {
+    const errorBox = document.getElementById('hanko-callback-error');
+    if (errorBox) {
+      errorBox.classList.add('is-hidden');
+    }
+    finishLogin();
+  });
 }

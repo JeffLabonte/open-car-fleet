@@ -12,11 +12,13 @@
       <div class="page-actions">
         {% if can_edit_fleet_data %}
           <a class="button is-link" href="{% url 'shop-car-update' car.pk %}">{% translate 'Edit' %}</a>
-          <button class="button is-danger" type="button" data-dialog-open="dialog-car-delete" data-dialog-action="{% url 'shop-car-delete' car.pk %}" data-testid="delete-car-button">{% translate 'Delete' %}</button>
           <a class="button is-primary" href="{% url 'shop-workjob-create' car.pk %}">
             {% include 'shop/partials/_icon.html' with name='plus' %}
             <span>{% translate 'Add planned work' %}</span>
           </a>
+        {% endif %}
+        {% if can_manage_fleet %}
+          <button class="button is-danger" type="button" data-dialog-open="dialog-car-delete" data-dialog-action="{% url 'shop-car-delete' car.pk %}" data-testid="delete-car-button">{% translate 'Delete' %}</button>
           <a class="button is-info" href="{% url 'shop-car-import' car.pk %}">
             {% include 'shop/partials/_icon.html' with name='upload' %}
             <span>{% translate 'Import work jobs or reports' %}</span>
@@ -42,7 +44,7 @@
     </dl>
   </div>
 
-  {% if can_edit_fleet_data %}
+  {% if can_manage_fleet %}
     {% include 'shop/partials/_confirm_delete_dialog.html' with dialog_id='dialog-car-delete' title=_('Delete this car?') message=_('This will permanently remove the vehicle and all of its parts, work jobs and reports. Vehicles with inspection history cannot be deleted.') %}
   {% endif %}
 

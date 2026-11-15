@@ -74,8 +74,24 @@
     });
   };
 
+  const collapseLargeTitle = () => {
+    const title = document.querySelector('.page-title');
+    if (!title) return;
+    const threshold = 40;
+    const onScroll = () => {
+      if (window.scrollY > threshold) {
+        title.classList.add('is-collapsed');
+      } else {
+        title.classList.remove('is-collapsed');
+      }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  };
+
   initDialogs();
   markCurrentNav();
   initAccountMenu();
   openErrorDialogs();
+  collapseLargeTitle();
 })();

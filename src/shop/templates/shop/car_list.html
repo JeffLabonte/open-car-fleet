@@ -62,8 +62,12 @@
       </div>
     </div>
   {% else %}
-    {% url 'shop-car-create' as add_car_url %}
-    {% include 'shop/partials/_empty_state.html' with empty_message=_('No cars yet.') empty_action_url=add_car_url empty_action_label=_('Add a new car') %}
+    {% if can_edit_fleet_data %}
+      {% url 'shop-car-create' as add_car_url %}
+      {% include 'shop/partials/_empty_state.html' with empty_message=_('No cars yet.') empty_action_url=add_car_url empty_action_label=_('Add a new car') %}
+    {% else %}
+      {% include 'shop/partials/_empty_state.html' with empty_message=_('No cars yet.') %}
+    {% endif %}
   {% endif %}
 
   {% if can_edit_fleet_data %}

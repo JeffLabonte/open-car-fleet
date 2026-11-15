@@ -24,8 +24,12 @@
       {% if hanko_api_url %}
         <hanko-login></hanko-login>
       {% else %}
-        <p class="notification is-warning">Missing HANKO_API_URL. Set it in .env and restart the server.</p>
+        <p class="notification is-warning" role="alert">{% translate 'Authentication is not configured. Contact your administrator.' %}</p>
       {% endif %}
+    </div>
+    <div id="hanko-callback-error" class="notification is-danger is-hidden" role="alert" data-testid="hanko-callback-error">
+      <p>{% translate 'Sign-in could not be completed. Please try again.' %}</p>
+      <button type="button" class="button is-small is-light mt-2" id="hanko-retry-button">{% translate 'Retry' %}</button>
     </div>
   </section>
 

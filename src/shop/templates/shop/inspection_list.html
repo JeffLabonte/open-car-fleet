@@ -85,9 +85,13 @@
                 </td>
                 <td data-label="{% translate 'Findings' %}">{{ inspection.notes|truncatewords:15|default:'—' }}</td>
                 <td data-label="{% translate 'Actions' %}">
-                  <a class="button is-small is-link" href="{% url 'shop-inspection-update' inspection.car.pk inspection.pk %}">
-                    {% translate 'Edit' %}
-                  </a>
+                  {% if inspection.car.fleet_id in editable_fleet_ids %}
+                    <a class="button is-small is-link" href="{% url 'shop-inspection-update' inspection.car.pk inspection.pk %}">
+                      {% translate 'Edit' %}
+                    </a>
+                  {% else %}
+                    <span class="has-text-grey">{% translate 'View only' %}</span>
+                  {% endif %}
                 </td>
               </tr>
             {% endfor %}

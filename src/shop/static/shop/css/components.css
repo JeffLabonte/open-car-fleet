@@ -4,27 +4,27 @@
   justify-content: center;
   gap: 0.5rem;
   min-height: 2.75rem;
-  padding: 0.45rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--bg-surface);
-  color: var(--text-main);
-  font-size: 0.9375rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  color: var(--accent);
+  font-size: 1rem;
   font-weight: 600;
   line-height: 1.2;
   text-decoration: none;
   cursor: pointer;
-  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), transform var(--transition-fast), opacity var(--transition-fast);
 }
 
 .button:hover {
-  background: var(--bg-elevated);
-  color: var(--text-main);
+  opacity: 0.85;
   text-decoration: none;
 }
 
 .button:active {
-  background: var(--bg-inset);
+  transform: scale(0.97);
+  opacity: 0.7;
 }
 
 .button svg {
@@ -42,10 +42,12 @@
 .button.is-primary:hover {
   background: var(--accent-hover);
   color: var(--on-accent);
+  opacity: 1;
 }
 
 .button.is-primary:active {
   background: var(--accent-active);
+  transform: scale(0.97);
 }
 
 .button.is-light {

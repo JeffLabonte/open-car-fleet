@@ -224,6 +224,13 @@ def inspection_list(request: HttpRequest) -> HttpResponse:
     query_params = request.GET.copy()
     query_params.pop("page", None)
 
+    editable_fleet_ids = {
+        fleet.pk
+        for fleet in Fleet.objects.filter(
+            memberships__user=request.user,
+            memberships__role__in=FleetMembership.WRITE_DATA_ROLES,
+        ).distinct()
+    }
     return render(
         request,
         "shop/inspection_list.html",
@@ -231,6 +238,7 @@ def inspection_list(request: HttpRequest) -> HttpResponse:
             "inspections": inspections,
             "filter_form": filter_form,
             "can_create": _user_can_create_inspections(request.user),
+            "editable_fleet_ids": editable_fleet_ids,
             "query_params": query_params,
             "title": _("Inspections"),
             "subtitle": _("Past inspections across your fleets."),

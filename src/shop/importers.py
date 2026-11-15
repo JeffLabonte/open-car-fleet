@@ -274,6 +274,7 @@ class CSVImporter:
             "model": self._require_text(record, "model"),
             "colour": self._clean_optional_text(record.get("colour")) or "",
             "year": self._coerce_optional_int(record.get("year"), field_name="year"),
+            "mileage": self._coerce_optional_int(record.get("mileage"), field_name="mileage"),
             "vin": self._normalize_vin(record.get("vin")),
             "license_plate": self._normalize_license_plate(record.get("license_plate")),
         }

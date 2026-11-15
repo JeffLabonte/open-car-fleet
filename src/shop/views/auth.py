@@ -150,6 +150,13 @@ def hanko_callback(request: HttpRequest) -> JsonResponse:
     if not session_token:
         return JsonResponse({"ok": False, "error": "Missing session token"}, status=400)
 
+    # Carry the validated local ``next`` target through the login flow. The
+    # value may come from the POST body (sent by login.js) or the query string.
+    next_candidate = payload.get("next")
+    if not isinstance(next_candidate, str):
+        next_candidate = request.GET.get("next")
+    safe_next = safe_next_url(request, default=reverse("shop-index"), candidate=next_candidate)
+
     try:
         user_data = fetch_hanko_userinfo(session_token)
         user = complete_hanko_login(request, user_data)
@@ -159,7 +166,7 @@ def hanko_callback(request: HttpRequest) -> JsonResponse:
     request.session["hanko_session_token"] = session_token
     request.session.save()
 
-    payload = {
+    response_payload = {
         "ok": True,
         "user": {
             "id": user.pk,
@@ -169,8 +176,13 @@ def hanko_callback(request: HttpRequest) -> JsonResponse:
         },
     }
     if not getattr(user, "onboarding_completed", False):
-        payload["redirect_url"] = reverse("shop-welcome")
-    return JsonResponse(payload)
+        # Remember the original destination so onboarding can return to it.
+        request.session["post_onboarding_redirect"] = safe_next
+        request.session.save()
+        from urllib.parse import urlencode
+
+        response_payload["redirect_url"] = f"{reverse('shop-welcome')}?{urlencode({'next': safe_next})}"
+    return JsonResponse(response_payload)
 
 
 def logout_view(request: HttpRequest) -> HttpResponse:

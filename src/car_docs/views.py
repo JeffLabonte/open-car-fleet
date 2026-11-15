@@ -16,12 +16,14 @@ from shop.view_helpers import user_car_docs_queryset, user_cars_queryset
 def car_doc_list(request, car_pk):
     car = get_object_or_404(user_cars_queryset(request.user), pk=car_pk)
     docs = user_car_docs_queryset(request.user).filter(car=car)
+    can_edit = FleetSharingPermissions(request.user, car.fleet).can_edit_fleet_data
     return render(
         request,
         "car_docs/list.html",
         {
             "car": car,
             "docs": docs,
+            "can_edit_fleet_data": can_edit,
             "title": _("Documents for %(name)s") % {"name": car.usual_name or car.make},
             "subtitle": _("Vehicle notes and reference material"),
         },

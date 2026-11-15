@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
 from shop.models.car import Car, CarPart
+from shop.models.fleet import Fleet, FleetMembership
 from shop.validators import validate_license_plate, validate_vin
 
 
@@ -66,15 +67,28 @@ class CarForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self._user = user
         if user is not None:
-            self.fields["fleet"].queryset = user.fleets.order_by("name")
+            self.fields["fleet"].queryset = (
+                Fleet.objects.filter(
+                    memberships__user=user,
+                    memberships__role__in=FleetMembership.WRITE_DATA_ROLES,
+                )
+                .distinct()
+                .order_by("name")
+            )
 
     def clean_fleet(self):
         fleet = self.cleaned_data.get("fleet")
         if fleet is None:
             return fleet
 
-        if self._user is not None and not self._user.fleets.filter(pk=fleet.pk).exists():
-            raise ValidationError(_("You can only select a fleet you are a member of."))
+        if self._user is not None:
+            writable = Fleet.objects.filter(
+                memberships__user=self._user,
+                memberships__role__in=FleetMembership.WRITE_DATA_ROLES,
+                pk=fleet.pk,
+            ).exists()
+            if not writable:
+                raise ValidationError(_("You can only select a fleet you can edit."))
         return fleet
 
     def clean_year(self) -> int | None:

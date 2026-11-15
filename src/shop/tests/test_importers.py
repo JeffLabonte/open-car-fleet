@@ -36,6 +36,17 @@ class CSVImporterTests(ShopTestCase):
         self.assertEqual(result.created_count, 1)
         self.assertEqual(Car.objects.count(), 0)
 
+    def test_car_import_preserves_mileage(self):
+        result = self.importer.import_records(
+            Car,
+            [{"make": "Toyota", "model": "Yaris", "vin": "JTDKB20U793512345", "mileage": "88000"}],
+            context=ImportContext(fleet=self.fleet),
+        )
+
+        self.assertFalse(result.has_errors)
+        car = Car.objects.get()
+        self.assertEqual(car.mileage, 88000)
+
     def test_report_import_parses_lists_and_persists(self):
         car = Car.objects.create(fleet=self.fleet, make="Honda", model="Civic", vin="2HGFG12698H512345")
 

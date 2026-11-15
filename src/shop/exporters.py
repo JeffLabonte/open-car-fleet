@@ -80,6 +80,16 @@ def _build_meta_sheet(
                     }
                 ),
             ],
+            [
+                "restore_notes",
+                (
+                    "The *_import sheets are designed to be round-trippable through "
+                    "import_csv. Records intentionally excluded from restore: "
+                    "invitations, car parts/inspections/car documents, uploaded file "
+                    "attachment contents (uploaded_attachments column is informational "
+                    "only and will be ignored by the importer)."
+                ),
+            ],
         ],
     )
 
@@ -136,36 +146,29 @@ def _build_memberships_sheet(sheet: Any, fleet: Fleet, memberships: list[Any]) -
 
 
 def _build_cars_sheet(sheet: Any, fleet: Fleet, cars: list[Car]) -> None:
+    # Headers match the Car CSV import schema so the sheet is round-trippable.
     _append_rows(
         sheet,
         [
-            "car_id",
-            "fleet_id",
             "usual_name",
             "make",
             "model",
+            "colour",
             "year",
-            "mileage",
             "vin",
             "license_plate",
-            "created_at",
-            "updated_at",
-            "colour",
+            "mileage",
         ],
         [
             [
-                str(car.pk),
-                str(fleet.pk),
                 car.usual_name,
                 car.make,
                 car.model,
+                car.colour,
                 _string_or_empty(car.year),
-                _string_or_empty(car.mileage),
                 car.vin or "",
                 car.license_plate,
-                _format_datetime(car.created_at),
-                _format_datetime(car.updated_at),
-                car.colour,
+                _string_or_empty(car.mileage),
             ]
             for car in cars
         ],
@@ -173,42 +176,30 @@ def _build_cars_sheet(sheet: Any, fleet: Fleet, cars: list[Car]) -> None:
 
 
 def _build_jobs_sheet(sheet: Any, jobs: list[WorkJob]) -> None:
+    # Headers match the WorkJob CSV import schema so the sheet is round-trippable.
     _append_rows(
         sheet,
         [
-            "workjob_id",
-            "car_id",
-            "car_ref_for_import",
+            "car",
             "title",
             "maintenance_type",
-            "assigned_to_user_id",
-            "assigned_to_email",
-            "assigned_to_username",
-            "assigned_shop_id",
-            "assigned_shop_name",
-            "assigned_shop_email",
+            "assigned_to",
+            "assigned_shop",
             "planned_date",
             "is_done",
             "done_date",
-            "required_items_text",
+            "required_items",
             "urgency",
             "status",
             "notes",
-            "created_at",
         ],
         [
             [
-                str(job.pk),
-                str(job.car_id),
                 _car_reference(job.car),
                 job.title,
                 job.maintenance_type,
-                _string_or_empty(job.assigned_to_id),
-                job.assigned_to.email if job.assigned_to else "",
-                job.assigned_to.username if job.assigned_to else "",
-                _string_or_empty(job.assigned_shop_id),
-                job.assigned_shop.name if job.assigned_shop else "",
-                job.assigned_shop.email if job.assigned_shop else "",
+                _assignment_reference(job.assigned_to),
+                _shop_reference(job.assigned_shop),
                 _format_date(job.planned_date),
                 bool(job.is_done),
                 _format_date(job.done_date),
@@ -216,7 +207,6 @@ def _build_jobs_sheet(sheet: Any, jobs: list[WorkJob]) -> None:
                 job.urgency,
                 job.status,
                 job.notes,
-                _format_datetime(job.created_at),
             ]
             for job in jobs
         ],
@@ -224,42 +214,36 @@ def _build_jobs_sheet(sheet: Any, jobs: list[WorkJob]) -> None:
 
 
 def _build_reports_sheet(sheet: Any, reports: list[Report]) -> None:
+    # Headers match the Report CSV import schema so the sheet is round-trippable.
+    # External-link attachments are split into documents/photos; uploaded file
+    # attachments are listed separately because their file content is not embedded
+    # in the workbook and cannot be restored automatically.
     _append_rows(
         sheet,
         [
-            "report_id",
-            "car_id",
-            "car_ref_for_import",
+            "car",
             "mileage",
             "job_name",
-            "assigned_to_user_id",
-            "assigned_to_email",
-            "assigned_to_username",
-            "assigned_shop_id",
-            "assigned_shop_name",
-            "assigned_shop_email",
+            "assigned_to",
+            "assigned_shop",
             "date_done",
-            "attachments_text",
+            "documents",
+            "photos",
+            "uploaded_attachments",
             "note",
-            "created_at",
+            "additional_information",
         ],
         [
             [
-                str(report.pk),
-                str(report.car_id),
                 _car_reference(report.car),
                 _string_or_empty(report.mileage),
                 report.job_name,
-                _string_or_empty(report.assigned_to_id),
-                report.assigned_to.email if report.assigned_to else "",
-                report.assigned_to.username if report.assigned_to else "",
-                _string_or_empty(report.assigned_shop_id),
-                report.assigned_shop.name if report.assigned_shop else "",
-                report.assigned_shop.email if report.assigned_shop else "",
+                _assignment_reference(report.assigned_to),
+                _shop_reference(report.assigned_shop),
                 _format_date(report.date_done),
-                _join_attachments(report.attachments.all()),
+                *_split_attachment_columns(report.attachments.all()),
                 report.note,
-                _format_datetime(report.created_at),
+                report.additional_information,
             ]
             for report in reports
         ],
@@ -309,19 +293,48 @@ def _join_list(value: Any) -> str:
     return str(value)
 
 
-def _join_attachments(attachments: Any) -> str:
-    """Render report attachments (uploads and external links) for the export sheet."""
-    lines: list[str] = []
-    for attachment in attachments:
-        if attachment.source_type == "external":
-            lines.append(attachment.url or attachment.display_name)
-        else:
-            lines.append(attachment.display_name or attachment.file.name)
-    return "\n".join(str(line).strip() for line in lines if str(line).strip())
-
-
 def _car_reference(car: Car) -> str:
     return car.vin or car.license_plate or car.usual_name or str(car.pk)
+
+
+def _assignment_reference(user) -> str:
+    """Return an importable reference for a mechanic or shop user."""
+    if user is None:
+        return ""
+    return user.email or user.username or str(user.pk)
+
+
+def _shop_reference(shop) -> str:
+    """Return an importable reference for a known shop."""
+    if shop is None:
+        return ""
+    return shop.email or shop.name or str(shop.pk)
+
+
+def _split_attachment_columns(attachments: Any) -> tuple[str, str, str]:
+    """Split attachments into documents, photos, and uploaded file names.
+
+    External links are mapped back to the importer's ``documents``/``photos``
+    columns by kind. Uploaded files cannot be restored from the workbook, so
+    their display names are isolated in ``uploaded_attachments``.
+    """
+    documents: list[str] = []
+    photos: list[str] = []
+    uploaded: list[str] = []
+    for attachment in attachments:
+        if attachment.source_type == "external":
+            value = attachment.url or attachment.display_name or ""
+            if attachment.kind in ("image", "video"):
+                photos.append(value)
+            else:
+                documents.append(value)
+        else:
+            uploaded.append(attachment.display_name or attachment.file.name or "")
+    return (
+        "\n".join(documents),
+        "\n".join(photos),
+        "\n".join(uploaded),
+    )
 
 
 def _build_filename(fleet: Fleet, exported_at: datetime) -> str:

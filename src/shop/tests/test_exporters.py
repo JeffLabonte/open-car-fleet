@@ -2,6 +2,7 @@ import tempfile
 import uuid
 from io import BytesIO, StringIO
 from pathlib import Path
+from typing import Any
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -13,9 +14,10 @@ from django.utils import timezone
 from openpyxl import load_workbook
 
 from shop.exporters import export_fleet_to_excel
+from shop.importers import CSVImporter, ImportContext
 from shop.models.attachment import Attachment
 from shop.models.car import Car
-from shop.models.fleet import Fleet, FleetMembership
+from shop.models.fleet import Fleet, FleetMembership, KnownShop
 from shop.models.job import WorkJob
 from shop.models.report import Report
 from shop.models.user import ShopUser
@@ -113,20 +115,22 @@ class FleetExportServiceTests(TestCase):
         self.assertIn("workjobs_import", workbook.sheetnames)
         self.assertIn("reports_import", workbook.sheetnames)
 
-        cars_rows = list(workbook["cars_import"].iter_rows(min_row=2, values_only=True))
-        self.assertEqual(len(cars_rows), 1)
-        self.assertEqual(cars_rows[0][3], "Toyota")
-        self.assertNotIn("2HGFG12698H512345", [row[7] for row in cars_rows])
+        cars = _sheet_to_dicts(workbook["cars_import"])
+        self.assertEqual(len(cars), 1)
+        self.assertEqual(cars[0]["make"], "Toyota")
+        self.assertNotIn("2HGFG12698H512345", [row["vin"] for row in cars])
 
-        job_rows = list(workbook["workjobs_import"].iter_rows(min_row=2, values_only=True))
-        self.assertEqual(len(job_rows), 1)
-        self.assertEqual(job_rows[0][3], "Oil Change")
-        self.assertEqual(job_rows[0][14], "Oil\nFilter")
+        jobs = _sheet_to_dicts(workbook["workjobs_import"])
+        self.assertEqual(len(jobs), 1)
+        self.assertEqual(jobs[0]["title"], "Oil Change")
+        self.assertEqual(jobs[0]["required_items"], "Oil\nFilter")
 
-        report_rows = list(workbook["reports_import"].iter_rows(min_row=2, values_only=True))
-        self.assertEqual(len(report_rows), 1)
-        self.assertEqual(report_rows[0][4], "Brake Service")
-        self.assertEqual(report_rows[0][12], "invoice.pdf\nhttps://example.com/before.jpg")
+        reports = _sheet_to_dicts(workbook["reports_import"])
+        self.assertEqual(len(reports), 1)
+        self.assertEqual(reports[0]["job_name"], "Brake Service")
+        self.assertEqual(reports[0]["documents"], "https://example.com/before.jpg")
+        self.assertEqual(reports[0]["photos"], "")
+        self.assertEqual(reports[0]["uploaded_attachments"], "invoice.pdf")
 
 
 class FleetExportViewTests(TestCase):
@@ -214,8 +218,8 @@ class FleetExportViewTests(TestCase):
         self.assertIn('attachment; filename="fleet_export-view-fleet_', response["Content-Disposition"])
 
         workbook = load_workbook(filename=BytesIO(response.content))
-        cars_rows = list(workbook["cars_import"].iter_rows(min_row=2, values_only=True))
-        vins = [row[7] for row in cars_rows]
+        cars_rows = _sheet_to_dicts(workbook["cars_import"])
+        vins = [row["vin"] for row in cars_rows]
         self.assertIn("1FAHP3F28CL512345", vins)
         self.assertNotIn("5YJ3E1EA7LF512345", vins)
 
@@ -259,10 +263,9 @@ class ExportFleetCommandTests(TestCase):
             self.assertTrue(output_path.exists())
             workbook = load_workbook(filename=str(output_path))
             self.assertIn("cars_import", workbook.sheetnames)
-            cars_sheet = workbook["cars_import"]
-            rows = list(cars_sheet.iter_rows(min_row=2, values_only=True))
-            self.assertEqual(len(rows), 1)
-            self.assertEqual(rows[0][3], "Mazda")
+            cars = _sheet_to_dicts(workbook["cars_import"])
+            self.assertEqual(len(cars), 1)
+            self.assertEqual(cars[0]["make"], "Mazda")
         finally:
             output_path.unlink(missing_ok=True)
 
@@ -273,3 +276,175 @@ class ExportFleetCommandTests(TestCase):
     def test_export_fleet_command_rejects_invalid_fleet_uuid(self):
         with self.assertRaises(CommandError):
             call_command("export_fleet", "not-a-uuid")
+
+
+class FleetExportRoundTripTests(TestCase):
+    """Verify exported *_import sheets can be imported back into a fleet."""
+
+    def setUp(self) -> None:
+        self.owner = ShopUser.objects.create_user(
+            username="roundtrip-owner",
+            email="roundtrip-owner@example.com",
+            password="pass1234",
+            is_mechanic=True,
+        )
+        self.source_fleet = Fleet.objects.create(name="Source Fleet", created_by=self.owner)
+        FleetMembership.objects.create(fleet=self.source_fleet, user=self.owner, role=FleetMembership.ROLE_OWNER)
+
+        self.target_fleet = Fleet.objects.create(name="Target Fleet", created_by=self.owner)
+        FleetMembership.objects.create(fleet=self.target_fleet, user=self.owner, role=FleetMembership.ROLE_OWNER)
+
+        self.shop = KnownShop.objects.create(name="Roundtrip Shop", email="shop@example.com")
+
+    def test_round_trip_imports_cars_workjobs_and_reports(self):
+        car = Car.objects.create(
+            fleet=self.source_fleet,
+            usual_name="Daily Driver",
+            make="Toyota",
+            model="Corolla",
+            year=2018,
+            mileage=92_450,
+            vin="2T1BURHE5JC512345",
+            license_plate="ABC 123",
+        )
+        WorkJob.objects.create(
+            car=car,
+            title="Oil Change",
+            maintenance_type="Routine",
+            assigned_to=self.owner,
+            planned_date="2026-08-15",
+            is_done=False,
+            required_items=["5W-30 oil", "Oil filter"],
+            urgency="soon",
+            status="pending",
+            notes="Use OEM filter.",
+        )
+        report = Report.objects.create(
+            car=car,
+            mileage=93_120,
+            job_name="Brake Service",
+            assigned_shop=self.shop,
+            date_done="2026-08-03",
+            note="Pads and rotors replaced.",
+            additional_information="Rear brakes still at 60%.",
+        )
+        ContentType.objects.get_for_model(report)
+        Attachment.objects.create(
+            content_type=ContentType.objects.get_for_model(report),
+            object_id=str(report.pk),
+            source_type=Attachment.SOURCE_EXTERNAL,
+            url="https://example.com/invoice.pdf",
+            display_name="invoice.pdf",
+            kind="document",
+        )
+
+        exporter_file = export_fleet_to_excel(self.source_fleet)
+        workbook = load_workbook(filename=BytesIO(exporter_file.content))
+        importer = CSVImporter()
+
+        # Free up globally-unique VINs so the round trip can recreate the cars.
+        Car.objects.filter(fleet=self.source_fleet).delete()
+
+        # Dry-run first to serve as an import preview.
+        car_records = _sheet_to_dicts(workbook["cars_import"])
+        dry_run = importer.import_records(
+            Car,
+            car_records,
+            context=ImportContext(fleet=self.target_fleet, user=self.owner),
+            dry_run=True,
+        )
+        self.assertFalse(dry_run.has_errors)
+        self.assertEqual(dry_run.created_count, 1)
+        self.assertEqual(Car.objects.filter(fleet=self.target_fleet).count(), 0)
+
+        # Import cars into the target fleet.
+        car_result = importer.import_records(
+            Car,
+            car_records,
+            context=ImportContext(fleet=self.target_fleet, user=self.owner),
+        )
+        self.assertFalse(car_result.has_errors)
+        self.assertEqual(car_result.created_count, 1)
+        imported_car = Car.objects.get(fleet=self.target_fleet, vin="2T1BURHE5JC512345")
+        self.assertEqual(imported_car.make, "Toyota")
+        self.assertEqual(imported_car.mileage, 92_450)
+
+        # Import work jobs, scoped to the target fleet.
+        job_records = _sheet_to_dicts(workbook["workjobs_import"])
+        job_result = importer.import_records(
+            WorkJob,
+            job_records,
+            context=ImportContext(fleet=self.target_fleet, user=self.owner),
+        )
+        self.assertFalse(job_result.has_errors)
+        self.assertEqual(job_result.created_count, 1)
+        imported_job = WorkJob.objects.get(car__fleet=self.target_fleet, title="Oil Change")
+        self.assertEqual(imported_job.assigned_to, self.owner)
+        self.assertEqual(imported_job.required_items, ["5W-30 oil", "Oil filter"])
+
+        # Import reports, scoped to the target fleet.
+        report_records = _sheet_to_dicts(workbook["reports_import"])
+        report_result = importer.import_records(
+            Report,
+            report_records,
+            context=ImportContext(fleet=self.target_fleet, user=self.owner),
+        )
+        self.assertFalse(report_result.has_errors)
+        self.assertEqual(report_result.created_count, 1)
+        imported_report = Report.objects.get(car__fleet=self.target_fleet, job_name="Brake Service")
+        self.assertEqual(imported_report.assigned_shop, self.shop)
+        self.assertEqual(imported_report.additional_information, "Rear brakes still at 60%.")
+        self.assertEqual(imported_report.attachments.count(), 1)
+        self.assertEqual(imported_report.attachments.first().url, "https://example.com/invoice.pdf")
+
+    def test_round_trip_warns_about_uploaded_file_attachments(self):
+        car = Car.objects.create(
+            fleet=self.source_fleet,
+            make="Honda",
+            model="Civic",
+            vin="2HGFG12698H512345",
+        )
+        report = Report.objects.create(
+            car=car,
+            job_name="Transmission Service",
+            date_done="2026-09-01",
+        )
+        ContentType.objects.get_for_model(report)
+        Attachment.objects.create(
+            content_type=ContentType.objects.get_for_model(report),
+            object_id=str(report.pk),
+            source_type=Attachment.SOURCE_UPLOAD,
+            file=SimpleUploadedFile("receipt.pdf", b"%PDF-1.4 receipt", content_type="application/pdf"),
+            display_name="receipt.pdf",
+            mime_type="application/pdf",
+            kind="document",
+        )
+
+        exporter_file = export_fleet_to_excel(self.source_fleet)
+        workbook = load_workbook(filename=BytesIO(exporter_file.content))
+        importer = CSVImporter()
+
+        Car.objects.filter(fleet=self.source_fleet).delete()
+
+        importer.import_records(
+            Car,
+            _sheet_to_dicts(workbook["cars_import"]),
+            context=ImportContext(fleet=self.target_fleet, user=self.owner),
+        )
+        report_result = importer.import_records(
+            Report,
+            _sheet_to_dicts(workbook["reports_import"]),
+            context=ImportContext(fleet=self.target_fleet, user=self.owner),
+        )
+
+        self.assertFalse(report_result.has_errors)
+        self.assertTrue(any("uploaded_attachments" in warning.message for warning in report_result.warnings))
+
+
+def _sheet_to_dicts(sheet) -> list[dict[str, Any]]:
+    """Return an openpyxl sheet as a list of row dicts keyed by header cell."""
+    rows = list(sheet.iter_rows(values_only=True))
+    if not rows:
+        return []
+    header = [str(cell) if cell is not None else "" for cell in rows[0]]
+    return [{key: ("" if value is None else value) for key, value in zip(header, row)} for row in rows[1:]]

@@ -35,6 +35,8 @@ poetry run python ./src/manage.py export_fleet <fleet-uuid> --output ./backups/m
 - Fleet backups are available from the fleet detail page (`Export to Excel`), from the fleet list quick action, and from the `export_fleet` management command.
 - Export requires owner or manager role for the target fleet in the web UI.
 - The default workbook includes `meta`, `fleet`, `memberships`, `cars_import`, `workjobs_import`, and `reports_import` sheets.
+- The `*_import` sheets use the same column names as the CSV import schemas so they can be round-tripped through `import_csv` after extracting each sheet to a CSV file.
+- Records intentionally excluded from restore: invitations, car parts, inspections, car documents, and the binary content of uploaded file attachments (their names are preserved in the `uploaded_attachments` column for reference but are not re-created by the importer).
 - Invitation history is intentionally excluded from the default export.
 
 ## convert_user_to_mechanic
@@ -133,6 +135,7 @@ Optional fields:
 - `documents`: newline-delimited string in quoted CSV cell
 - `photos`: newline-delimited string in quoted CSV cell
 - `note`: string
+- `additional_information`: string
 
 Example for car-scoped web import:
 

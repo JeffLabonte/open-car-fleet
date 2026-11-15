@@ -251,7 +251,7 @@ class OdometerUpdateTests(TestCase):
         self.car.refresh_from_db()
         self.assertEqual(self.car.mileage, 50000)
 
-    def test_csv_car_import_ignores_mileage_column(self):
+    def test_csv_car_import_maps_mileage_column(self):
         importer = CSVImporter()
 
         result = importer.import_records(
@@ -270,5 +270,4 @@ class OdometerUpdateTests(TestCase):
         self.assertFalse(result.has_errors)
         self.assertEqual(result.created_count, 1)
         car = Car.objects.get(vin="JTDKB20U793512360")
-        self.assertIsNone(car.mileage)
-        self.assertTrue(any("mileage" in warning.message for warning in result.warnings))
+        self.assertEqual(car.mileage, 99999)

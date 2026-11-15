@@ -96,6 +96,46 @@ class OnboardingViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Please enter your first or last name")
 
+    def test_onboarding_submission_redirects_to_stored_next(self):
+        user = ShopUser.objects.create_user(username="new-user", email="new@example.com", password="pass1234")
+        self.client.force_login(user)
+        session = self.client.session
+        session["post_onboarding_redirect"] = "/cars/42/"
+        session.save()
+
+        response = self.client.post(
+            reverse("shop-welcome"),
+            {
+                "first_name": "John",
+                "last_name": "Smith",
+                "is_mechanic": "",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "/cars/42/")
+        user.refresh_from_db()
+        self.assertTrue(user.onboarding_completed)
+
+    def test_onboarding_submission_redirects_to_next_query_param(self):
+        user = ShopUser.objects.create_user(username="new-user", email="new@example.com", password="pass1234")
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("shop-welcome") + "?next=/cars/7/")
+        self.assertEqual(response.status_code, 200)
+
+        response = self.client.post(
+            reverse("shop-welcome"),
+            {
+                "first_name": "John",
+                "last_name": "Smith",
+                "is_mechanic": "",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "/cars/7/")
+
 
 class OnboardingRedirectTests(TestCase):
     def test_new_user_is_redirected_to_welcome_after_hanko_callback(self):
@@ -132,10 +172,48 @@ class OnboardingRedirectTests(TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertTrue(data["ok"])
-        self.assertEqual(data["redirect_url"], reverse("shop-welcome"))
+        self.assertTrue(data["redirect_url"].startswith(reverse("shop-welcome")))
 
         user = ShopUser.objects.get(email="onboarding@example.com")
         self.assertFalse(user.onboarding_completed)
+
+    def test_callback_preserves_next_for_new_user(self):
+        payload = {
+            "user": {
+                "id": "hanko-new-user-2",
+                "email": "onboarding2@example.com",
+                "name": "New User 2",
+                "display_name": "New User 2",
+                "provider": "hanko",
+            },
+            "session_token": "session-token-new-2",
+            "next": "/cars/99/",
+        }
+
+        with patch(
+            "shop.auth.requests.post",
+            return_value=FakeHankoResponse(
+                {
+                    "is_valid": True,
+                    "claims": {
+                        "sub": "hanko-new-user-2",
+                        "email": "onboarding2@example.com",
+                        "username": "New User 2",
+                    },
+                }
+            ),
+        ):
+            response = self.client.post(
+                reverse("shop-hanko-callback"),
+                data=json.dumps(payload),
+                content_type="application/json",
+            )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["ok"])
+        self.assertTrue(data["redirect_url"].startswith(reverse("shop-welcome")))
+        self.assertIn("next=", data["redirect_url"])
 
     def test_existing_complete_user_skips_welcome_after_hanko_callback(self):
         ShopUser.objects.create_user(

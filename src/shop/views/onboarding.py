@@ -7,13 +7,23 @@ from django.utils.translation import gettext as _
 
 from shop.forms.onboarding import OnboardingForm
 from shop.middleware import hanko_login_required
+from shop.views.auth import safe_next_url
 
 
 @hanko_login_required
 def welcome_view(request: HttpRequest) -> HttpResponse:
     user = request.user
     if getattr(user, "onboarding_completed", False):
-        return redirect(reverse("shop-index"))
+        stored_next = request.session.pop("post_onboarding_redirect", None)
+        return redirect(safe_next_url(request, default=reverse("shop-index"), candidate=stored_next))
+
+    # Preserve a ``next`` target supplied via the query string through the form POST.
+    query_next = request.GET.get("next")
+    if query_next:
+        request.session["post_onboarding_redirect"] = safe_next_url(
+            request, default=reverse("shop-index"), candidate=query_next
+        )
+        request.session.save()
 
     if request.method == "POST":
         form = OnboardingForm(request.POST)
@@ -36,7 +46,8 @@ def welcome_view(request: HttpRequest) -> HttpResponse:
                 ]
             )
             messages.success(request, _("Welcome! Your profile is ready."))
-            return redirect(reverse("shop-index"))
+            stored_next = request.session.pop("post_onboarding_redirect", None)
+            return redirect(safe_next_url(request, default=reverse("shop-index"), candidate=stored_next))
     else:
         form = OnboardingForm(
             initial={

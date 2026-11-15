@@ -88,5 +88,17 @@ class WorkJob(AssignedToShopMixin, models.Model):
                     {"inspection": _("The inspection must belong to the same vehicle as the work job.")}
                 )
 
+    def save(self, *args, **kwargs):
+        # Keep the legacy ``is_done`` flag synchronized with ``status`` so
+        # callers never observe contradictory completion states.
+        self.is_done = self.status == self.STATUS_DONE
+        if self.status == self.STATUS_DONE and self.done_date is None:
+            from django.utils import timezone
+
+            self.done_date = timezone.now().date()
+        if self.status != self.STATUS_DONE:
+            self.done_date = None
+        super().save(*args, **kwargs)
+
     def __str__(self) -> str:
         return f"{self.title} [{self.get_urgency_display()}] for {self.car}"

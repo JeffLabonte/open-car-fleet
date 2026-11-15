@@ -39,6 +39,7 @@ from shop.views.car import (
     report_create,
     report_update,
     workjob_create,
+    workjob_status_update,
     workjob_update,
 )
 from shop.views.fleet import (
@@ -137,5 +138,6 @@ __all__ = [
     "theme_view",
     "welcome_view",
     "workjob_create",
+    "workjob_status_update",
     "workjob_update",
 ]

@@ -239,7 +239,6 @@ class AdditionalCoverageRegressionTests(TestCase):
                 "assigned_to": str(self.owner.pk),
                 "planned_date": "2026-08-11",
                 "status": "done",
-                "is_done": "on",
                 "done_date": "2026-08-12",
                 "urgency": "ahead",
                 "required_items": "Oil\nFilter",

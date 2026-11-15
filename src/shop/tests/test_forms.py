@@ -30,7 +30,7 @@ class FormEditableFieldsCoverageTests(TestCase):
         self.assertSetEqual(set(FleetForm.base_fields.keys()), expected)
 
     def test_workjob_form_covers_user_editable_workjob_fields(self):
-        expected = self._editable_model_field_names(WorkJob, exclude={"car"})
+        expected = self._editable_model_field_names(WorkJob, exclude={"car", "is_done"})
         self.assertSetEqual(set(WorkJobForm.base_fields.keys()), expected)
 
     def test_report_form_covers_user_editable_report_fields(self):

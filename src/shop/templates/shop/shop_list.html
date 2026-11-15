@@ -36,7 +36,9 @@
           </div>
           <div class="fleet-card__actions">
             <a class="button is-light is-small" href="{% url 'shop-known-shop-detail' shop.pk %}">{% translate 'View' %}</a>
+            {% if shop.pk in manageable_shop_ids %}
             <a class="button is-light is-small" href="{% url 'shop-known-shop-proof-create' shop.pk %}">{% translate 'Add proof' %}</a>
+            {% endif %}
           </div>
         </article>
       {% endfor %}

@@ -182,6 +182,7 @@ def car_detail(request: HttpRequest, pk: str) -> HttpResponse:
         .order_by("year", "usual_name")
     )
     can_edit = FleetSharingPermissions(request.user, car.fleet).can_edit_fleet_data
+    can_manage = FleetSharingPermissions(request.user, car.fleet).can_manage_members
     return render(
         request,
         "shop/car_detail.html",
@@ -195,6 +196,7 @@ def car_detail(request: HttpRequest, pk: str) -> HttpResponse:
             "car_inspections": car_inspections,
             "parts": parts,
             "can_edit_fleet_data": can_edit,
+            "can_manage_fleet": can_manage,
             "show_done": show_done,
             "title": car.usual_name or car.make,
             "subtitle": _("Vehicle identity, status tracker and maintenance ledger."),
@@ -331,6 +333,29 @@ def workjob_update(request: HttpRequest, car_pk: str, pk: str) -> HttpResponse:
 
 
 @hanko_login_required
+@require_POST
+def workjob_status_update(request: HttpRequest, car_pk: str, pk: str) -> HttpResponse:
+    car = get_object_or_404(user_cars_queryset(request.user).select_related("fleet"), pk=car_pk)
+    if not FleetSharingPermissions(request.user, car.fleet).can_edit_fleet_data:
+        messages.error(request, _("You do not have permission to update planned work for this car."))
+        return redirect(reverse("shop-car-detail", args=[car.pk]))
+    work_job = get_object_or_404(WorkJob, pk=pk, car=car)
+    new_status = request.POST.get("status")
+    if new_status not in {
+        WorkJob.STATUS_DONE,
+        WorkJob.STATUS_CANCELLED,
+        WorkJob.STATUS_PENDING,
+        WorkJob.STATUS_IN_PROGRESS,
+    }:
+        messages.error(request, _("Invalid status."))
+        return redirect(reverse("shop-car-detail", args=[car.pk]))
+    work_job.status = new_status
+    work_job.save()
+    messages.success(request, _("Planned work status updated."))
+    return redirect(reverse("shop-car-detail", args=[car.pk]))
+
+
+@hanko_login_required
 def report_create(request: HttpRequest, car_pk: str) -> HttpResponse:
     car = get_object_or_404(user_cars_queryset(request.user).select_related("fleet"), pk=car_pk)
     if not FleetSharingPermissions(request.user, car.fleet).can_edit_fleet_data:
@@ -358,7 +383,17 @@ def report_create(request: HttpRequest, car_pk: str) -> HttpResponse:
             messages.success(request, _("Maintenance report added successfully."))
             return redirect(reverse("shop-car-detail", args=[car.pk]))
     else:
-        form = ReportForm(user=request.user, fleet=car.fleet, car=car)
+        initial = {}
+        workjob_pk = request.GET.get("workjob")
+        if workjob_pk and workjob_pk.isdigit():
+            work_job = WorkJob.objects.filter(pk=int(workjob_pk), car=car).first()
+            if work_job is not None:
+                initial["job_name"] = work_job.title
+                if work_job.maintenance_type:
+                    initial["job_name"] = work_job.title
+                if car.mileage is not None:
+                    initial["mileage"] = car.mileage
+        form = ReportForm(user=request.user, fleet=car.fleet, car=car, initial=initial)
     return render(request, "shop/report_form.html", {"form": form, "is_create": True, "car": car})
 
 

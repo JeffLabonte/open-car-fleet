@@ -22,8 +22,8 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  const MAX_UPLOAD_BYTES = 500 * 1024 * 1024; // keep in sync with shop.forms.base
-  const MAX_FILES = 10; // keep in sync with shop.forms.base
+  const MAX_UPLOAD_BYTES = parseInt(section.dataset.maxUploadBytes || '104857600', 10); // keep in sync with shop.forms.base
+  const MAX_FILES = parseInt(section.dataset.maxFiles || '10', 10); // keep in sync with shop.forms.base
   const MAX_CONCURRENT_UPLOADS = 2;
   const IMAGE_MAX_DIMENSION = 2560;
   const IMAGE_COMPRESS_MIN_BYTES = 1.5 * 1024 * 1024;

@@ -6,10 +6,12 @@
     {% include 'shop/partials/_page_header.html' %}
     <div class="page-actions">
       <a class="button is-light" href="{% url 'shop-car-detail' car.pk %}">{% translate 'Back to car' %}</a>
+      {% if can_edit_fleet_data %}
       <a class="button is-primary" href="{% url 'shop-car-doc-create' car.pk %}">
         {% include 'shop/partials/_icon.html' with name='plus' %}
         <span>{% translate 'Add document' %}</span>
       </a>
+      {% endif %}
     </div>
   </header>
 
@@ -37,8 +39,10 @@
                 <td data-label="">
                   <div class="buttons are-small">
                     <a class="button is-link" href="{% url 'shop-car-doc-detail' car.pk doc.pk %}">{% translate 'View' %}</a>
+                    {% if can_edit_fleet_data %}
                     <a class="button is-light" href="{% url 'shop-car-doc-update' car.pk doc.pk %}">{% translate 'Edit' %}</a>
                     <a class="button is-danger" href="{% url 'shop-car-doc-delete' car.pk doc.pk %}">{% translate 'Delete' %}</a>
+                    {% endif %}
                   </div>
                 </td>
               </tr>

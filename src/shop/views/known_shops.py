@@ -26,11 +26,13 @@ security_log = logging.getLogger("security")
 @hanko_login_required
 def known_shop_list(request: HttpRequest) -> HttpResponse:
     shops = user_known_shops_queryset(request.user).prefetch_related("proofs").order_by("name")
+    manageable_shop_ids = {shop.pk for shop in shops if user_can_manage_known_shop(request.user, shop)}
     return render(
         request,
         "shop/shop_list.html",
         {
             "shops": shops,
+            "manageable_shop_ids": manageable_shop_ids,
             "title": _("Known shops"),
             "subtitle": _("Keep trusted repair shops and their supporting proofs together"),
         },

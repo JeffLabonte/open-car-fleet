@@ -25,7 +25,6 @@ class WorkJobForm(LineListFieldMixin, AssignedToShopFormMixin, forms.ModelForm):
             "assigned_shop",
             "planned_date",
             "status",
-            "is_done",
             "done_date",
             "urgency",
             "required_items",
@@ -71,6 +70,19 @@ class WorkJobForm(LineListFieldMixin, AssignedToShopFormMixin, forms.ModelForm):
         )
         if self.instance and self.instance.pk:
             self.fields["required_items"].initial = "\n".join(self.instance.required_items or [])
+
+    def clean(self) -> dict[str, Any]:
+        cleaned_data = super().clean()
+        status = cleaned_data.get("status")
+        done_date = cleaned_data.get("done_date")
+        if status == WorkJob.STATUS_DONE and not done_date:
+            # Default the completion date to today when marking work done.
+            from django.utils import timezone
+
+            cleaned_data["done_date"] = timezone.now().date()
+        if status != WorkJob.STATUS_DONE:
+            cleaned_data["done_date"] = None
+        return cleaned_data
 
     def clean_required_items(self) -> list[str]:
         return self._clean_line_list_field("required_items")

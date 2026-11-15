@@ -112,7 +112,8 @@
     const isEnabled = enabledCategories.includes(categoryCode);
 
     toggle.checked = isEnabled;
-    category.open = false;
+    const hasErrors = category.querySelector(".help.is-danger") !== null;
+    category.open = hasErrors || isEnabled;
     setCategoryEnabled(category, isEnabled);
 
     category.querySelectorAll(".inspection-point").forEach((point) => {
@@ -185,6 +186,51 @@
     });
   }
 
+  function highlightValidationErrors() {
+    const errorMessages = document.querySelectorAll(".help.is-danger");
+    if (errorMessages.length === 0) {
+      return;
+    }
+    errorMessages.forEach((message) => {
+      const control = message.parentElement && message.parentElement.querySelector("input, select, textarea");
+      if (control) {
+        control.setAttribute("aria-invalid", "true");
+      }
+    });
+
+    // Build a summary at the top of the form so the mechanic sees every
+    // affected section even when the page is long.
+    const form = document.querySelector("form[data-testid='inspection-form']") || document.querySelector("form");
+    if (!form) {
+      return;
+    }
+    const existing = form.querySelector("[data-testid='inspection-error-summary']");
+    if (existing) {
+      existing.remove();
+    }
+    const summary = document.createElement("div");
+    summary.className = "notification is-danger mb-4";
+    summary.setAttribute("data-testid", "inspection-error-summary");
+    summary.setAttribute("role", "alert");
+    summary.tabIndex = -1;
+    const count = errorMessages.length;
+    summary.textContent = count === 1
+      ? "1 checklist item needs your attention before this inspection can be finalized."
+      : count + " checklist items need your attention before this inspection can be finalized.";
+    const firstError = errorMessages[0];
+    const firstControl = firstError.parentElement && firstError.parentElement.querySelector("input, select, textarea");
+    if (firstControl && firstControl.id) {
+      const link = document.createElement("a");
+      link.href = "#" + firstControl.id;
+      link.textContent = " Jump to the first invalid item.";
+      summary.appendChild(link);
+    }
+    form.insertBefore(summary, form.firstChild);
+    if (typeof summary.focus === "function") {
+      summary.focus();
+    }
+  }
+
   function init() {
     const categories = document.querySelectorAll(".inspection-category");
     const input = getEnabledCategoriesInput();
@@ -196,6 +242,7 @@
     }
     categories.forEach(initCategory);
     initGlobalToggles();
+    highlightValidationErrors();
 
     document.addEventListener("inspection:restored", refreshFromInput);
     window.InspectionUI = { refreshFromInput };
