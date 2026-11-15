@@ -92,8 +92,20 @@
     }
   }
 
-  function setCategoryEnabled(category, enabled) {
+  function categoryHasEnteredValues(category) {
+    return Array.from(category.querySelectorAll(".inspection-point")).some((point) => !isEmptyPoint(point));
+  }
+
+  function setCategoryEnabled(category, enabled, { confirmReset = true } = {}) {
     const pointForms = category.querySelectorAll(".inspection-point");
+    if (!enabled && confirmReset && categoryHasEnteredValues(category)) {
+      const ok = window.confirm(
+        "Disabling this section will clear its entered values. Continue?"
+      );
+      if (!ok) {
+        return false;
+      }
+    }
     pointForms.forEach((point) => {
       if (!enabled) {
         resetPoint(point);
@@ -101,6 +113,7 @@
     });
 
     category.classList.toggle(DISABLED_CLASS, !enabled);
+    return true;
   }
 
   function initCategory(category) {
@@ -126,7 +139,14 @@
 
     toggle.addEventListener("change", () => {
       const enabled = toggle.checked;
-      setCategoryEnabled(category, enabled);
+      const applied = setCategoryEnabled(category, enabled);
+      if (!applied) {
+        // User cancelled the reset; keep the section enabled.
+        toggle.checked = true;
+        category.open = true;
+        addEnabledCategory(categoryCode);
+        return;
+      }
       category.open = enabled;
       if (enabled) {
         addEnabledCategory(categoryCode);
@@ -151,8 +171,19 @@
     categories.forEach((category) => {
       const toggle = category.querySelector(".category-enable-toggle");
       if (!toggle) return;
+      if (!enabled && categoryHasEnteredValues(category)) {
+        const ok = window.confirm(
+          "Disabling this section will clear its entered values. Continue?"
+        );
+        if (!ok) {
+          toggle.checked = true;
+          category.open = true;
+          categoryCodes.push(category.dataset.category);
+          return;
+        }
+      }
       toggle.checked = enabled;
-      setCategoryEnabled(category, enabled);
+      setCategoryEnabled(category, enabled, { confirmReset: false });
       category.open = enabled;
       if (enabled) {
         categoryCodes.push(category.dataset.category);
