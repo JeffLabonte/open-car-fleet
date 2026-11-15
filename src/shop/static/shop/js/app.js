@@ -103,9 +103,31 @@
     onScroll();
   };
 
+  const initFlashMessages = () => {
+    document.querySelectorAll('[data-testid="flash-message"]').forEach((message) => {
+      const tags = message.dataset.messageTags || '';
+      const isPersistent = tags === 'error' || tags === 'warning';
+      const dismiss = () => {
+        message.style.transition = 'opacity 0.2s ease';
+        message.style.opacity = '0';
+        window.setTimeout(() => message.remove(), 200);
+      };
+      const closeButton = message.querySelector('[data-dismiss-flash]');
+      if (closeButton) {
+        closeButton.addEventListener('click', dismiss);
+      }
+      if (!isPersistent) {
+        let timer = window.setTimeout(dismiss, 5000);
+        message.addEventListener('mouseenter', () => window.clearTimeout(timer));
+        message.addEventListener('focusin', () => window.clearTimeout(timer));
+      }
+    });
+  };
+
   initDialogs();
   markCurrentNav();
   initAccountMenu();
   openErrorDialogs();
   collapseLargeTitle();
-})();
+  initFlashMessages();
+})();"

@@ -6,6 +6,7 @@
 {% endblock %}
 
 {% block content %}
+  {% include 'shop/partials/_breadcrumbs.html' with breadcrumbs=breadcrumbs %}
   <div class="box" data-testid="vehicle-header">
     <div class="page-header mb-0">
       {% include 'shop/partials/_page_header.html' %}

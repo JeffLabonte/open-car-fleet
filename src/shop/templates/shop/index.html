@@ -1,8 +1,52 @@
 {% extends 'shop/base.html' %}
 {% load i18n %}
-
 {% block content %}
-  <div class="box content-card">
-    <p>{% translate 'Welcome to the shop app.' %}</p>
-  </div>
+  <section class="box content-card" data-testid="dashboard">
+    <h1 class="title mb-2">{% translate 'Dashboard' %}</h1>
+    <p class="subtitle mb-4">{% translate 'Your fleets, open work, and recent activity' %}</p>
+
+    <h2 class="title is-5">{% translate 'My fleets' %}</h2>
+    {% if fleets %}
+      <ul class="mb-4">
+        {% for fleet in fleets %}
+          <li><a href="{% url 'shop-fleet-detail' fleet.pk %}">{{ fleet.name }}</a> ({{ fleet.cars.count }} {% translate 'cars' %})</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="has-text-grey">{% translate 'No fleets yet.' %}</p>
+    {% endif %}
+
+    <h2 class="title is-5">{% translate 'Open work jobs' %}</h2>
+    {% if recent_jobs %}
+      <ul class="mb-4">
+        {% for job in recent_jobs %}
+          <li><a href="{% url 'shop-car-detail' job.car.pk %}">{{ job.car }}</a> — {{ job.title }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="has-text-grey">{% translate 'No open work jobs.' %}</p>
+    {% endif %}
+
+    <h2 class="title is-5">{% translate 'Draft inspections' %}</h2>
+    {% if draft_inspections %}
+      <ul class="mb-4">
+        {% for inspection in draft_inspections %}
+          <li><a href="{% url 'shop-inspection-update' inspection.car.pk inspection.pk %}">{{ inspection.car }}</a> — {{ inspection.inspected_at|date:'M j, Y' }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="has-text-grey">{% translate 'No draft inspections.' %}</p>
+    {% endif %}
+
+    <h2 class="title is-5">{% translate 'Recent reports' %}</h2>
+    {% if recent_reports %}
+      <ul>
+        {% for report in recent_reports %}
+          <li><a href="{% url 'shop-car-detail' report.car.pk %}">{{ report.car }}</a> — {{ report.job_name }} ({{ report.date_done|date:'M j, Y' }})</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="has-text-grey">{% translate 'No recent reports.' %}</p>
+    {% endif %}
+  </section>
 {% endblock %}

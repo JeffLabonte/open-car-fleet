@@ -198,6 +198,11 @@ def car_detail(request: HttpRequest, pk: str) -> HttpResponse:
             "can_edit_fleet_data": can_edit,
             "can_manage_fleet": can_manage,
             "show_done": show_done,
+            "breadcrumbs": [
+                {"label": _("My Fleets"), "url": reverse("shop-index")},
+                {"label": car.fleet.name, "url": reverse("shop-fleet-detail", args=[car.fleet.pk])},
+                {"label": car.usual_name or car.make, "url": None},
+            ],
             "title": car.usual_name or car.make,
             "subtitle": _("Vehicle identity, status tracker and maintenance ledger."),
         },

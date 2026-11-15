@@ -25,6 +25,7 @@ from shop.services.invitations import (
 )
 from shop.view_helpers import (
     set_selected_fleet,
+    user_cars_queryset,
     user_fleets_queryset,
 )
 from shop.views.helpers import process_import_form
@@ -34,7 +35,11 @@ security_log = logging.getLogger("security")
 
 @hanko_login_required
 def index(request: HttpRequest) -> HttpResponse:
-    """Authenticated homepage showing only fleets the user belongs to."""
+    """Authenticated homepage dashboard."""
+    from shop.models.inspection import Inspection
+    from shop.models.job import WorkJob
+    from shop.models.report import Report
+
     fleets = user_fleets_queryset(request.user).prefetch_related("cars").order_by("name")
     manageable_fleet_ids = set(
         FleetMembership.objects.filter(
@@ -42,14 +47,34 @@ def index(request: HttpRequest) -> HttpResponse:
             role__in=[FleetMembership.ROLE_OWNER, FleetMembership.ROLE_MANAGER],
         ).values_list("fleet_id", flat=True)
     )
+    user_cars = user_cars_queryset(request.user)
+    recent_jobs = (
+        WorkJob.objects.filter(car__in=user_cars)
+        .exclude(status__in=[WorkJob.STATUS_DONE, WorkJob.STATUS_CANCELLED])
+        .select_related("car", "car__fleet")
+        .order_by("-created_at")[:10]
+    )
+    draft_inspections = (
+        Inspection.objects.filter(car__in=user_cars, is_draft=True)
+        .select_related("car", "car__fleet")
+        .order_by("-updated_at")[:10]
+    )
+    recent_reports = (
+        Report.objects.filter(car__in=user_cars)
+        .select_related("car", "car__fleet")
+        .order_by("-date_done", "-created_at")[:10]
+    )
     return render(
         request,
-        "shop/fleet_list.html",
+        "shop/index.html",
         {
-            "title": _("My Fleets"),
-            "subtitle": _("Fleets you belong to"),
+            "title": _("Dashboard"),
+            "subtitle": _("Your fleets, open work, and recent activity"),
             "fleets": fleets,
             "manageable_fleet_ids": manageable_fleet_ids,
+            "recent_jobs": recent_jobs,
+            "draft_inspections": draft_inspections,
+            "recent_reports": recent_reports,
         },
     )
 
@@ -70,6 +95,10 @@ def fleet_detail(request: HttpRequest, pk: str) -> HttpResponse:
             "can_manage_fleet": perms.can_manage_members,
             "can_edit_fleet_data": perms.can_edit_fleet_data,
             "cars": cars,
+            "breadcrumbs": [
+                {"label": _("My Fleets"), "url": reverse("shop-index")},
+                {"label": fleet.name, "url": None},
+            ],
             "title": fleet.name,
             "subtitle": _("Review the vehicles in this fleet and manage access."),
         },

@@ -1,7 +1,12 @@
+{% load i18n %}
 {% if messages %}
   {% for message in messages %}
     <div class="notification {% if message.tags %}is-{{ message.tags }}{% else %}is-info{% endif %}"
          role="{% if message.tags == 'error' or message.tags == 'warning' %}alert{% else %}status{% endif %}"
-         data-testid="flash-message">{{ message }}</div>
+         data-testid="flash-message"
+         data-message-tags="{{ message.tags|default:'info' }}">
+      <button type="button" class="delete" aria-label="{% translate 'Dismiss message' %}" data-dismiss-flash></button>
+      {{ message }}
+    </div>
   {% endfor %}
 {% endif %}
