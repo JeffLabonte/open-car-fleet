@@ -1,7 +1,7 @@
 import logging
 
 from django.contrib import messages
-from django.db import transaction
+from django.db import models, transaction
 from django.db.models import Prefetch
 from django.db.models.deletion import ProtectedError
 from django.http import HttpRequest, HttpResponse
@@ -93,6 +93,15 @@ def car_import(request: HttpRequest, pk: str) -> HttpResponse:
 def car_list(request: HttpRequest) -> HttpResponse:
     """Display list of cars with basic info."""
     cars = user_cars_queryset(request.user).order_by("-created_at")
+    search = (request.GET.get("q") or "").strip()
+    if search:
+        cars = cars.filter(
+            models.Q(make__icontains=search)
+            | models.Q(model__icontains=search)
+            | models.Q(usual_name__icontains=search)
+            | models.Q(vin__icontains=search)
+            | models.Q(license_plate__icontains=search)
+        )
     manageable_fleet_ids = set(
         FleetMembership.objects.filter(
             user=request.user,
