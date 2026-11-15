@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let items = []; // {key, file, status, error, stagedId, xhr}
   let waitingForSubmit = false;
+  let lastSubmitter = null; // preserve the clicked submit button across async uploads
 
   const fileKey = (file) => [file.name, file.size, file.lastModified, file.type].join('::');
 
@@ -224,11 +225,18 @@ document.addEventListener('DOMContentLoaded', () => {
     submitButtons.forEach((button) => { button.disabled = false; });
     if (failedCount() === 0) {
       updateHiddenInput();
-      form.submit();
+      if (typeof form.requestSubmit === 'function' && lastSubmitter) {
+        form.requestSubmit(lastSubmitter);
+      } else if (lastSubmitter) {
+        lastSubmitter.click();
+      } else {
+        form.submit();
+      }
     }
   };
 
   form.addEventListener('submit', (event) => {
+    lastSubmitter = event.submitter || lastSubmitter;
     updateHiddenInput();
     if (failedCount() > 0) {
       event.preventDefault();
