@@ -19,7 +19,7 @@
   </header>
 
   <div class="box" data-testid="inspection-filters">
-    <form method="get" class="form-row">
+    <form method="get" class="field is-grouped">
       <div class="field">
         <label class="label" for="{{ filter_form.status.id_for_label }}">{{ filter_form.status.label }}</label>
         <div class="control">{{ filter_form.status }}</div>
@@ -28,10 +28,10 @@
         <label class="label" for="{{ filter_form.owner.id_for_label }}">{{ filter_form.owner.label }}</label>
         <div class="control">{{ filter_form.owner }}</div>
       </div>
-      <div class="field field--align-end">
+      <div class="field">
         <div class="control">
           <button class="button is-light" type="submit">{% translate 'Filter' %}</button>
-          <a class="button is-ghost" href="{% url 'shop-inspection-list' %}">{% translate 'Clear' %}</a>
+          <a class="button is-light" href="{% url 'shop-inspection-list' %}">{% translate 'Clear' %}</a>
         </div>
       </div>
     </form>
@@ -71,9 +71,9 @@
                 <td data-label="{% translate 'Fleet' %}">{{ inspection.car.fleet }}</td>
                 <td data-label="{% translate 'Inspection owner' %}">
                   {% if inspection.created_by %}
-                    <span class="tag is-light">{{ inspection.created_by.get_full_name|default:inspection.created_by.username }}</span>
+                    <span class="badge badge--viewer">{{ inspection.created_by.get_full_name|default:inspection.created_by.username }}</span>
                   {% else %}
-                    <span class="tag is-light">—</span>
+                    <span class="badge badge--viewer">—</span>
                   {% endif %}
                 </td>
                 <td data-label="{% translate 'Status' %}">

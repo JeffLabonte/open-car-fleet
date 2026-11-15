@@ -47,7 +47,7 @@
           <p class="report-description">{{ inspection.notes|linebreaksbr|default:_('No inspection findings provided.') }}</p>
 
           {% with counts=inspection.point_status_counts %}
-            <div class="tags are-medium mt-3" data-testid="inspection-summary-{{ inspection.pk }}">
+            <div class="is-flex is-flex-wrap-wrap gap-2 mt-3" data-testid="inspection-summary-{{ inspection.pk }}">
               <span class="badge badge--ok">{% translate 'OK' %}: {{ counts.pass }}</span>
               <span class="badge badge--soon">{% translate 'Attention' %}: {{ counts.attention }}</span>
               <span class="badge badge--cancelled">{% translate 'Needs repair' %}: {{ counts.repair }}</span>
