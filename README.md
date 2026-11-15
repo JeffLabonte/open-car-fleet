@@ -44,6 +44,7 @@ scripts/setup-ansible-inventory.sh   # create ansible/inventory.yml
 scripts/prepare-env.sh --hanko-api-url https://your-hanko-api-url.hanko.io \
   --allowed-hosts "fleet.example.com" \
   --csrf-trusted-origins "https://fleet.example.com"
+# Provision Vault and configure AppRole in src/.env.production (see docs/security/secrets-management.md).
 make ansible-ping                    # verify Tailscale + SSH connectivity
 make ansible-deploy                  # install Docker, sync source, build, migrate, configure backups
 ```

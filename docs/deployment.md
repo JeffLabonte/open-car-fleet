@@ -51,14 +51,15 @@ scripts/prepare-env.sh \
   --csrf-trusted-origins "https://fleet.example.com"
 ```
 
-This writes `src/.env.production` with a generated secret key and Postgres password, and sets `DJANGO_TRUSTED_PROXY=True` so Django trusts the `X-Forwarded-Proto` header from Tailscale (or another reverse proxy). During deploy, Ansible derives `src/.env.database` from this file on the server, so the DB container receives only `POSTGRES_*` variables and stays in sync with the web container.
+This writes `src/.env.production` with Vault enabled, a generated Postgres password, and `DJANGO_TRUSTED_PROXY=True` so Django trusts the `X-Forwarded-Proto` header from Tailscale (or another reverse proxy). During deploy, Ansible derives `src/.env.database` from this file on the server, so the DB container receives only `POSTGRES_*` variables and stays in sync with the web container.
 
-For production Vault-backed application secrets, set `SECRETS_BACKEND=vault`
-and fill in `VAULT_ADDR`, `VAULT_ROLE_ID`, `VAULT_SECRET_ID`,
+Provision Vault and fill in `VAULT_ADDR`, `VAULT_ROLE_ID`, `VAULT_SECRET_ID`,
 `VAULT_KV_MOUNT`, and `VAULT_SECRET_PATH` in the generated env file using a
-secure editor. The existing env deployment role uploads that file with mode
-`0600`, and Compose passes the Vault settings to the web service. Keep the
-default `SECRETS_BACKEND=environment` for local development. See
+secure editor. The Ansible env role requires `SECRETS_BACKEND=vault` and
+`DEBUG=False`, uploads the file with mode `0600`, and Compose passes the Vault
+settings to the web service. Store the Django key and MailerSend token in
+Vault, not in the env file. Keep `SECRETS_BACKEND=environment` for local
+development. See
 [Secrets management](security/secrets-management.md) for the AppRole policy,
 required Vault values, rotation procedure, and verification checklist.
 

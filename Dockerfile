@@ -28,11 +28,9 @@ RUN pip install --no-cache-dir --only-binary :all: poetry==2.5.1 \
 COPY . /app/
 
 # Collect static files for production.
-# The env file is mounted as a BuildKit secret so it is not baked into the image.
-# DJANGO_TRUSTED_PROXY and DJANGO_SECRET_KEY are set here only so settings.py
-# loads during the build; runtime values come from the mounted env file.
-RUN --mount=type=secret,id=env_file,target=/app/src/.env \
-    DJANGO_TRUSTED_PROXY=True DJANGO_SECRET_KEY=build-only-secret python src/manage.py collectstatic --noinput
+# Static collection uses build-only settings and never needs runtime credentials.
+RUN SECRETS_BACKEND=environment DJANGO_TRUSTED_PROXY=True DJANGO_SECRET_KEY=build-only-secret \
+    python src/manage.py collectstatic --noinput
 
 # Use a lean runtime image.
 # python:3.13-slim
