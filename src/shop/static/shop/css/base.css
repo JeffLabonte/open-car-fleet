@@ -126,8 +126,17 @@ p {
 
 a {
   color: var(--accent);
-  text-decoration: none;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
   transition: color var(--transition-fast);
+}
+
+/* Navigation and button links rely on affordance rather than underline. */
+.app-navlink,
+.app-tab,
+.button,
+.button * {
+  text-decoration: none;
 }
 
 a:hover {
