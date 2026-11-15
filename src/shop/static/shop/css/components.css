@@ -839,7 +839,7 @@
 
 @container (max-width: 21rem) {
   .fleet-card__desc {
-    display: none;
+    -webkit-line-clamp: 1;
   }
 }
 

@@ -36,6 +36,7 @@ urlpatterns = [
     path("shops/", views.known_shop_list, name="shop-known-shop-list"),
     path("shops/add/", views.known_shop_create, name="shop-known-shop-create"),
     path("shops/<int:pk>/", views.known_shop_detail, name="shop-known-shop-detail"),
+    path("shops/<int:pk>/edit/", views.known_shop_update, name="shop-known-shop-update"),
     path("shops/<int:shop_pk>/proofs/add/", views.known_shop_proof_create, name="shop-known-shop-proof-create"),
     path(
         "shops/<int:shop_pk>/proofs/<int:proof_pk>/edit/",

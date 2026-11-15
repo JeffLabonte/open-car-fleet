@@ -74,6 +74,32 @@ def known_shop_detail(request: HttpRequest, pk: int) -> HttpResponse:
 
 
 @hanko_login_required
+def known_shop_update(request: HttpRequest, pk: int) -> HttpResponse:
+    shop = get_object_or_404(user_known_shops_queryset(request.user), pk=pk)
+    if not user_can_manage_known_shop(request.user, shop):
+        security_log.warning(
+            "access_denied: user=%s path=%s reason=known_shop_not_manager shop=%s",
+            request.user.pk,
+            request.path,
+            shop.pk,
+        )
+        messages.error(request, _("You do not have permission to edit this shop."))
+        return redirect(reverse("shop-known-shop-detail", args=[shop.pk]))
+    return handle_model_form(
+        request,
+        KnownShopForm,
+        "shop/shop_form.html",
+        lambda edited_shop: reverse("shop-known-shop-detail", args=[edited_shop.pk]),
+        instance=shop,
+        success_message=_("Shop updated successfully."),
+        context={
+            "title": _("Edit known shop"),
+            "subtitle": _("Update the shop contact details"),
+        },
+    )
+
+
+@hanko_login_required
 def known_shop_proof_create(request: HttpRequest, shop_pk: int) -> HttpResponse:
     shop = get_object_or_404(user_known_shops_queryset(request.user), pk=shop_pk)
     if not user_can_manage_known_shop(request.user, shop):

@@ -10,6 +10,7 @@
           {% include 'shop/partials/_icon.html' with name='plus' %}
           <span>{% translate 'Add proof' %}</span>
         </a>
+        <a class="button is-link" href="{% url 'shop-known-shop-update' shop.pk %}">{% translate 'Edit shop' %}</a>
       {% endif %}
       <a class="button is-light" href="{% url 'shop-known-shop-list' %}">{% translate 'Back to shops' %}</a>
     </div>

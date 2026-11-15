@@ -76,6 +76,7 @@ from shop.views.known_shops import (
     known_shop_list,
     known_shop_proof_create,
     known_shop_proof_update,
+    known_shop_update,
 )
 from shop.views.onboarding import welcome_view
 
@@ -122,6 +123,7 @@ __all__ = [
     "known_shop_create",
     "known_shop_detail",
     "known_shop_list",
+    "known_shop_update",
     "known_shop_proof_create",
     "known_shop_proof_update",
     "login_view",

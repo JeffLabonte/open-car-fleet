@@ -47,7 +47,7 @@ def fleet_invitation_accept(request: HttpRequest, token: str) -> HttpResponse:
             request,
             _("Sign in with %(email)s to accept this invitation.") % {"email": invitation.invited_email},
         )
-        return redirect(reverse("shop-index"))
+        return redirect(f"{reverse('shop-login')}?next={reverse('shop-fleet-invitation-accept', args=[token])}")
 
     if request.method != "POST":
         return _render_invitation_response(request, invitation)
@@ -98,7 +98,7 @@ def fleet_invitation_decline(request: HttpRequest, token: str) -> HttpResponse:
             request,
             _("Sign in with %(email)s to decline this invitation.") % {"email": invitation.invited_email},
         )
-        return redirect(reverse("shop-index"))
+        return redirect(f"{reverse('shop-login')}?next={reverse('shop-fleet-invitation-decline', args=[token])}")
 
     invitation.status = FleetInvitation.STATUS_DECLINED
     invitation.declined_at = timezone.now()
