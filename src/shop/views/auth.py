@@ -10,7 +10,6 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 
@@ -100,7 +99,6 @@ def theme_view(request: HttpRequest, theme: str) -> HttpResponse:
     return response
 
 
-@csrf_exempt
 @require_POST
 def set_test_session(request: HttpRequest) -> HttpResponse:
     """DEBUG-only helper that signs a user in by email for Selenium suites.
