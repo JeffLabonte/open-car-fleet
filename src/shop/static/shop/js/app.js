@@ -103,6 +103,22 @@
     onScroll();
   };
 
+  const initUnsavedChangesWarning = () => {
+    const forms = document.querySelectorAll('form[data-warn-unsaved="true"]');
+    forms.forEach((form) => {
+      let dirty = false;
+      form.addEventListener('input', () => { dirty = true; });
+      form.addEventListener('change', () => { dirty = true; });
+      form.addEventListener('submit', () => { dirty = false; });
+      window.addEventListener('beforeunload', (event) => {
+        if (dirty) {
+          event.preventDefault();
+          event.returnValue = '';
+        }
+      });
+    });
+  };
+
   const initFlashMessages = () => {
     document.querySelectorAll('[data-testid="flash-message"]').forEach((message) => {
       const tags = message.dataset.messageTags || '';
@@ -130,4 +146,5 @@
   openErrorDialogs();
   collapseLargeTitle();
   initFlashMessages();
+  initUnsavedChangesWarning();
 })();"

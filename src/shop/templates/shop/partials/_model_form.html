@@ -20,7 +20,7 @@ including `form` and `is_create`.
     <h1 class="title mb-4">{% block form_title %}{% if is_create %}{% translate 'Create' %}{% else %}{% translate 'Update' %}{% endif %}{% endblock %}</h1>
     {% block form_subtitle %}{% endblock %}
 
-    <form method="post" {% block form_attrs %}novalidate{% endblock %}>
+    <form method="post" data-warn-unsaved="true" {% block form_attrs %}novalidate{% endblock %}>
       {% csrf_token %}
       {% if form.non_field_errors %}
         <div class="notification is-danger mb-4" role="alert">
