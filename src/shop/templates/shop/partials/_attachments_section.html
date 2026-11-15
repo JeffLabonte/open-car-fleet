@@ -28,6 +28,7 @@ upload component. Include at the bottom of every create/update form.
 <div class="field" data-testid="attachment-upload-section"
      data-upload-url="{% url 'shop-attachment-upload' %}"
      data-delete-url="{% url 'shop-attachment-delete' 0 %}"
+     data-staged-list-url="{% url 'shop-attachment-staged-list' %}"
      data-max-upload-bytes="104857600"
      data-max-files="10">
   {{ form.staged_attachments }}

@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const dropzone = document.getElementById('attachment-dropzone') || section;
   const uploadUrl = section.dataset.uploadUrl;
   const deleteUrlBase = section.dataset.deleteUrl;
+  const stagedListUrl = section.dataset.stagedListUrl;
   if (!form || !uploadUrl || !deleteUrlBase) {
     return;
   }
@@ -465,4 +466,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   clearInputFiles();
   updateHiddenInput();
+  // Restore staged uploads that survived a validation error round-trip so the
+  // user does not lose already-uploaded files when the form is re-rendered.
+  if (hiddenInput && hiddenInput.value && stagedListUrl && window.AttachmentUploader &&
+      typeof window.AttachmentUploader.restoreStaged === 'function') {
+    window.AttachmentUploader.restoreStaged(hiddenInput.value, stagedListUrl);
+  }
 });
