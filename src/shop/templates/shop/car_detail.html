@@ -7,6 +7,14 @@
 
 {% block content %}
   {% include 'shop/partials/_breadcrumbs.html' with breadcrumbs=breadcrumbs %}
+  <nav class="section-nav mb-4" aria-label="{% translate 'Section navigation' %}">
+    <a href="#inspection-section">{% translate 'Inspection' %}</a>
+    <a href="#inspection-history-section">{% translate 'History' %}</a>
+    <a href="#parts-section">{% translate 'Parts' %}</a>
+    <a href="#work-jobs-section">{% translate 'Work' %}</a>
+    <a href="#reports-section">{% translate 'Reports' %}</a>
+    <a href="#related-cars-section">{% translate 'Related' %}</a>
+  </nav>
   <div class="box" data-testid="vehicle-header">
     <div class="page-header mb-0">
       {% include 'shop/partials/_page_header.html' %}
@@ -49,7 +57,7 @@
     {% include 'shop/partials/_confirm_delete_dialog.html' with dialog_id='dialog-car-delete' title=_('Delete this car?') message=_('This will permanently remove the vehicle and all of its parts, work jobs and reports. Vehicles with inspection history cannot be deleted.') %}
   {% endif %}
 
-  <section class="section-head" data-testid="inspection-section">
+  <section class="section-head" id="inspection-section" data-testid="inspection-section">
     <h2 class="title is-4">{% translate 'Latest inspection' %}</h2>
     <div class="section-actions">
       {% if can_edit_fleet_data %}
@@ -136,7 +144,7 @@
     </article>
   {% endif %}
 
-  <section class="section-head" data-testid="inspection-history-section">
+  <section class="section-head" id="inspection-history-section" data-testid="inspection-history-section">
     <h2 class="title is-4">{% translate 'Inspection history' %}</h2>
     <div class="section-actions">
       <a class="button is-light is-small" href="{% url 'shop-inspection-history' car.pk %}">{% translate 'View full history' %}</a>
@@ -192,7 +200,7 @@
     <div class="notification is-warning">{% translate 'No inspections recorded for this vehicle yet.' %}</div>
   {% endif %}
 
-  <section class="section-head" data-testid="parts-section">
+  <section class="section-head" id="parts-section" data-testid="parts-section">
     <h2 class="title is-4">{% translate 'Part status tracker' %}</h2>
     <div class="section-actions">
       {% if can_edit_fleet_data %}
@@ -252,7 +260,7 @@
     <div class="notification is-warning">{% translate 'No parts tracked for this car yet.' %}</div>
   {% endif %}
 
-  <section class="section-head" data-testid="work-jobs-section">
+  <section class="section-head" id="work-jobs-section" data-testid="work-jobs-section">
     <h2 class="title is-4">{% translate 'Planned work and assignments' %}</h2>
     <div class="section-actions">
       {% if show_done %}
@@ -362,7 +370,7 @@
     {% endif %}
   {% endif %}
 
-  <section class="section-head" data-testid="reports-section">
+  <section class="section-head" id="reports-section" data-testid="reports-section">
     <h2 class="title is-4">{% translate 'Maintenance history' %}</h2>
     <div class="section-actions">
       {% if can_edit_fleet_data %}
@@ -439,7 +447,7 @@
     </div>
   {% endif %}
 
-  <section class="section-head" data-testid="related-cars-section">
+  <section class="section-head" id="related-cars-section" data-testid="related-cars-section">
     <h2 class="title is-4">{% translate 'Related cars' %}</h2>
   </section>
 
