@@ -8,6 +8,7 @@ class OnboardingForm(forms.Form):
     first_name = forms.CharField(
         label=_("First name"),
         max_length=150,
+        required=False,
         widget=forms.TextInput(attrs={"class": "input"}),
     )
     last_name = forms.CharField(

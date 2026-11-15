@@ -36,7 +36,9 @@ poetry run python ./src/manage.py export_fleet <fleet-uuid> --output ./backups/m
 - Export requires owner or manager role for the target fleet in the web UI.
 - The default workbook includes `meta`, `fleet`, `memberships`, `cars_import`, `workjobs_import`, and `reports_import` sheets.
 - The `*_import` sheets use the same column names as the CSV import schemas so they can be round-tripped through `import_csv` after extracting each sheet to a CSV file.
-- Records intentionally excluded from restore: invitations, car parts, inspections, car documents, and the binary content of uploaded file attachments (their names are preserved in the `uploaded_attachments` column for reference but are not re-created by the importer).
+- Round-trip safety: a sheet exported from a multi-car fleet contains a `car` column with each row's vehicle reference. Importing such a sheet through the **car-scoped web import** applies every row to the selected car and ignores (or rejects) mismatched car references. To restore a multi-car sheet faithfully, extract it to CSV and run `import_csv WorkJob|Report <file> --fleet <fleet-uuid>` (or `import_csv Car <file> --fleet <fleet-uuid>` for cars), which honours each row's `car` reference. The car-scoped web flow is intended for single-vehicle sheets only.
+- Dry-run (`--dry-run` or the web "Validate" path) validates records without writing, and is recommended as a preview before restoring.
+- Records intentionally excluded from restore: invitations, car parts, inspections, car documents, fleet memberships, and the binary content of uploaded file attachments. External-link attachments are restored. Uploaded attachment file names are preserved in the `uploaded_attachments` column for reference but are not re-created (the importer reports that column as an ignored field).
 - Invitation history is intentionally excluded from the default export.
 
 ## convert_user_to_mechanic

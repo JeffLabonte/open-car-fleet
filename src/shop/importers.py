@@ -371,7 +371,28 @@ class CSVImporter:
     def _resolve_car(self, raw_value: Any, context: ImportContext) -> Car:
         if context.car is not None:
             if raw_value in (None, ""):
+                # Car-scoped web import: the selected car is applied when the
+                # sheet omits a car reference (the intended single-car flow).
                 return context.car
+            # When a car reference is present, validate it against the fleet so a
+            # mismatched or unknown vehicle fails loudly instead of being silently
+            # replaced by the selected car. This protects multi-car exports that
+            # are accidentally imported through a single-car page.
+            if context.fleet is not None:
+                try:
+                    referenced_car = self._resolve_car(raw_value, ImportContext(fleet=context.fleet))
+                except ImportValidationError:
+                    referenced_car = None
+                if referenced_car is not None and referenced_car.pk != context.car.pk:
+                    raise ImportValidationError(
+                        _(
+                            "Car reference '%(value)s' does not match the selected car "
+                            "'%(car)s'. Car-scoped imports can only target the selected "
+                            "vehicle; use `import_csv ... --fleet <fleet-uuid>` for "
+                            "multi-car sheets."
+                        )
+                        % {"value": raw_value, "car": context.car.usual_name or context.car.make}
+                    )
             queryset = Car.objects.filter(pk=context.car.pk)
         elif context.fleet is not None:
             queryset = Car.objects.filter(fleet=context.fleet)

@@ -84,10 +84,15 @@ def _build_meta_sheet(
                 "restore_notes",
                 (
                     "The *_import sheets are designed to be round-trippable through "
-                    "import_csv. Records intentionally excluded from restore: "
-                    "invitations, car parts/inspections/car documents, uploaded file "
-                    "attachment contents (uploaded_attachments column is informational "
-                    "only and will be ignored by the importer)."
+                    "import_csv. Car-scoped web imports apply every row to the selected "
+                    "car; multi-car sheets must be imported with `import_csv ... "
+                    "--fleet <fleet-uuid>` so each row's car reference is honoured. "
+                    "Records intentionally excluded from restore: invitations, car "
+                    "parts, inspections, car documents, fleet memberships, and the "
+                    "binary content of uploaded file attachments (the "
+                    "uploaded_attachments column is informational only and is reported "
+                    "as an ignored field by the importer). External-link attachments "
+                    "are restored."
                 ),
             ],
         ],

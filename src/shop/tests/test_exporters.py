@@ -441,6 +441,168 @@ class FleetExportRoundTripTests(TestCase):
         self.assertTrue(any("uploaded_attachments" in warning.message for warning in report_result.warnings))
 
 
+class FleetExportMultiCarRoundTripTests(TestCase):
+    """Round-trip a multi-car fleet export and verify car references are preserved."""
+
+    def setUp(self) -> None:
+        self.owner = ShopUser.objects.create_user(
+            username="mc-roundtrip-owner",
+            email="mc-roundtrip-owner@example.com",
+            password="pass1234",
+            is_mechanic=True,
+        )
+        self.source_fleet = Fleet.objects.create(name="Source Fleet", created_by=self.owner)
+        FleetMembership.objects.create(fleet=self.source_fleet, user=self.owner, role=FleetMembership.ROLE_OWNER)
+
+        self.target_fleet = Fleet.objects.create(name="Target Fleet", created_by=self.owner)
+        FleetMembership.objects.create(fleet=self.target_fleet, user=self.owner, role=FleetMembership.ROLE_OWNER)
+
+        self.shop = KnownShop.objects.create(name="Roundtrip Shop", email="shop@example.com")
+
+    def test_multi_car_round_trip_preserves_car_references(self):
+        car_a = Car.objects.create(
+            fleet=self.source_fleet,
+            usual_name="Car A",
+            make="Toyota",
+            model="Corolla",
+            year=2018,
+            mileage=92_450,
+            vin="2T1BURHE5JC512345",
+            license_plate="AAA 111",
+        )
+        car_b = Car.objects.create(
+            fleet=self.source_fleet,
+            usual_name="Car B",
+            make="Honda",
+            model="Civic",
+            year=2020,
+            mileage=45_000,
+            vin="2HGFG12698H512345",
+            license_plate="BBB 222",
+        )
+
+        WorkJob.objects.create(
+            car=car_a,
+            title="Oil Change A",
+            assigned_to=self.owner,
+            required_items=["Oil", "Filter"],
+            status="pending",
+            urgency="soon",
+        )
+        WorkJob.objects.create(
+            car=car_b,
+            title="Brake Job B",
+            required_items=["Pads"],
+            status="pending",
+            urgency="ahead",
+        )
+
+        report_a = Report.objects.create(
+            car=car_a,
+            mileage=93_120,
+            job_name="Brake Service A",
+            assigned_shop=self.shop,
+            date_done="2026-08-03",
+            note="Pads replaced on A.",
+        )
+        Report.objects.create(
+            car=car_b,
+            mileage=46_000,
+            job_name="Battery B",
+            date_done="2026-09-01",
+            note="Battery replaced on B.",
+        )
+        from django.contrib.contenttypes.models import ContentType
+
+        ContentType.objects.get_for_model(report_a)
+        Attachment.objects.create(
+            content_type=ContentType.objects.get_for_model(report_a),
+            object_id=str(report_a.pk),
+            source_type=Attachment.SOURCE_EXTERNAL,
+            url="https://example.com/a.pdf",
+            display_name="a.pdf",
+            kind="document",
+        )
+
+        exporter_file = export_fleet_to_excel(self.source_fleet)
+        workbook = load_workbook(filename=BytesIO(exporter_file.content))
+        importer = CSVImporter()
+
+        # Free up globally-unique VINs so the round trip can recreate the cars.
+        Car.objects.filter(fleet=self.source_fleet).delete()
+
+        # Cars
+        car_records = _sheet_to_dicts(workbook["cars_import"])
+        self.assertEqual(len(car_records), 2)
+        car_result = importer.import_records(
+            Car,
+            car_records,
+            context=ImportContext(fleet=self.target_fleet, user=self.owner),
+        )
+        self.assertFalse(car_result.has_errors)
+        self.assertEqual(car_result.created_count, 2)
+        imported_a = Car.objects.get(fleet=self.target_fleet, vin="2T1BURHE5JC512345")
+        imported_b = Car.objects.get(fleet=self.target_fleet, vin="2HGFG12698H512345")
+
+        # Work jobs must land on the correct cars.
+        job_records = _sheet_to_dicts(workbook["workjobs_import"])
+        self.assertEqual(len(job_records), 2)
+        job_result = importer.import_records(
+            WorkJob,
+            job_records,
+            context=ImportContext(fleet=self.target_fleet, user=self.owner),
+        )
+        self.assertFalse(job_result.has_errors, job_result.errors)
+        self.assertEqual(job_result.created_count, 2)
+        self.assertTrue(WorkJob.objects.filter(car=imported_a, title="Oil Change A").exists())
+        self.assertTrue(WorkJob.objects.filter(car=imported_b, title="Brake Job B").exists())
+        imported_job_a = WorkJob.objects.get(car=imported_a, title="Oil Change A")
+        self.assertEqual(imported_job_a.assigned_to, self.owner)
+        self.assertEqual(imported_job_a.required_items, ["Oil", "Filter"])
+
+        # Reports must land on the correct cars with attachments.
+        report_records = _sheet_to_dicts(workbook["reports_import"])
+        self.assertEqual(len(report_records), 2)
+        report_result = importer.import_records(
+            Report,
+            report_records,
+            context=ImportContext(fleet=self.target_fleet, user=self.owner),
+        )
+        self.assertFalse(report_result.has_errors, report_result.errors)
+        self.assertEqual(report_result.created_count, 2)
+        imported_report_a = Report.objects.get(car=imported_a, job_name="Brake Service A")
+        imported_report_b = Report.objects.get(car=imported_b, job_name="Battery B")
+        self.assertEqual(imported_report_a.assigned_shop, self.shop)
+        self.assertEqual(imported_report_a.attachments.count(), 1)
+        self.assertEqual(imported_report_a.attachments.first().url, "https://example.com/a.pdf")
+        self.assertEqual(imported_report_b.mileage, 46_000)
+
+    def test_car_scoped_import_rejects_mismatched_car_reference(self):
+        car = Car.objects.create(
+            fleet=self.source_fleet,
+            usual_name="Car A",
+            make="Toyota",
+            model="Corolla",
+            vin="2T1BURHE5JC512345",
+        )
+        other_car = Car.objects.create(
+            fleet=self.source_fleet,
+            usual_name="Car B",
+            make="Honda",
+            model="Civic",
+            vin="2HGFG12698H512345",
+        )
+        importer = CSVImporter()
+        result = importer.import_records(
+            WorkJob,
+            [{"car": other_car.vin, "title": "Cross-car job"}],
+            context=ImportContext(fleet=self.source_fleet, car=car, user=self.owner),
+            dry_run=True,
+        )
+        self.assertTrue(result.has_errors)
+        self.assertIn("does not match the selected car", result.errors[0].message)
+
+
 def _sheet_to_dicts(sheet) -> list[dict[str, Any]]:
     """Return an openpyxl sheet as a list of row dicts keyed by header cell."""
     rows = list(sheet.iter_rows(values_only=True))

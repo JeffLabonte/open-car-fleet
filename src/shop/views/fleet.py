@@ -212,13 +212,22 @@ def fleet_members(request: HttpRequest, pk: str) -> HttpResponse:
         messages.error(request, _("You do not have permission to manage fleet members."))
         return redirect(reverse("shop-fleet-detail", args=[fleet.pk]))
 
-    members = fleet.memberships.select_related("user").order_by("-role", "created_at")
+    memberships = fleet.memberships.select_related("user").order_by("-role", "created_at")
+    member_rows = [
+        {
+            "membership": membership,
+            "can_change_role": perms.can_manage_member(membership.role),
+            "can_remove": perms.can_manage_member(membership.role),
+        }
+        for membership in memberships
+    ]
     return render(
         request,
         "shop/fleet_members.html",
         {
             "fleet": fleet,
-            "members": members,
+            "members": memberships,
+            "member_rows": member_rows,
             "can_manage_members": perms.can_manage_members,
             "can_change_roles": [
                 (role, label) for role, label in FleetMembership.ROLE_CHOICES if role in perms.can_change_role_to
