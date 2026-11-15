@@ -41,4 +41,4 @@ def test_login_page_renders_in_firefox(firefox_driver: webdriver.Firefox) -> Non
 
     headings = [element.text for element in firefox_driver.find_elements(By.TAG_NAME, "h1")]
     assert "Sign in" in headings
-    assert "Missing HANKO_API_URL" in firefox_driver.find_element(By.ID, "hanko-auth-container").text
+    assert "Authentication is not configured" in firefox_driver.find_element(By.ID, "hanko-auth-container").text
