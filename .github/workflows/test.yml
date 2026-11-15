@@ -13,7 +13,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     container:
-      image: fedora:44
+      image: fedora:44@sha256:b189269dfee735c54ebcd3b4e43ff2dc0d4a4b07855468970217c9df57968eb0 # 44
 
     steps:
       - name: Install system dependencies
@@ -33,7 +33,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Install Poetry
-        run: "python3 -m pip install --no-cache-dir --only-binary :all: poetry"
+        run: "python3 -m pip install --no-cache-dir --only-binary :all: poetry==2.5.1"
 
       - name: Install project dependencies
         run: poetry install --no-interaction --no-ansi --no-root --with test
@@ -47,7 +47,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     container:
-      image: fedora:44
+      image: fedora:44@sha256:b189269dfee735c54ebcd3b4e43ff2dc0d4a4b07855468970217c9df57968eb0 # 44
 
     steps:
       - name: Install system dependencies
@@ -66,7 +66,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Install Poetry
-        run: "python3 -m pip install --no-cache-dir --only-binary :all: poetry"
+        run: "python3 -m pip install --no-cache-dir --only-binary :all: poetry==2.5.1"
 
       - name: Install project dependencies
         run: poetry install --no-interaction --no-ansi --no-root --with test
@@ -112,7 +112,7 @@ jobs:
           firefox-version: latest
 
       - name: Install Poetry
-        run: "python -m pip install --upgrade --only-binary :all: poetry"
+        run: "python -m pip install --upgrade --only-binary :all: poetry==2.5.1"
 
       - name: Run Firefox E2E suite
         env:
