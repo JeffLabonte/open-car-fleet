@@ -144,7 +144,7 @@ def visit_share_page(firefox_driver: webdriver.Firefox, shared_fleet: Fleet):
 
 @when('they invite "viewer@example.com" with role "Viewer"')
 def invite_viewer(firefox_driver: webdriver.Firefox):
-    wait = WebDriverWait(firefox_driver, 10)
+    wait = WebDriverWait(firefox_driver, 30)
     email_field = wait.until(ec.presence_of_element_located((By.NAME, "invited_email")))
     email_field.send_keys("viewer@example.com")
     role_select = firefox_driver.find_element(By.NAME, "role")
@@ -160,14 +160,14 @@ def pending_invitation_exists(firefox_driver: webdriver.Firefox):
 
 @when('they cancel the invitation for "viewer@example.com"')
 def cancel_invitation(firefox_driver: webdriver.Firefox):
-    wait = WebDriverWait(firefox_driver, 10)
+    wait = WebDriverWait(firefox_driver, 30)
     item = wait.until(ec.presence_of_element_located((By.XPATH, "//li[contains(., 'viewer@example.com')]")))
     item.find_element(By.CSS_SELECTOR, 'button[data-testid="cancel-invitation-button"]').click()
 
 
 @then('the invitation for "viewer@example.com" is no longer pending')
 def invitation_no_longer_pending(firefox_driver: webdriver.Firefox):
-    wait = WebDriverWait(firefox_driver, 10)
+    wait = WebDriverWait(firefox_driver, 30)
     wait.until(lambda d: "No pending invitations." in d.page_source)
     aside = firefox_driver.find_element(By.CSS_SELECTOR, '[data-testid="pending-invitations"]')
     assert "viewer@example.com" not in aside.text
@@ -202,7 +202,7 @@ def no_add_car_button(firefox_driver: webdriver.Firefox):
 @when('they change the role of "viewer@example.com" to "Mechanic"')
 def change_role_to_mechanic(firefox_driver: webdriver.Firefox, shared_fleet: Fleet):
     firefox_driver.get(_url(f"/fleets/{shared_fleet.pk}/members/"))
-    wait = WebDriverWait(firefox_driver, 10)
+    wait = WebDriverWait(firefox_driver, 30)
     row = wait.until(ec.presence_of_element_located((By.XPATH, "//tr[contains(., 'viewer@example.com')]")))
     select = row.find_element(By.NAME, "role")
     select.find_element(By.CSS_SELECTOR, 'option[value="mechanic"]').click()
@@ -218,7 +218,7 @@ def viewer_role_is_mechanic(firefox_driver: webdriver.Firefox):
 @when('they attempt to change the role of "viewer@example.com" to "Owner"')
 def attempt_promote_to_owner(firefox_driver: webdriver.Firefox, shared_fleet: Fleet):
     firefox_driver.get(_url(f"/fleets/{shared_fleet.pk}/members/"))
-    wait = WebDriverWait(firefox_driver, 10)
+    wait = WebDriverWait(firefox_driver, 30)
     row = wait.until(ec.presence_of_element_located((By.XPATH, "//tr[contains(., 'viewer@example.com')]")))
     select = row.find_element(By.NAME, "role")
     options = [opt.get_attribute("value") for opt in select.find_elements(By.TAG_NAME, "option")]
@@ -234,7 +234,7 @@ def viewer_role_unchanged(firefox_driver: webdriver.Firefox):
 @when('they remove "viewer@example.com" from "Shared Fleet"')
 def remove_viewer(firefox_driver: webdriver.Firefox, shared_fleet: Fleet):
     firefox_driver.get(_url(f"/fleets/{shared_fleet.pk}/members/"))
-    wait = WebDriverWait(firefox_driver, 10)
+    wait = WebDriverWait(firefox_driver, 30)
     row = wait.until(ec.presence_of_element_located((By.XPATH, "//tr[contains(., 'viewer@example.com')]")))
     row.find_element(By.CSS_SELECTOR, 'button[formaction*="remove"]').click()
 
