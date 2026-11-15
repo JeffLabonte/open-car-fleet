@@ -294,6 +294,22 @@
                   {% if job.urgency == 'soon' %}
                     <div class="mt-2">{% include 'shop/partials/_status_badge.html' with status=job.urgency label=job.get_urgency_display %}</div>
                   {% endif %}
+                  {% if job.required_items %}
+                    <details class="mt-2">
+                      <summary class="is-size-7">{% translate 'Required items' %}</summary>
+                      <ul class="is-size-7">
+                        {% for item in job.required_items %}
+                          <li>{{ item }}</li>
+                        {% endfor %}
+                      </ul>
+                    </details>
+                  {% endif %}
+                  {% if job.notes %}
+                    <details class="mt-2">
+                      <summary class="is-size-7">{% translate 'Notes' %}</summary>
+                      <p class="is-size-7">{{ job.notes }}</p>
+                    </details>
+                  {% endif %}
                 </td>
                 <td data-label="{% translate 'Type' %}">{{ job.maintenance_type|default:'—' }}</td>
                 <td data-label="{% translate 'Assigned to' %}">
@@ -369,6 +385,9 @@
           {% endif %}
         </div>
         <div class="message-body">
+          {% if report.mileage is not None %}
+            <p><strong>{% translate 'Mileage:' %}</strong> {{ report.mileage }}</p>
+          {% endif %}
           <p class="report-description">{{ report.note|linebreaksbr|default:_('No maintenance report details provided.') }}</p>
           {% if report.additional_information %}
             <p class="report-description"><strong>{% translate 'Additional information:' %}</strong> {{ report.additional_information|linebreaksbr }}</p>
