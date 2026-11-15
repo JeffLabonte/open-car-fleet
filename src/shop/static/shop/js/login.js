@@ -153,6 +153,6 @@ if (retryButton) {
     if (errorBox) {
       errorBox.classList.add('is-hidden');
     }
-    finishLogin();
+    void finishLogin();
   });
 }

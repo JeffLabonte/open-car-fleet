@@ -74,7 +74,7 @@ h6 {
   }
 }
 
-@media (prefers-contrast: high) {
+@media (prefers-contrast: more) {
   :root {
     --border: #000000;
     --border-strong: #000000;
