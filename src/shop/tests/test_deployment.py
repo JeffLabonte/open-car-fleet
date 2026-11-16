@@ -244,6 +244,9 @@ class TestDeploymentHardening(TestCase):
         self.assertIn("MaxRetentionSec=90day", deploy)
         self.assertIn("SystemMaxUse=2G", deploy)
         self.assertIn("systemd-journal", deploy)
+        self.assertIn("mode: '2750'", deploy)
+        self.assertIn("mode: '0700'", deploy)
+        self.assertIn("mode: '0600'", deploy)
         self.assertIn("Review security events at least daily", audit_docs)
 
     def test_ssl_redirect_without_trusted_proxy_raises(self):

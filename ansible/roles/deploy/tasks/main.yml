@@ -5,7 +5,7 @@
     state: directory
     owner: root
     group: systemd-journal
-    mode: '2755'
+    mode: '2750'
 
 - name: Ensure journald configuration drop-in directory exists
   ansible.builtin.file:
@@ -13,14 +13,14 @@
     state: directory
     owner: root
     group: root
-    mode: '0755'
+    mode: '0700'
 
 - name: Configure persistent journal retention for security audit events
   ansible.builtin.copy:
     dest: /etc/systemd/journald.conf.d/open-car-fleet-audit.conf
     owner: root
     group: root
-    mode: '0644'
+    mode: '0600'
     content: |
       [Journal]
       Storage=persistent
