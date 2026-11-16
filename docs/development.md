@@ -23,7 +23,9 @@ If you already have Python, Poetry, and Docker installed, you can skip this step
 
 ## Dependency installation security
 
-CI and the production Docker build configure Poetry with `installer.only-binary = ":all:"` before installing dependencies. This fails closed if any locked dependency has no compatible wheel, rather than executing package build scripts from a source distribution. Poetry itself is also installed by pip with `--only-binary :all:`, and dependency versions and hashes are recorded in `poetry.lock`.
+CI and the production Docker build configure Poetry with `installer.only-binary = ":all:"` before installing dependencies. This fails closed if any locked dependency has no compatible wheel, rather than executing package build scripts from a source distribution. Setting `installer.no-binary = false` is not equivalent: it permits wheels but still allows source distributions as a fallback. Poetry itself is installed by pip with `--only-binary :all:`, and dependency artifact hashes (including wheels) are recorded in `poetry.lock`. The Docker install also uses `--no-root`, so it does not build the application project.
+
+If SonarCloud reports `docker:S8541` on the Dockerfile's `poetry install` despite these controls, review it as a false positive for source-build execution: Poetry is explicitly restricted to compatible wheels and fails instead of running source build scripts. Keep the wheel-only setting in place; reassess the finding if the install policy changes.
 
 If a future dependency lacks a compatible wheel, replace it or explicitly review and document an exception; do not silently disable the wheel-only policy.
 
