@@ -41,9 +41,7 @@ class SharedRateLimitCacheTests(SimpleTestCase):
 
             def use_worker_cache():
                 worker_clients.append(caches["ratelimit"])
-                results.append(
-                    get_usage(request, group=group, key="ip", rate="1/m", method="GET", increment=True)
-                )
+                results.append(get_usage(request, group=group, key="ip", rate="1/m", method="GET", increment=True))
 
             first = get_usage(request, group=group, key="ip", rate="1/m", method="GET", increment=True)
             worker = threading.Thread(target=use_worker_cache)
