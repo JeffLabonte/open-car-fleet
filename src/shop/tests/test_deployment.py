@@ -55,6 +55,64 @@ class TestDeploymentHardening(TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("RATELIMIT_CACHE_URL must be set", result.stderr)
 
+    def test_production_uses_shared_redis_cache_and_fails_closed(self):
+        env = os.environ.copy()
+        env.update(
+            {
+                "DEBUG": "False",
+                "DJANGO_SECRET_KEY": "test-production-cache-key",
+                "RATELIMIT_CACHE_URL": "redis://cache:6379/0",
+                "SECURE_SSL_REDIRECT": "False",
+            }
+        )
+        result = subprocess.run(
+            [
+                "python",
+                "-c",
+                (
+                    "from settings.settings import CACHES, RATELIMIT_FAIL_OPEN, RATELIMIT_USE_CACHE; "
+                    "assert CACHES['ratelimit']['BACKEND'] == "
+                    "'django.core.cache.backends.redis.RedisCache'; "
+                    "assert CACHES['ratelimit']['LOCATION'] == 'redis://cache:6379/0'; "
+                    "assert RATELIMIT_USE_CACHE == 'ratelimit'; "
+                    "assert RATELIMIT_FAIL_OPEN is False"
+                ),
+            ],
+            cwd=str(REPO_ROOT / "src"),
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_development_uses_local_cache_without_redis_url(self):
+        env = os.environ.copy()
+        env.update(
+            {
+                "DEBUG": "True",
+                "DJANGO_SECRET_KEY": "test-development-cache-key",
+                "RATELIMIT_CACHE_URL": "",
+            }
+        )
+        result = subprocess.run(
+            [
+                "python",
+                "-c",
+                (
+                    "from settings.settings import CACHES; "
+                    "assert CACHES['ratelimit']['BACKEND'] == "
+                    "'django.core.cache.backends.locmem.LocMemCache'"
+                ),
+            ],
+            cwd=str(REPO_ROOT / "src"),
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_ansible_cfg_does_not_disable_host_key_checking(self):
         cfg = REPO_ROOT / "ansible" / "ansible.cfg"
         self.assertTrue(cfg.exists())
