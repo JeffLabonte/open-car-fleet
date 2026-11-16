@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
@@ -9,6 +10,7 @@ from shop.models.car import Car
 from shop.models.fleet import Fleet, FleetMembership
 from shop.models.report import Report
 from shop.models.user import ShopUser
+from shop.services.attachments import save_attachments
 from shop.tests.helpers import MP4_SIGNATURE, PNG_SIGNATURE
 
 
@@ -71,7 +73,12 @@ class ReportAttachmentTests(TestCase):
         self.assertIn("https://drive.google.com/file/d/123/view", attachment_urls)
 
     def test_report_form_rejects_unsafe_links_and_upload_types(self):
-        for link in ("javascript:alert(1)", "ftp://example.com/file.pdf", "https:///missing-host.pdf"):
+        for link in (
+            "javascript:alert(1)",
+            "ftp://example.com/file.pdf",
+            "https:///missing-host.pdf",
+            "http://bad host/file.pdf",
+        ):
             with self.subTest(link=link):
                 unsafe_link_form = ReportForm(
                     data={
@@ -98,6 +105,33 @@ class ReportAttachmentTests(TestCase):
         )
         self.assertFalse(unsafe_file_form.is_valid())
         self.assertIn("attachments", unsafe_file_form.errors)
+
+    def test_report_form_accepts_http_and_https_external_links(self):
+        form = ReportForm(
+            data={
+                "job_name": "Valid links",
+                "date_done": "2026-08-10",
+                "external_links": "http://example.com/invoice.pdf\nhttps://example.com/checklist.pdf",
+            }
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(
+            form.cleaned_data["external_links"],
+            ["http://example.com/invoice.pdf", "https://example.com/checklist.pdf"],
+        )
+
+    def test_attachment_service_rejects_invalid_external_links_before_persisting(self):
+        report = Report.objects.create(
+            car=self.car,
+            job_name="Invalid external link",
+            date_done="2026-08-10",
+        )
+
+        with self.assertRaises(ValidationError):
+            save_attachments(report, [], ["https://example.com/valid", "http://bad host"])
+
+        self.assertEqual(report.attachments.count(), 0)
 
     def test_orphaned_attachment_returns_404(self):
         attachment = Attachment.objects.create(

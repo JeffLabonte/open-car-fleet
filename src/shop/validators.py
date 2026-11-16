@@ -3,6 +3,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from django.core.exceptions import ValidationError
+from django.core.validators import URLValidator
 from django.utils.translation import gettext_lazy as _
 
 VIN_BAD_CHARS = set("IOQ")
@@ -74,7 +75,8 @@ def validate_external_link(value: str) -> str:
         parsed = urlparse(link)
         hostname = parsed.hostname
         parsed.port
-    except ValueError as exc:
+        URLValidator(schemes=["http", "https"])(link)
+    except (ValidationError, ValueError) as exc:
         raise ValidationError(_("External links must use HTTP or HTTPS.")) from exc
 
     if parsed.scheme.lower() not in {"http", "https"} or not hostname:
