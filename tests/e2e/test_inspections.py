@@ -166,12 +166,22 @@ def attach_inspection_evidence(firefox_driver: webdriver.Firefox, inspection_fil
         """,
         "LATEST_INSPECTION_FINDINGS_WITH_EVIDENCE",
     )
-    firefox_driver.find_element(By.CSS_SELECTOR, 'input[name="attachments"]').send_keys(
-        f"{inspection_files['photo']}\n{inspection_files['document']}"
-    )
-    _wait(firefox_driver).until(
-        lambda driver: driver.find_element(By.NAME, "staged_attachments").get_attribute("value").count(",") == 1
-    )
+    for uploaded_count, name in enumerate(("photo", "document"), start=1):
+        firefox_driver.find_element(By.CSS_SELECTOR, 'input[name="attachments"]').send_keys(inspection_files[name])
+        _wait(firefox_driver).until(
+            lambda driver: (
+                len(
+                    [
+                        attachment_id
+                        for attachment_id in driver.find_element(By.NAME, "staged_attachments")
+                        .get_attribute("value")
+                        .split(",")
+                        if attachment_id
+                    ]
+                )
+                == uploaded_count
+            )
+        )
     _finalize_and_wait_for_car_page(firefox_driver)
 
 
