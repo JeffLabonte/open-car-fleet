@@ -6,8 +6,7 @@
     {% include 'shop/partials/_page_header.html' %}
     <div class="page-actions page-actions--car-list">
       <form method="get" class="is-flex car-search-form">
-        <label class="is-sr-only" for="car-search">{% translate 'Search cars' %}</label>
-        <input class="input" id="car-search" type="search" name="q" value="{{ request.GET.q }}" placeholder="{% translate 'Search cars' %}" />
+        <input class="input" id="car-search" type="search" name="q" value="{{ request.GET.q }}" aria-label="{% translate 'Search cars' %}" placeholder="{% translate 'Search cars' %}" />
         <button class="button is-light" type="submit">{% translate 'Search' %}</button>
       </form>
       {% if can_edit_fleet_data %}
