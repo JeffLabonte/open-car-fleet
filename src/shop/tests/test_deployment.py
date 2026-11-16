@@ -2,6 +2,7 @@ import os
 import subprocess
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 from django.test import TestCase
 
@@ -12,6 +13,15 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
 class TestDeploymentHardening(TestCase):
     """Regression tests for deployment configuration hardening."""
+
+    def test_load_dotenv_skips_unreadable_file(self):
+        from settings.settings import load_dotenv
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / ".env"
+            path.write_text("DJANGO_SECRET_KEY=unreadable\n")
+            with patch.object(Path, "read_text", side_effect=PermissionError):
+                self.assertEqual(load_dotenv(path), {})
 
     def test_environment_file_precedence_keeps_the_first_value(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -371,6 +381,36 @@ assert configured.MAILERS["default"]["OPTIONS"]["api_token"] == "mail-token"
             text=True,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_production_settings_reject_invalid_secret_and_host_values(self):
+        cases = (
+            ({"DJANGO_SECRET_KEY": ""}, "DJANGO_SECRET_KEY must be configured"),
+            ({"DJANGO_SECRET_KEY": "change-me"}, "must not use a development placeholder"),
+            ({"DJANGO_SECRET_KEY": "valid-key", "DJANGO_ALLOWED_HOSTS": "*"}, "must not contain *"),
+        )
+        for overrides, message in cases:
+            with self.subTest(overrides=overrides):
+                env = os.environ.copy()
+                env.update(
+                    {
+                        "DEBUG": "False",
+                        "DJANGO_SECRET_KEY": "valid-key",
+                        "DJANGO_ALLOWED_HOSTS": "localhost",
+                        "RATELIMIT_CACHE_URL": "redis://localhost:6379/0",
+                        "SECURE_SSL_REDIRECT": "False",
+                    }
+                )
+                for key, value in overrides.items():
+                    env[key] = value
+                result = subprocess.run(
+                    ["python", "-c", "import settings.settings"],
+                    cwd=str(REPO_ROOT / "src"),
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                )
+                self.assertEqual(result.returncode, 1)
+                self.assertIn(message, result.stderr)
 
     def test_runtime_collectstatic_uses_environment_secret(self):
         env = os.environ.copy()
