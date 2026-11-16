@@ -17,15 +17,26 @@ addresses.
 
 ## Production operations
 
-The application currently routes this logger to the console. The production
-deployment does not yet configure a separate durable, access-restricted audit
-destination. Do not treat Docker/container console output as the required
-long-term security audit record.
+With `DEBUG=False`, the application sends only the `security` logger to the
+host's `/dev/log` socket using the `local0` syslog facility. Production Compose
+mounts that socket into the web container. Ansible configures systemd-journald
+to persist records under `/var/log/journal`, retain them for up to 90 days, and
+use at most 2 GB of journal storage. The system journal uses root and
+`systemd-journal` group access; keep membership in that group limited to
+authorized operators. The application container can submit events through the
+socket but cannot modify the journal files. Sink errors are discarded without
+printing the event or interrupting the request. Local and test configurations
+continue to use the console handler.
 
-Before relying on these events for incident response, route the logger to a
-persistent append-only destination with restricted operator access, alert on
-repeated authentication failures, rate-limit spikes, and access denials, and
-review the events at least daily. Retain records for 90 days, archive them
-outside the application host, and restrict deletion/retention changes to the
-smallest operator group. Local and test environments should continue using the
-console handler.
+Authorized operators can review the security facility with:
+
+```bash
+sudo journalctl SYSLOG_FACILITY=16 --since "24 hours ago"
+```
+
+Alert on repeated authentication failures, rate-limit spikes, and access
+denials. Review security events at least daily, monitor journal disk usage so
+the 2 GB cap does not shorten the 90-day window, and archive records to
+restricted off-host storage before expiration. Restrict journal deletion and
+retention changes to the smallest operator group; journal files are managed
+append-only by journald and are not writable by the application process.
