@@ -6,6 +6,8 @@ import pytest
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 from shop.auth import sync_hanko_user
 from shop.models import Car, Fleet, FleetMembership
@@ -63,27 +65,70 @@ def test_car_list_actions_fit_phone_viewports(firefox_driver: webdriver.Firefox,
     sign_in_with_test_session(firefox_driver, email, next_url="/cars/")
 
     for width in (320, 375):
-        firefox_driver.set_window_size(width, 800)
         firefox_driver.get(f"{_base_url()}/cars/")
+        # Firefox enforces a minimum outer window width, so use an iframe for phone-sized viewports.
+        firefox_driver.execute_script(
+            """
+            const frame = document.createElement('iframe');
+            frame.id = 'phone-viewport';
+            frame.style.cssText = `width: ${arguments[0]}px; height: 800px; border: 0`;
+            frame.srcdoc = document.documentElement.outerHTML;
+            document.body.appendChild(frame);
+            """,
+            width,
+        )
+        WebDriverWait(firefox_driver, 10).until(EC.frame_to_be_available_and_switch_to_it((By.ID, "phone-viewport")))
+        WebDriverWait(firefox_driver, 10).until(EC.presence_of_element_located((By.ID, "car-search")))
         metrics = firefox_driver.execute_script(
             """
             const form = document.querySelector('.page-actions--car-list .car-search-form');
             const input = form.querySelector('#car-search');
             const button = form.querySelector('button[type="submit"]');
             const add = document.querySelector('.page-actions--car-list a.button');
+            const inputRect = input.getBoundingClientRect();
+            const buttonRect = button.getBoundingClientRect();
+            const addRect = add.getBoundingClientRect();
             return {
+              innerWidth: window.innerWidth,
               viewportWidth: document.documentElement.clientWidth,
               documentWidth: document.documentElement.scrollWidth,
-              inputWidth: input.getBoundingClientRect().width,
-              inputTop: input.getBoundingClientRect().top,
-              buttonTop: button.getBoundingClientRect().top,
+              inputWidth: inputRect.width,
+              inputTop: inputRect.top,
+              inputRight: inputRect.right,
+              buttonTop: buttonRect.top,
+              buttonLeft: buttonRect.left,
+              buttonRight: buttonRect.right,
+              buttonHeight: buttonRect.height,
+              buttonContentFits: button.scrollWidth <= button.clientWidth,
               formBottom: form.getBoundingClientRect().bottom,
-              addTop: add.getBoundingClientRect().top
+              addTop: addRect.top,
+              addRight: addRect.right,
+              addHeight: addRect.height,
+              addContentFits: add.scrollWidth <= add.clientWidth
             };
             """
         )
 
+        assert metrics["innerWidth"] == width
         assert metrics["documentWidth"] <= metrics["viewportWidth"]
         assert metrics["inputWidth"] >= 120
         assert abs(metrics["inputTop"] - metrics["buttonTop"]) < 2
+        assert metrics["inputRight"] <= metrics["buttonLeft"]
+        assert metrics["buttonRight"] <= metrics["viewportWidth"]
+        assert metrics["buttonHeight"] >= 44
+        assert metrics["buttonContentFits"]
         assert metrics["addTop"] >= metrics["formBottom"]
+        assert metrics["addRight"] <= metrics["viewportWidth"]
+        assert metrics["addHeight"] >= 44
+        assert metrics["addContentFits"]
+        firefox_driver.switch_to.default_content()
+
+    firefox_driver.set_window_size(1280, 800)
+    firefox_driver.get(f"{_base_url()}/cars/")
+    assert firefox_driver.execute_script(
+        """
+        const form = document.querySelector('.page-actions--car-list .car-search-form').getBoundingClientRect();
+        const add = document.querySelector('.page-actions--car-list a.button').getBoundingClientRect();
+        return Math.abs(form.top - add.top) < 2 && form.right <= add.left;
+        """
+    )
