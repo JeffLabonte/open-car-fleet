@@ -51,17 +51,20 @@ scripts/prepare-env.sh \
   --csrf-trusted-origins "https://fleet.example.com"
 ```
 
-This writes `src/.env.production` with Vault enabled, a generated Postgres password, and `DJANGO_TRUSTED_PROXY=True` so Django trusts the `X-Forwarded-Proto` header from Tailscale (or another reverse proxy). During deploy, Ansible derives `src/.env.database` from this file on the server, so the DB container receives only `POSTGRES_*` variables and stays in sync with the web container.
+This writes `src/.env.production` with a generated Postgres password,
+`DJANGO_TRUSTED_PROXY=True`, and blank application secret fields. Django trusts
+the `X-Forwarded-Proto` header from Tailscale (or another reverse proxy).
+During deploy, Ansible derives `src/.env.database` from this file on the
+server, so the DB container receives only `POSTGRES_*` variables and stays in
+sync with the web container.
 
-Provision Vault and fill in `VAULT_ADDR`, `VAULT_ROLE_ID`, `VAULT_SECRET_ID`,
-`VAULT_KV_MOUNT`, and `VAULT_SECRET_PATH` in the generated env file using a
-secure editor. The Ansible env role requires `SECRETS_BACKEND=vault` and
-`DEBUG=False`, uploads the file with mode `0600`, and Compose passes the Vault
-settings to the web service. Store the Django key and MailerSend token in
-Vault, not in the env file. Keep `SECRETS_BACKEND=environment` for local
-development. See
-[Secrets management](security/secrets-management.md) for the AppRole policy,
-required Vault values, rotation procedure, and verification checklist.
+Using a secure editor, set a strong `DJANGO_SECRET_KEY` and, when email delivery
+is enabled, `MAILERSEND_API_TOKEN` in the generated env file. The Ansible env
+role requires `DJANGO_SECRET_KEY` and `DEBUG=False`, uploads the file with mode
+`0600`, and Compose passes the environment file to the web service. Never
+commit the production env file or expose its values in command arguments or
+logs. See [Secrets management](security/secrets-management.md) for the
+required values, rotation procedure, and verification checklist.
 
 ## 4. Test connectivity
 

@@ -140,7 +140,6 @@ updates = {
     "HANKO_API_URL": r"${HANKO_API_URL}",
     "DJANGO_SECRET_KEY": "",
     "DEBUG": "False",
-    "SECRETS_BACKEND": "vault",
     "DJANGO_ALLOWED_HOSTS": r"${DJANGO_ALLOWED_HOSTS}",
     "CSRF_TRUSTED_ORIGINS": r"${CSRF_TRUSTED_ORIGINS}",
     "SECURE_SSL_REDIRECT": "True",
@@ -188,7 +187,7 @@ echo "Wrote ${OUTPUT_FILE}"
 echo "Next steps:"
 echo "  1) Review DJANGO_ALLOWED_HOSTS and CSRF_TRUSTED_ORIGINS"
 echo "  2) Set HANKO_API_URL if missing"
-echo "  3) Configure Vault AppRole credentials and store DJANGO_SECRET_KEY and MAILERSEND_API_TOKEN in Vault"
+echo "  3) Set DJANGO_SECRET_KEY and MAILERSEND_API_TOKEN in the owner-only env file"
 echo "     Set DEFAULT_FROM_EMAIL to an address on your verified MailerSend domain"
 echo "  4) Verify HTTPS is terminated in front of the app (SECURE_SSL_REDIRECT and HSTS are enabled)"
 echo "  5) Deploy with make ansible-deploy"

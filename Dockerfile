@@ -29,7 +29,7 @@ COPY . /app/
 
 # Collect static files for production.
 # Static collection uses build-only settings and never needs runtime credentials.
-RUN SECRETS_BACKEND=environment DEBUG=True DJANGO_TRUSTED_PROXY=True DJANGO_SECRET_KEY=build-only-secret \
+RUN DEBUG=True DJANGO_TRUSTED_PROXY=True DJANGO_SECRET_KEY=build-only-secret \
     python src/manage.py collectstatic --noinput
 
 # Use a lean runtime image.

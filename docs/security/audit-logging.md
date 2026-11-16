@@ -10,7 +10,7 @@ The `security` logger records:
 
 Events use a stable event name and reason, with local database IDs and affected
 resource IDs only where needed to correlate an access decision or membership
-change. They must not include passwords, session tokens, Vault tokens,
+change. They must not include passwords or session tokens,
 AppRole credentials, provider identity subjects, email addresses, or raw
 provider exception text. Rate-limit records intentionally omit client IP
 addresses.

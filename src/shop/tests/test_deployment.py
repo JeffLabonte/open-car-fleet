@@ -178,7 +178,7 @@ class TestDeploymentHardening(TestCase):
         self.assertLess(playbook.index("    - env"), playbook.index("    - app"))
         upload_index = env_role.index("- name: Upload production env file to server")
         for check in (
-            "- name: Require Vault for production deployment",
+            "- name: Require Django secret key for production deployment",
             "- name: Require DEBUG=False for production deployment",
         ):
             check_index = env_role.index(check)
@@ -228,7 +228,6 @@ class TestDeploymentHardening(TestCase):
             content = output.read_text()
             self.assertIn("DJANGO_TRUSTED_PROXY=True", content)
             self.assertIn("SECURE_SSL_REDIRECT=True", content)
-            self.assertIn("SECRETS_BACKEND=vault", content)
             self.assertIn("DJANGO_SECRET_KEY=\n", content)
             self.assertIn("MAILERSEND_API_TOKEN=\n", content)
             self.assertEqual(output.stat().st_mode & 0o777, 0o600)
@@ -238,8 +237,6 @@ class TestDeploymentHardening(TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             template = Path(tmp) / ".env.template"
             template.write_text(
-                "SECRETS_BACKEND=environment\n"
-                "SECRETS_BACKEND=environment\n"
                 "DEBUG=True\n"
                 "DEBUG=True\n"
                 "DJANGO_SECRET_KEY=first-secret\n"
@@ -256,24 +253,22 @@ class TestDeploymentHardening(TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             content = output.read_text()
 
-        self.assertEqual(content.count("SECRETS_BACKEND=vault\n"), 2)
         self.assertEqual(content.count("DEBUG=False\n"), 2)
         self.assertEqual(content.count("DJANGO_SECRET_KEY=\n"), 2)
         self.assertEqual(content.count("MAILERSEND_API_TOKEN=\n"), 2)
-        self.assertNotIn("SECRETS_BACKEND=environment", content)
         self.assertNotIn("first-secret", content)
         self.assertNotIn("second-secret", content)
         self.assertNotIn("first-token", content)
         self.assertNotIn("second-token", content)
 
-    def test_production_deploy_requires_vault_and_build_excludes_credentials(self):
+    def test_production_deploy_requires_secret_key_and_build_excludes_credentials(self):
         env_role = (REPO_ROOT / "ansible" / "roles" / "env" / "tasks" / "main.yml").read_text()
         dockerfile = (REPO_ROOT / "Dockerfile").read_text()
         compose = (REPO_ROOT / "docker-compose.prod.yml").read_text()
-        self.assertIn("Require Vault for production deployment", env_role)
-        self.assertIn('exit value != "vault"', env_role)
+        self.assertIn("Require Django secret key for production deployment", env_role)
+        self.assertIn('exit value == ""', env_role)
         self.assertIn("no_log: true", env_role)
-        self.assertIn("SECRETS_BACKEND=environment", dockerfile)
+        self.assertNotIn("SECRETS_BACKEND", dockerfile)
         self.assertNotIn("--mount=type=secret", dockerfile)
         self.assertNotIn("env_file:\n    file:", compose)
 
@@ -353,82 +348,20 @@ class TestDeploymentHardening(TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("DJANGO_TRUSTED_PROXY", result.stderr)
 
-    def test_vault_backend_loads_secrets_before_settings(self):
-        env = os.environ.copy()
-        env.update(
-            {
-                "DEBUG": "True",
-                "SECRETS_BACKEND": "vault",
-                "VAULT_ADDR": "https://vault.example.com",
-                "VAULT_ROLE_ID": "role-id",
-                "VAULT_SECRET_ID": "secret-id",
-                "VAULT_KV_MOUNT": "secret",
-                "VAULT_SECRET_PATH": "open-car-fleet/production",
-            }
-        )
-        script = """
-from unittest.mock import patch
-with patch(
-    "settings.vault.load_vault_secrets",
-    return_value={"DJANGO_SECRET_KEY": "vault-key", "MAILERSEND_API_TOKEN": "mail-token"},
-) as load_secrets:
-    import settings.settings as configured
-    assert configured.SECRET_KEY == "vault-key"
-    assert configured.MAILERS["default"]["OPTIONS"]["api_token"] == "mail-token"
-    load_secrets.assert_called_once_with(
-        address="https://vault.example.com",
-        role_id="role-id",
-        secret_id="secret-id",
-        mount="secret",
-        secret_path="open-car-fleet/production",
-        require_tls=False,
-    )
-"""
-        result = subprocess.run(
-            ["python", "-c", script],
-            cwd=str(REPO_ROOT / "src"),
-            env=env,
-            capture_output=True,
-            text=True,
-        )
-        self.assertEqual(result.returncode, 0, result.stderr)
-
-    def test_unknown_secrets_backend_fails_closed(self):
-        env = os.environ.copy()
-        env.update({"DEBUG": "True", "DJANGO_SECRET_KEY": "test-secret", "SECRETS_BACKEND": "unknown"})
-        result = subprocess.run(
-            ["python", "-c", "import settings.settings"],
-            cwd=str(REPO_ROOT / "src"),
-            env=env,
-            capture_output=True,
-            text=True,
-        )
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("SECRETS_BACKEND must be either", result.stderr)
-
-    def test_vault_settings_do_not_fall_back_to_environment_secrets(self):
+    def test_environment_file_loads_production_secrets(self):
         env = os.environ.copy()
         env.update(
             {
                 "DEBUG": "False",
-                "SECURE_SSL_REDIRECT": "False",
-                "RATELIMIT_CACHE_URL": "redis://cache:6379/0",
-                "SECRETS_BACKEND": "vault",
-                "VAULT_ADDR": "https://vault.example.com",
-                "VAULT_ROLE_ID": "role-id",
-                "VAULT_SECRET_ID": "secret-id",
                 "DJANGO_SECRET_KEY": "environment-key",
-                "MAILERSEND_API_TOKEN": "environment-token",
+                "MAILERSEND_API_TOKEN": "mail-token",
+                "SECURE_SSL_REDIRECT": "False",
             }
         )
         script = """
-from unittest.mock import Mock, patch
-login = Mock(status_code=200, json=lambda: {"auth": {"client_token": "token"}})
-secret = Mock(status_code=200, json=lambda: {"data": {"data": {"DJANGO_SECRET_KEY": "vault-key"}}})
-with patch("settings.vault.requests.post", return_value=login), patch("settings.vault.requests.get", return_value=secret):
-    import settings.settings as configured
-    assert configured.SECRET_KEY == "vault-key"
-    assert configured.MAILERS["default"]["OPTIONS"]["api_token"] == ""
+import settings.settings as configured
+assert configured.SECRET_KEY == "environment-key"
+assert configured.MAILERS["default"]["OPTIONS"]["api_token"] == "mail-token"
 """
         result = subprocess.run(
             ["python", "-c", script],
@@ -439,24 +372,21 @@ with patch("settings.vault.requests.post", return_value=login), patch("settings.
         )
         self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_runtime_collectstatic_requires_vault_credentials(self):
+    def test_runtime_collectstatic_uses_environment_secret(self):
         env = os.environ.copy()
         env.update(
             {
                 "DEBUG": "False",
                 "DJANGO_SECRET_KEY": "build-only-secret",
-                "SECRETS_BACKEND": "vault",
                 "SECURE_SSL_REDIRECT": "False",
             }
         )
-        for key in ("VAULT_ADDR", "VAULT_ROLE_ID", "VAULT_SECRET_ID"):
-            env.pop(key, None)
 
         result = subprocess.run(
             [
                 "python",
                 "-c",
-                "import sys; sys.argv = ['manage.py', 'collectstatic']; import settings.settings",
+                "import settings.settings; assert settings.settings.SECRET_KEY == 'build-only-secret'",
             ],
             cwd=str(REPO_ROOT / "src"),
             env=env,
@@ -464,5 +394,4 @@ with patch("settings.vault.requests.post", return_value=login), patch("settings.
             text=True,
         )
 
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("Vault backend requires VAULT_ADDR", result.stderr)
+        self.assertEqual(result.returncode, 0, result.stderr)
