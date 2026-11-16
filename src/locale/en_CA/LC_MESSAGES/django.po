@@ -508,7 +508,7 @@ msgid "Enabled categories must be a list."
 msgstr ""
 
 #: src/shop/forms/inspection.py:105 src/shop/forms/report.py:94
-msgid "External links must use HTTP or HTTPS."
+msgid "External links must use HTTPS."
 msgstr ""
 
 #: src/shop/forms/inspection.py:124

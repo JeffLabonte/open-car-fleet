@@ -57,7 +57,7 @@ class CSVImporterTests(ShopTestCase):
                     "car": str(car.pk),
                     "job_name": "Brake service",
                     "date_done": "2026-08-01",
-                    "documents": "https://example.com/invoice.pdf\nhttps://example.com/checklist.pdf",
+                    "documents": "HTTPS://example.com/invoice.pdf\nhttps://example.com/checklist.pdf",
                     "photos": "https://example.com/before.jpg\nhttps://example.com/after.jpg",
                     "mileage": "12345",
                 }
@@ -71,7 +71,7 @@ class CSVImporterTests(ShopTestCase):
         self.assertEqual(report.mileage, 12345)
         document_links = list(
             report.attachments.filter(source_type=Attachment.SOURCE_EXTERNAL, kind="document").values_list(
-                "display_name", flat=True
+                "url", flat=True
             )
         )
         photo_links = list(
@@ -79,7 +79,10 @@ class CSVImporterTests(ShopTestCase):
                 "display_name", flat=True
             )
         )
-        self.assertEqual(document_links, ["invoice.pdf", "checklist.pdf"])
+        self.assertEqual(
+            document_links,
+            ["HTTPS://example.com/invoice.pdf", "https://example.com/checklist.pdf"],
+        )
         self.assertEqual(photo_links, ["before.jpg", "after.jpg"])
         self.assertEqual(Attachment.objects.filter(url__gt="").count(), 4)
 
@@ -123,12 +126,17 @@ class CSVImporterTests(ShopTestCase):
         )
 
         self.assertTrue(result.has_errors)
-        self.assertIn("HTTP or HTTPS", result.errors[0].message)
+        self.assertIn("HTTPS", result.errors[0].message)
 
     def test_report_import_rejects_non_http_or_hostless_attachment_links(self):
         car = Car.objects.create(fleet=self.fleet, make="Honda", model="Fit", vin="JHMGE88478S012347")
 
-        for link in ("ftp://example.com/file.pdf", "https:///missing-host.pdf"):
+        for link in (
+            "ftp://example.com/file.pdf",
+            "https:///missing-host.pdf",
+            "http://bad host/file.pdf",
+            "http://example.com/file.pdf",
+        ):
             with self.subTest(link=link):
                 result = self.importer.import_records(
                     Report,
@@ -145,7 +153,7 @@ class CSVImporterTests(ShopTestCase):
                 )
 
                 self.assertTrue(result.has_errors)
-                self.assertIn("HTTP or HTTPS", result.errors[0].message)
+                self.assertIn("HTTPS", result.errors[0].message)
 
     def test_workjob_import_rejects_unknown_car(self):
         result = self.importer.import_records(

@@ -61,7 +61,13 @@ class InspectionModelAndFormTests(ShopTestCase):
         self.assertNotIn(other_inspection, form.fields["inspection"].queryset)
 
     def test_inspection_form_rejects_invalid_external_link(self):
-        for link in ("not-a-valid-link", "ftp://example.com/file.pdf", "https:///missing-host.pdf"):
+        for link in (
+            "not-a-valid-link",
+            "ftp://example.com/file.pdf",
+            "https:///missing-host.pdf",
+            "http://bad host/file.pdf",
+            "http://example.com/file.pdf",
+        ):
             with self.subTest(link=link):
                 form = InspectionForm(
                     data={
@@ -75,6 +81,23 @@ class InspectionModelAndFormTests(ShopTestCase):
 
                 self.assertFalse(form.is_valid())
                 self.assertIn("external_links", form.errors)
+
+    def test_inspection_form_accepts_https_external_links(self):
+        form = InspectionForm(
+            data={
+                "inspected_at": "2026-10-20T14:30",
+                "mileage": "12345",
+                "notes": "Notes",
+                "external_links": "https://example.com/report.pdf\nhttps://example.com/checklist.pdf",
+            },
+            user=self.owner,
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(
+            form.cleaned_data["external_links"],
+            ["https://example.com/report.pdf", "https://example.com/checklist.pdf"],
+        )
 
     def test_unsaved_inspection_has_empty_status_counts(self):
         inspection = Inspection(car=self.create_car())

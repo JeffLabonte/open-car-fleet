@@ -6,6 +6,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 
 from shop.models.attachment import Attachment
+from shop.validators import validate_external_link
 
 # Per-user quota for staged (unclaimed) uploads (1 GB). Claimed attachments
 # are counted against the parent object, not this transient quota.
@@ -51,6 +52,7 @@ def save_attachments(
     endpoint for this user (validated in the form); they are re-parented
     onto ``parent`` here.
     """
+    external_links = [validate_external_link(link) for link in external_links]
     content_type = ContentType.objects.get_for_model(parent)
     for index, uploaded_file in enumerate(uploaded_files):
         Attachment.objects.create(

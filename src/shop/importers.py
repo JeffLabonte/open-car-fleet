@@ -229,7 +229,7 @@ class CSVImporter:
         for index, item in enumerate(attachment_plan):
             value = item["value"]
             parsed = urlparse(value)
-            is_url = parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+            is_url = parsed.scheme.lower() == "https" and bool(parsed.hostname)
             Attachment.objects.create(
                 content_type=content_type,
                 object_id=str(instance.pk),
