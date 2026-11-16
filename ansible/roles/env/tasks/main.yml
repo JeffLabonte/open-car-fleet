@@ -1,7 +1,7 @@
 ---
-- name: Require Vault for production deployment
+- name: Require Django secret key for production deployment
   ansible.builtin.shell: |
-    awk -F= '$1 == "SECRETS_BACKEND" {value = $2} END {exit value != "vault"}' "{{ playbook_dir }}/../{{ env_file }}"
+    awk -F= '$1 == "DJANGO_SECRET_KEY" {value = $2} END {exit value == ""}' "{{ playbook_dir }}/../{{ env_file }}"
   changed_when: false
   delegate_to: localhost
   become: false

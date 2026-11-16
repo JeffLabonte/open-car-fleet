@@ -1,111 +1,55 @@
 # Secrets management
 
-The application supports HashiCorp Vault KV v2 with AppRole. The default
-`SECRETS_BACKEND=environment` keeps the local `.env` workflow unchanged.
-Production preparation sets `SECRETS_BACKEND=vault`, and Ansible requires it
-and `DEBUG=False`, so Django fetches application secrets at startup.
+The application reads secrets from the process environment, falling back to
+local `.env` files. Production uses the owner-only `src/.env.production` file,
+which Ansible uploads as `src/.env` with mode `0600`. The file is never copied
+into the image or committed to source control.
 
-## AppRole and policy
+## Required production values
 
-Configure a dedicated AppRole for this deployment. Its policy should allow only
-reading the one KV v2 path used by the app; do not grant list, write, or access
-to other paths:
-
-```hcl
-path "secret/data/open-car-fleet/production" {
-  capabilities = ["read"]
-}
-```
-
-Configure the role for short-lived tokens and a short-lived SecretID. Each
-Gunicorn worker authenticates separately, so the SecretID must allow enough
-logins for all workers and deployment management commands; do not make it
-single-use unless a Vault Agent supplies a per-process token. At startup, the
-application sends `VAULT_ROLE_ID` and `VAULT_SECRET_ID` to
-`POST /v1/auth/approle/login`, then reads
-`GET /v1/<VAULT_KV_MOUNT>/data/<VAULT_SECRET_PATH>` using the returned token.
-The token is held only in memory and is not logged or returned to the app
-environment.
-
-Configure these values in `src/.env.production`:
+Set these values in `src/.env.production` before deploying:
 
 ```dotenv
-SECRETS_BACKEND=vault
-VAULT_ADDR=https://vault.example.com
-VAULT_ROLE_ID=<deployment-role-id>
-VAULT_SECRET_ID=<deployment-secret-id>
-VAULT_KV_MOUNT=secret
-VAULT_SECRET_PATH=open-car-fleet/production
+DJANGO_SECRET_KEY=<long-random-django-secret>
+MAILERSEND_API_TOKEN=<optional-mailersend-token>
 ```
 
-Keep the production env file owner-readable only (mode `0600`); the Ansible
-env role uploads it with that mode without logging its contents. Never put AppRole credentials in
-source control, issue text, shell command arguments, or build arguments. In
-Vault, store `DJANGO_SECRET_KEY` and, when email delivery is enabled,
-`MAILERSEND_API_TOKEN` as string values at the configured path. The app ignores
-unrecognized keys and fails startup with a value-free diagnostic if Vault is
-unavailable, denies authentication/read access, or omits `DJANGO_SECRET_KEY`.
-An absent MailerSend token becomes empty, never an environment fallback.
-Production requires HTTPS for `VAULT_ADDR` with a certificate trusted by the
-container. Compose injects AppRole credentials into the web container's
-environment: host administrators and users with Docker access can inspect
-them, so restrict both. The image build receives no production env file.
+`DJANGO_SECRET_KEY` must be non-empty and must not use a development
+placeholder. `MAILERSEND_API_TOKEN` is required only when email delivery is
+enabled. The Postgres service remains separate and receives only the
+`POSTGRES_*` values from the derived `src/.env.database` file.
 
-The Postgres service is started independently by Compose and still uses
-`POSTGRES_PASSWORD` from the owner-only deployment env file. Its bootstrap
-credential is not currently loaded from Vault; do not remove it from that file
-until database startup and rotation are migrated together.
+Keep both environment files owner-readable only. Never put secrets in source
+control, issue text, shell command arguments, Docker build arguments, or shared
+logs. Restrict server and Docker access to operators who are authorized to
+read the deployment secrets.
 
-## Rotation and revocation
+## Rotation
 
-1. Write the new application secret value to the same KV path using an
-   authorized operator workflow and confirm the active AppRole can read it
-   without printing it to shared logs. Rotating `DJANGO_SECRET_KEY` invalidates
-   existing sessions and signed values unless an appropriate Django key
-   rollover is separately planned.
-2. Deploy/restart the web service so all workers load the new values. The
-   application reads secrets at process startup; it does not refresh its Vault
-   token or values during requests.
-3. Generate a new SecretID through Vault, update the protected production
-   env file, deploy again, then destroy the old SecretID using its accessor
-   and revoke outstanding tokens where needed. For suspected compromise,
-   revoke affected credentials and tokens immediately, then issue replacements.
-   Remove the role and policy when decommissioning.
+1. Generate a new secret value using an authorized operator workflow and update
+   the protected production env file.
+2. Deploy or restart the web service so all workers load the new value.
+   Rotating `DJANGO_SECRET_KEY` invalidates existing sessions and signed values
+   unless a Django key rollover is separately planned.
+3. For MailerSend rotation, create the replacement token with the minimum
+   required permissions, deploy it, verify delivery, then revoke the old token.
 4. For a database password change, coordinate the Postgres role password and
-   `POSTGRES_PASSWORD` env-file update; rotating only one side will interrupt
+   `POSTGRES_PASSWORD` env-file update; rotating only one side interrupts
    database connections.
-
-Vault audit logging should be enabled and reviewed by Vault operators. Restrict
-access to the Vault policy, AppRole credentials, and deployment env file to
-operators responsible for the service; investigate denied reads and unexpected
-authentication attempts. For outages or denied access, verify Vault
-availability, the configured address/mount/path, role policy, and credential
-rotation. The application intentionally does not print secret values or
-provider response bodies in startup errors.
-
-The image build's `collectstatic` command explicitly uses build-only environment
-settings and does not contact Vault. All runtime management commands, including
-`collectstatic`, and web workers require Vault when the backend is enabled.
-Existing processes retain their loaded secrets during an outage, but a new or
-restarted process fails closed rather than using environment-file secrets.
-Restore Vault access before restarting, scaling, or running migrations.
 
 ## Deployment verification
 
 Before deploying, verify that:
 
-- The KV v2 path contains a non-empty `DJANGO_SECRET_KEY` and the optional
-  `MAILERSEND_API_TOKEN`.
-- The AppRole policy grants read access only to the configured path.
-- `VAULT_ADDR` uses HTTPS and is reachable from the application host.
-- `src/.env.production` contains the current AppRole values, `DEBUG=False`,
-  and `SECRETS_BACKEND=vault`, has mode `0600`, and contains no Django key or
-  MailerSend token.
-- A deployment with valid credentials starts successfully; missing credentials,
-  denied reads, and unavailable Vault fail startup without exposing values.
+- `DJANGO_SECRET_KEY` is non-empty, random, and not a development placeholder.
+- `src/.env.production` has mode `0600` and contains no committed or logged
+  copies of its values.
+- `DEBUG=False` and the expected HTTPS and trusted-proxy settings are enabled.
+- The database env file contains only `POSTGRES_*` variables.
 - Migrations complete and the web service responds; verify email delivery when
-  configured without displaying the token. Check restricted Vault audit logs
-  for expected AppRole logins and reads.
-- The database bootstrap password is protected and matches the existing
-  Postgres role; an env-file change alone does not rotate that role.
-- After rotation, the web service is restarted and the old SecretID is revoked.
+  configured without displaying the token.
+- After rotation, the old application or MailerSend credentials are revoked
+  where applicable.
+
+The image build uses a temporary build-only Django secret for `collectstatic`;
+it does not read or require the production env file.

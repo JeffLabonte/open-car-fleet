@@ -17,8 +17,6 @@ from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.translation import gettext_lazy as _
 
-from settings.vault import load_vault_secrets
-
 
 class SecuritySysLogHandler(SysLogHandler):
     def handleError(self, record):
@@ -78,29 +76,10 @@ env_paths = [
 _file_env: dict[str, str] = {}
 _file_env = load_environment_files(env_paths)
 
-_vault_secrets: dict[str, str] = {}
-
 
 def _env(name: str, default: str = "") -> str:
     """Return a setting value from the process environment, falling back to .env files."""
-    if name in _vault_secrets:
-        return _vault_secrets[name]
     return os.environ.get(name, _file_env.get(name, default))
-
-
-SECRETS_BACKEND = _env("SECRETS_BACKEND", "environment").strip().lower()
-if SECRETS_BACKEND not in {"environment", "vault"}:
-    raise ImproperlyConfigured("SECRETS_BACKEND must be either 'environment' or 'vault'.")
-
-if SECRETS_BACKEND == "vault":
-    _vault_secrets = load_vault_secrets(
-        address=_env("VAULT_ADDR").strip(),
-        role_id=_env("VAULT_ROLE_ID").strip(),
-        secret_id=_env("VAULT_SECRET_ID").strip(),
-        mount=_env("VAULT_KV_MOUNT", "secret"),
-        secret_path=_env("VAULT_SECRET_PATH", "open-car-fleet/production"),
-        require_tls=_env("DEBUG", "False").strip().lower() not in ("1", "true", "yes"),
-    )
 
 
 # Quick-start development settings - unsuitable for production
