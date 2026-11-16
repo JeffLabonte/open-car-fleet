@@ -28,7 +28,9 @@ def sign_in_with_test_session(
     URL query string. Callers should wait for navigation to ``next_url``
     afterwards.
     """
-    driver.get(e2e_url("/login/"))
+    login_url = e2e_url("/login/")
+    target_url = e2e_url(next_url)
+    driver.get(login_url)
     driver.execute_script(
         """
         const getCsrfToken = () => {
@@ -64,8 +66,8 @@ def sign_in_with_test_session(
     # with the browser until the session is established.
     deadline = time.monotonic() + 10
     while time.monotonic() < deadline:
-        if any(cookie.get("name") == "sessionid" for cookie in driver.get_cookies()):
-            break
+        has_session = any(cookie.get("name") == "sessionid" for cookie in driver.get_cookies())
+        if has_session and driver.current_url == target_url:
+            return
         time.sleep(0.1)
-    else:
-        raise RuntimeError("sessionid cookie was not set after /set-test-session/")
+    raise RuntimeError(f"browser did not reach {target_url} with a session after /set-test-session/")

@@ -90,6 +90,11 @@ Django refuses to start when `RATELIMIT_CACHE_URL` is missing; if Redis becomes
 unavailable, rate-limited requests fail closed rather than bypassing limits.
 Development and tests use a local-memory cache.
 
+Staged uploads are subject to a per-user size quota. On PostgreSQL, each
+upload checks the user's unclaimed staged files and saves the new file in one
+transaction while locking that user's row, so concurrent uploads by the same
+user cannot both pass the quota check.
+
 Ansible schedules `purge_staged_attachments` hourly through the running web
 container. It removes unclaimed uploads after the 12-hour retention window;
 upload requests do not scan or purge the global staged-file set.
