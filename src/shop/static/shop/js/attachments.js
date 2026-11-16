@@ -23,8 +23,8 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  const MAX_UPLOAD_BYTES = parseInt(section.dataset.maxUploadBytes || '104857600', 10); // keep in sync with shop.forms.base
-  const MAX_FILES = parseInt(section.dataset.maxFiles || '10', 10); // keep in sync with shop.forms.base
+  const MAX_UPLOAD_BYTES = Number.parseInt(section.dataset.maxUploadBytes || '104857600', 10); // keep in sync with shop.forms.base
+  const MAX_FILES = Number.parseInt(section.dataset.maxFiles || '10', 10); // keep in sync with shop.forms.base
   const I18N = {
     waiting: section.dataset.i18nWaiting || 'Waiting',
     uploaded: section.dataset.i18nUploaded || 'Uploaded',

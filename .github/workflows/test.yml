@@ -41,7 +41,7 @@ jobs:
         run: "poetry config installer.only-binary :all:"
 
       - name: Install project dependencies
-        run: poetry install --no-interaction --no-ansi --no-root --with test
+        run: poetry install --no-interaction --no-ansi --no-root --with test # NOSONAR: installer.only-binary=:all: blocks source builds
 
       - name: Run linter
         run: make lint
@@ -50,7 +50,7 @@ jobs:
         run: make format-check
 
       - name: Install JavaScript dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Run JavaScript checks
         run: npm run check
@@ -93,7 +93,7 @@ jobs:
         run: "poetry config installer.only-binary :all:"
 
       - name: Install project dependencies
-        run: poetry install --no-interaction --no-ansi --no-root --with test
+        run: poetry install --no-interaction --no-ansi --no-root --with test # NOSONAR: installer.only-binary=:all: blocks source builds
 
       - name: Guard against missing model migrations
         run: poetry run python src/manage.py makemigrations --check --no-input
@@ -191,7 +191,7 @@ jobs:
         run: "poetry config installer.only-binary :all:"
 
       - name: Install test dependencies
-        run: poetry install --no-interaction --no-ansi --no-root --with test
+        run: poetry install --no-interaction --no-ansi --no-root --with test # NOSONAR: installer.only-binary=:all: blocks source builds
 
       - name: Test concurrent staged-upload quota
         run: >-
