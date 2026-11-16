@@ -27,6 +27,10 @@ CI and the production Docker build configure Poetry with `installer.only-binary 
 
 If SonarCloud reports `docker:S8541` on the Dockerfile's `poetry install` despite these controls, review it as a false positive for source-build execution: Poetry is explicitly restricted to compatible wheels and fails instead of running source build scripts. Keep the wheel-only setting in place; reassess the finding if the install policy changes.
 
+The November 15 SonarCloud `githubactions:S8541` findings (`AaGvJIrdlEjyCxiSRzW9` and `AaGvJIrdlEjyCxiSRzXA`) predate the wheel-only policy. The earlier `installer.no-binary = false` setting merely permits wheels; it does not prevent fallback to source builds. The CI jobs now require wheels, use `--no-root`, and the lockfile contains only registry dependencies with SHA-256 hashes and wheels. The dependency security test guards those lockfile assumptions because direct Git, URL, or path dependencies may bypass the wheel-only policy. Wheel availability in the lockfile does not guarantee compatibility with every CI platform: the install must still succeed on each platform.
+
+If SonarCloud still reports these CI findings after a fresh scan, review them as potential false positives against the current workflow and lockfile rather than assuming the earlier scan reflects the current policy. This does not certify the contents of the wheels or Poetry's own dependencies; the policy specifically prevents source-distribution build scripts.
+
 If a future dependency lacks a compatible wheel, replace it or explicitly review and document an exception; do not silently disable the wheel-only policy.
 
 ## Makefile targets
