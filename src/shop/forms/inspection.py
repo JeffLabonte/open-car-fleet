@@ -1,6 +1,5 @@
 import re
 from typing import Any
-from urllib.parse import urlparse
 
 from django import forms
 from django.contrib.auth import get_user_model
@@ -14,6 +13,7 @@ from shop.models.car import Car
 from shop.models.fleet import Fleet, FleetMembership
 from shop.models.inspection import Inspection
 from shop.models.inspection_point import InspectionPoint
+from shop.validators import validate_external_link
 
 
 class InspectionForm(StagedAttachmentsMixin, forms.ModelForm):
@@ -99,11 +99,7 @@ class InspectionForm(StagedAttachmentsMixin, forms.ModelForm):
     def clean_external_links(self) -> list[str]:
         raw = self.cleaned_data.get("external_links", "")
         links = [item.strip() for item in raw.splitlines() if item.strip()]
-        for link in links:
-            parsed = urlparse(link)
-            if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-                raise forms.ValidationError(_("External links must use HTTP or HTTPS."))
-        return links
+        return [validate_external_link(link) for link in links]
 
 
 class InspectionPointForm(forms.ModelForm):

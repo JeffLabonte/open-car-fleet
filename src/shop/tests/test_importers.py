@@ -57,8 +57,8 @@ class CSVImporterTests(ShopTestCase):
                     "car": str(car.pk),
                     "job_name": "Brake service",
                     "date_done": "2026-08-01",
-                    "documents": "invoice.pdf\nchecklist.pdf",
-                    "photos": "before.jpg\nafter.jpg",
+                    "documents": "https://example.com/invoice.pdf\nhttps://example.com/checklist.pdf",
+                    "photos": "https://example.com/before.jpg\nhttps://example.com/after.jpg",
                     "mileage": "12345",
                 }
             ],
@@ -81,7 +81,7 @@ class CSVImporterTests(ShopTestCase):
         )
         self.assertEqual(document_links, ["invoice.pdf", "checklist.pdf"])
         self.assertEqual(photo_links, ["before.jpg", "after.jpg"])
-        self.assertEqual(Attachment.objects.filter(url__gt="").count(), 0)
+        self.assertEqual(Attachment.objects.filter(url__gt="").count(), 4)
 
     def test_report_import_maps_url_values_to_external_links(self):
         car = Car.objects.create(fleet=self.fleet, make="Honda", model="Fit", vin="JHMGE88478S012345")
@@ -123,7 +123,29 @@ class CSVImporterTests(ShopTestCase):
         )
 
         self.assertTrue(result.has_errors)
-        self.assertIn("Entries must be URLs", result.errors[0].message)
+        self.assertIn("HTTP or HTTPS", result.errors[0].message)
+
+    def test_report_import_rejects_non_http_or_hostless_attachment_links(self):
+        car = Car.objects.create(fleet=self.fleet, make="Honda", model="Fit", vin="JHMGE88478S012347")
+
+        for link in ("ftp://example.com/file.pdf", "https:///missing-host.pdf"):
+            with self.subTest(link=link):
+                result = self.importer.import_records(
+                    Report,
+                    [
+                        {
+                            "car": str(car.pk),
+                            "job_name": "Invalid external link",
+                            "date_done": "2026-08-03",
+                            "documents": link,
+                        }
+                    ],
+                    context=ImportContext(fleet=self.fleet),
+                    dry_run=True,
+                )
+
+                self.assertTrue(result.has_errors)
+                self.assertIn("HTTP or HTTPS", result.errors[0].message)
 
     def test_workjob_import_rejects_unknown_car(self):
         result = self.importer.import_records(

@@ -21,6 +21,12 @@ This runs `scripts/install-prereqs.sh`, which supports:
 
 If you already have Python, Poetry, and Docker installed, you can skip this step.
 
+## Dependency installation security
+
+CI and the production Docker build configure Poetry with `installer.only-binary = ":all:"` before installing dependencies. This fails closed if any locked dependency has no compatible wheel, rather than executing package build scripts from a source distribution. Poetry itself is also installed by pip with `--only-binary :all:`, and dependency versions and hashes are recorded in `poetry.lock`.
+
+If a future dependency lacks a compatible wheel, replace it or explicitly review and document an exception; do not silently disable the wheel-only policy.
+
 ## Makefile targets
 
 Use the Makefile to install dependencies, run migrations, start the app, and run tests:
@@ -79,6 +85,7 @@ Troubleshooting:
 | `make test-bdd` | pytest-bdd scenarios in `tests/bdd`. |
 | `make test-coverage` | Unit suite with branch coverage for `src/shop`, `src/car_docs`, `src/settings`. |
 | `make test-e2e` | Selenium (headless Firefox) end-to-end suite against a live dev server. |
+| `make js-check` | First-party JavaScript lint and focused Node.js tests (requires Node.js >=20.19 and npm). |
 
 Focused runs:
 

@@ -11,6 +11,7 @@ ENV/
 .env
 *.env
 *.venv
+node_modules/
 pip-log.txt
 pip-delete-this-directory.txt
 htmlcov/

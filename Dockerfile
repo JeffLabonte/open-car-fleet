@@ -21,7 +21,7 @@ COPY pyproject.toml poetry.lock /app/
 # Install dependencies with Poetry in a virtual environment.
 RUN pip install --no-cache-dir --only-binary :all: poetry==2.5.1 \
     && poetry config virtualenvs.create false \
-    && poetry config installer.no-binary false \
+    && poetry config installer.only-binary :all: \
     && poetry install --no-root --no-interaction --no-ansi
 
 # Copy application code.
@@ -29,7 +29,7 @@ COPY . /app/
 
 # Collect static files for production.
 # Static collection uses build-only settings and never needs runtime credentials.
-RUN SECRETS_BACKEND=environment DJANGO_TRUSTED_PROXY=True DJANGO_SECRET_KEY=build-only-secret \
+RUN SECRETS_BACKEND=environment DEBUG=True DJANGO_TRUSTED_PROXY=True DJANGO_SECRET_KEY=build-only-secret \
     python src/manage.py collectstatic --noinput
 
 # Use a lean runtime image.

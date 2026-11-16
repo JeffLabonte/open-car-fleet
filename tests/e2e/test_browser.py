@@ -7,6 +7,10 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 
+from shop.auth import sync_hanko_user
+from shop.models import Car, Fleet, FleetMembership
+from tests.e2e.conftest import sign_in_with_test_session
+
 
 @pytest.fixture
 def firefox_driver() -> Iterator[webdriver.Firefox]:
@@ -42,3 +46,44 @@ def test_login_page_renders_in_firefox(firefox_driver: webdriver.Firefox) -> Non
     headings = [element.text for element in firefox_driver.find_elements(By.TAG_NAME, "h1")]
     assert "Sign in" in headings
     assert "Authentication is not configured" in firefox_driver.find_element(By.ID, "hanko-auth-container").text
+
+
+def test_car_list_actions_fit_phone_viewports(firefox_driver: webdriver.Firefox, django_db_blocker) -> None:
+    email = "responsive-owner@example.com"
+    with django_db_blocker.unblock():
+        owner = sync_hanko_user(
+            hanko_id=f"e2e-{email}",
+            email=email,
+            username="responsive-owner",
+            provider="local",
+        )
+        fleet = Fleet.objects.create(name="Responsive Fleet", created_by=owner)
+        FleetMembership.objects.create(fleet=fleet, user=owner, role=FleetMembership.ROLE_OWNER)
+        Car.objects.create(fleet=fleet, make="Honda", model="Fit", vin="1HGBH41JXMN109186")
+    sign_in_with_test_session(firefox_driver, email, next_url="/cars/")
+
+    for width in (320, 375):
+        firefox_driver.set_window_size(width, 800)
+        firefox_driver.get(f"{_base_url()}/cars/")
+        metrics = firefox_driver.execute_script(
+            """
+            const form = document.querySelector('.page-actions--car-list .car-search-form');
+            const input = form.querySelector('#car-search');
+            const button = form.querySelector('button[type="submit"]');
+            const add = document.querySelector('.page-actions--car-list a.button');
+            return {
+              viewportWidth: document.documentElement.clientWidth,
+              documentWidth: document.documentElement.scrollWidth,
+              inputWidth: input.getBoundingClientRect().width,
+              inputTop: input.getBoundingClientRect().top,
+              buttonTop: button.getBoundingClientRect().top,
+              formBottom: form.getBoundingClientRect().bottom,
+              addTop: add.getBoundingClientRect().top
+            };
+            """
+        )
+
+        assert metrics["documentWidth"] <= metrics["viewportWidth"]
+        assert metrics["inputWidth"] >= 120
+        assert abs(metrics["inputTop"] - metrics["buttonTop"]) < 2
+        assert metrics["addTop"] >= metrics["formBottom"]

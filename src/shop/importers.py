@@ -18,12 +18,11 @@ from shop.models.job import WorkJob
 from shop.models.report import Report
 from shop.services import update_car_odometer_from_report
 from shop.validators import (
+    validate_external_link,
     validate_license_plate,
     validate_single_assignment,
     validate_vin,
 )
-
-UNSAFE_URL_SCHEMES = {"javascript", "data", "vbscript", "blob", "file"}
 
 
 class ImportValidationError(Exception):
@@ -574,13 +573,11 @@ class CSVImporter:
         )
 
     def _validate_link_list(self, items: list[str]) -> list[str]:
-        """Reject URL schemes that could execute script if rendered as links."""
-        for item in items:
-            if urlparse(item).scheme.lower() in UNSAFE_URL_SCHEMES:
-                raise ImportValidationError(
-                    _("Entries must be URLs (http/https) or plain paths: %(value)s") % {"value": item}
-                )
-        return items
+        """Validate imported external links with the same policy as interactive forms."""
+        try:
+            return [validate_external_link(item) for item in items]
+        except ValidationError as exc:
+            raise ImportValidationError(exc.messages[0]) from exc
 
     def _normalize_vin(self, value: Any) -> str | None:
         cleaned = self._clean_optional_text(value)

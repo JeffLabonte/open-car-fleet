@@ -1,11 +1,11 @@
 from typing import Any
-from urllib.parse import urlparse
 
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
 from shop.forms.base import AssignedToShopFormMixin, AttachmentField, MultipleFileInput, StagedAttachmentsMixin
 from shop.models.report import Report
+from shop.validators import validate_external_link
 
 
 class ReportForm(AssignedToShopFormMixin, StagedAttachmentsMixin, forms.ModelForm):
@@ -88,8 +88,4 @@ class ReportForm(AssignedToShopFormMixin, StagedAttachmentsMixin, forms.ModelFor
     def clean_external_links(self) -> list[str]:
         raw = self.cleaned_data.get("external_links", "")
         links = [item.strip() for item in raw.splitlines() if item.strip()]
-        for link in links:
-            parsed = urlparse(link)
-            if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-                raise forms.ValidationError(_("External links must use HTTP or HTTPS."))
-        return links
+        return [validate_external_link(link) for link in links]

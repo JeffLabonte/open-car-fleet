@@ -176,14 +176,31 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_HSTS_SECONDS > 0
 SECURE_HSTS_PRELOAD = SECURE_HSTS_SECONDS > 0
 X_FRAME_OPTIONS = "DENY"
 
+RATELIMIT_CACHE_URL = _env("RATELIMIT_CACHE_URL", "").strip()
+if DEBUG:
+    ratelimit_cache = {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "open-car-fleet-ratelimits",
+    }
+else:
+    if not RATELIMIT_CACHE_URL:
+        raise ImproperlyConfigured("RATELIMIT_CACHE_URL must be set when DEBUG=False.")
+    ratelimit_cache = {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": RATELIMIT_CACHE_URL,
+    }
+
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-    }
+    },
+    "ratelimit": ratelimit_cache,
 }
 
 # Return 429 Too Many Requests instead of the default 403 when a limit is hit.
 RATELIMIT_VIEW = "django_ratelimit.views.ratelimited_error"
+RATELIMIT_USE_CACHE = "ratelimit"
+RATELIMIT_FAIL_OPEN = False
 
 
 # Application definition

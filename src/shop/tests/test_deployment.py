@@ -34,6 +34,27 @@ class TestDeploymentHardening(TestCase):
         self.assertIn("$(DEV_DJANGO_ENV) $(PYTHON) src/manage.py migrate", text)
         self.assertIn("$(DEV_DJANGO_ENV) $(PYTHON) src/manage.py runserver", text)
 
+    def test_production_requires_rate_limit_cache_url(self):
+        env = os.environ.copy()
+        env.update(
+            {
+                "DEBUG": "False",
+                "DJANGO_SECRET_KEY": "test-production-cache-key",
+                "RATELIMIT_CACHE_URL": "",
+                "SECURE_SSL_REDIRECT": "False",
+            }
+        )
+        result = subprocess.run(
+            ["python", "-c", "import settings.settings"],
+            cwd=str(REPO_ROOT / "src"),
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("RATELIMIT_CACHE_URL must be set", result.stderr)
+
     def test_ansible_cfg_does_not_disable_host_key_checking(self):
         cfg = REPO_ROOT / "ansible" / "ansible.cfg"
         self.assertTrue(cfg.exists())
@@ -210,6 +231,7 @@ class TestDeploymentHardening(TestCase):
             {
                 "DEBUG": "False",
                 "DJANGO_SECRET_KEY": "test-production-logging-key",
+                "RATELIMIT_CACHE_URL": "redis://cache:6379/0",
                 "SECURE_SSL_REDIRECT": "False",
             }
         )
@@ -332,6 +354,7 @@ with patch(
             {
                 "DEBUG": "False",
                 "SECURE_SSL_REDIRECT": "False",
+                "RATELIMIT_CACHE_URL": "redis://cache:6379/0",
                 "SECRETS_BACKEND": "vault",
                 "VAULT_ADDR": "https://vault.example.com",
                 "VAULT_ROLE_ID": "role-id",

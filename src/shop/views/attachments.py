@@ -2,7 +2,9 @@ import mimetypes
 import os
 from typing import Any
 
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.http import FileResponse, Http404, HttpRequest, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
@@ -19,7 +21,6 @@ from shop.models.report import Report
 from shop.services.attachments import (
     ATTACHMENT_USER_STAGED_QUOTA_BYTES,
     INLINE_SAFE_ATTACHMENT_TYPES,
-    purge_stale_staged_attachments,
 )
 from shop.view_helpers import (
     user_cars_queryset,
@@ -37,7 +38,6 @@ def attachment_upload(request: HttpRequest) -> JsonResponse:
     path (size, extension, content type, magic bytes). It becomes a real
     attachment only when the parent form claims it by ID.
     """
-    purge_stale_staged_attachments()
     upload = request.FILES.get("file")
     if upload is None:
         return JsonResponse({"error": _("No file was uploaded.")}, status=400)
@@ -46,28 +46,30 @@ def attachment_upload(request: HttpRequest) -> JsonResponse:
     except ValidationError as exc:
         return JsonResponse({"error": exc.messages[0]}, status=400)
 
-    staged_bytes = sum(
-        attachment.file.size
-        for attachment in Attachment.objects.filter(
-            uploaded_by=request.user,
-            content_type__isnull=True,
-        ).iterator()
-        if attachment.file
-    )
-    if staged_bytes + upload.size > ATTACHMENT_USER_STAGED_QUOTA_BYTES:
-        return JsonResponse(
-            {"error": _("Upload quota exceeded. Delete unused staged files or wait for them to expire.")},
-            status=413,
+    with transaction.atomic():
+        get_user_model().objects.select_for_update().get(pk=request.user.pk)
+        staged_bytes = sum(
+            attachment.file.size
+            for attachment in Attachment.objects.filter(
+                uploaded_by=request.user,
+                content_type__isnull=True,
+            ).iterator()
+            if attachment.file
         )
+        if staged_bytes + upload.size > ATTACHMENT_USER_STAGED_QUOTA_BYTES:
+            return JsonResponse(
+                {"error": _("Upload quota exceeded. Delete unused staged files or wait for them to expire.")},
+                status=413,
+            )
 
-    attachment = Attachment(
-        source_type=Attachment.SOURCE_UPLOAD,
-        uploaded_by=request.user,
-        file=upload,
-        display_name=os.path.basename(upload.name),
-        mime_type=getattr(upload, "content_type", "") or "",
-    )
-    attachment.save()
+        attachment = Attachment(
+            source_type=Attachment.SOURCE_UPLOAD,
+            uploaded_by=request.user,
+            file=upload,
+            display_name=os.path.basename(upload.name),
+            mime_type=getattr(upload, "content_type", "") or "",
+        )
+        attachment.save()
     return JsonResponse(
         {
             "id": attachment.pk,

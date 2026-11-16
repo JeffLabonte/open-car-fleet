@@ -1,5 +1,6 @@
 import { Hanko } from '../vendor/hanko/hanko-frontend-sdk.js';
 import { register } from '../vendor/hanko/hanko-elements.js';
+import { isSafeRedirectUrl } from './redirects.js';
 
 const apiUrl = JSON.parse(document.getElementById('hanko-api-url').textContent);
 const nextUrl = JSON.parse(document.getElementById('hanko-next-url').textContent);
@@ -22,38 +23,6 @@ if (loggedOut) {
     await hanko.logout();
   } catch (error) {
     console.warn('Unable to fully terminate Hanko session on logout.', error);
-  }
-}
-
-/**
- * Validate a redirect URL supplied by an untrusted source (e.g. a JSON
- * response). Only same-origin relative paths are accepted so that assigning
- * the value to window.location cannot be abused as an open redirect or
- * javascript: URL sink.
- */
-function isSafeRedirectUrl(value) {
-  if (typeof value !== 'string') {
-    return false;
-  }
-  const url = value.trim();
-  if (!url) {
-    return false;
-  }
-  // Reject protocol-relative URLs and any string that begins with a URL
-  // scheme (e.g. http:, https:, javascript:, data:).
-  if (/^\/\//.test(url) || /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(url)) {
-    return false;
-  }
-  // Require a relative path.
-  if (!url.startsWith('/')) {
-    return false;
-  }
-  // Final same-origin sanity check.
-  try {
-    const parsed = new URL(url, window.location.origin);
-    return parsed.origin === window.location.origin;
-  } catch {
-    return false;
   }
 }
 

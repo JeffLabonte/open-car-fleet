@@ -47,6 +47,7 @@
 
 .button.is-primary:active {
   background: var(--accent-active);
+  opacity: 1;
   transform: scale(0.97);
 }
 

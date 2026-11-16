@@ -97,7 +97,7 @@ h6 {
   }
 }
 
-/* Focus-visible for keyboard navigation (Apple-style blue ring) */
+/* Focus-visible for keyboard navigation */
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;

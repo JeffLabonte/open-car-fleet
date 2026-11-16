@@ -33,13 +33,10 @@
     const path = window.location.pathname;
     document.querySelectorAll('.app-navlink, .app-tab').forEach((link) => {
       const linkPath = new URL(link.href, window.location.origin).pathname;
-      let isCurrent = false;
-      if (linkPath === '/' || linkPath === '') {
-        isCurrent = path === '/' || path.startsWith('/fleets/');
-      } else {
-        const prefix = linkPath.endsWith('/') ? linkPath : `${linkPath}/`;
-        isCurrent = path === linkPath || path === prefix || path.startsWith(prefix);
-      }
+      const prefix = linkPath.endsWith('/') ? linkPath : `${linkPath}/`;
+      const isCurrent = linkPath === '/' || linkPath === ''
+        ? path === '/' || path.startsWith('/fleets/')
+        : path === linkPath || path === prefix || path.startsWith(prefix);
       if (isCurrent) {
         link.setAttribute('aria-current', 'page');
       } else {
@@ -147,4 +144,4 @@
   collapseLargeTitle();
   initFlashMessages();
   initUnsavedChangesWarning();
-})();"
+})();

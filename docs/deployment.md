@@ -81,6 +81,19 @@ The playbook installs Docker, syncs the project source, uploads the env file, bu
 >
 > **Reverse proxy:** Production deploys are behind Tailscale HTTPS. `prepare-env.sh` sets `DJANGO_TRUSTED_PROXY=True` by default so Django trusts `X-Forwarded-Proto` and `SECURE_SSL_REDIRECT` does not create a redirect loop. If you disable the proxy, set `DJANGO_TRUSTED_PROXY=False` and `SECURE_SSL_REDIRECT=False`.
 
+## Rate-limit cache and staged uploads
+
+Production Compose runs a Redis cache shared by all Gunicorn workers and sets
+`RATELIMIT_CACHE_URL=redis://cache:6379/0`. If you use an external Redis
+service, update that value in `docker-compose.prod.yml`. With `DEBUG=False`,
+Django refuses to start when `RATELIMIT_CACHE_URL` is missing; if Redis becomes
+unavailable, rate-limited requests fail closed rather than bypassing limits.
+Development and tests use a local-memory cache.
+
+Ansible schedules `purge_staged_attachments` hourly through the running web
+container. It removes unclaimed uploads after the 12-hour retention window;
+upload requests do not scan or purge the global staged-file set.
+
 ## Media
 
 Uploaded files live in a Docker named volume mounted at `/app/src/media`. During deploy, any existing `src/media/` directory on the host is archived into `/opt/backups/media` and copied into the container volume.

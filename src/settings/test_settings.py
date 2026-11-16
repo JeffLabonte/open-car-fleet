@@ -37,6 +37,16 @@ MAILERS = {
 # Disable django-ratelimit by default in tests so existing suites are not
 # throttled. Targeted tests can re-enable it with override_settings.
 RATELIMIT_ENABLE = False
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "open-car-fleet-test",
+    },
+    "ratelimit": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "open-car-fleet-test-ratelimits",
+    },
+}
 
 PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.MD5PasswordHasher",

@@ -1,11 +1,14 @@
 import io
+import threading
 from datetime import timedelta
+from unittest import skipUnless
 from unittest.mock import patch
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
-from django.test import TestCase
+from django.db import connection, connections
+from django.test import Client, TestCase, TransactionTestCase
 from django.urls import reverse
 from django.utils import timezone
 
@@ -108,7 +111,7 @@ class AttachmentStagingEndpointTests(TestCase):
         self.assertEqual(response.status_code, 413)
         self.assertIn("quota", response.json()["error"].lower())
 
-    def test_upload_opportunistically_purges_stale_staged(self):
+    def test_upload_leaves_stale_staged_files_for_scheduled_cleanup(self):
         stale = Attachment.objects.create(
             source_type=Attachment.SOURCE_UPLOAD,
             uploaded_by=self.user,
@@ -122,7 +125,8 @@ class AttachmentStagingEndpointTests(TestCase):
         response = self._upload(self.client)
 
         self.assertEqual(response.status_code, 201)
-        self.assertFalse(Attachment.objects.filter(pk=stale.pk).exists())
+        self.assertTrue(Attachment.objects.filter(pk=stale.pk).exists())
+        Attachment.objects.filter(pk=stale.pk).delete()
 
     def test_delete_staged_by_owner(self):
         self.client.force_login(self.user)
@@ -166,6 +170,51 @@ class AttachmentStagingEndpointTests(TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertTrue(Attachment.objects.filter(pk=attachment.pk).exists())
         attachment.file.delete(save=False)
+
+
+class ConcurrentStagedUploadQuotaTests(TransactionTestCase):
+    @skipUnless(connection.vendor == "postgresql", "Quota row locking is specific to PostgreSQL.")
+    @patch("shop.views.attachments.ATTACHMENT_USER_STAGED_QUOTA_BYTES", 12)
+    def test_simultaneous_uploads_cannot_exceed_user_quota(self):
+        user = ShopUser.objects.create_user(
+            username="concurrent-staging-owner",
+            email="concurrent-staging-owner@example.com",
+            password="pass1234",
+        )
+        clients = [Client(), Client()]
+        for client in clients:
+            client.force_login(user)
+
+        barrier = threading.Barrier(2)
+        responses = []
+
+        def upload(client):
+            try:
+                barrier.wait(timeout=10)
+                responses.append(
+                    client.post(
+                        reverse("shop-attachment-upload"),
+                        data={
+                            "file": SimpleUploadedFile(
+                                "photo.png",
+                                b"\x89PNG\r\n\x1a\n",
+                                content_type="image/png",
+                            )
+                        },
+                    )
+                )
+            finally:
+                connections.close_all()
+
+        threads = [threading.Thread(target=upload, args=(client,)) for client in clients]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=20)
+
+        self.assertTrue(all(not thread.is_alive() for thread in threads))
+        self.assertCountEqual([response.status_code for response in responses], [201, 413])
+        Attachment.objects.filter(uploaded_by=user).delete()
 
 
 class StagedAttachmentClaimTests(TestCase):

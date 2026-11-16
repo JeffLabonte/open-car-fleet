@@ -81,7 +81,7 @@
       const data = await response.json();
       setCarOptions(data.cars, selectedPk);
       updateFormAction();
-    } catch (error) {
+    } catch {
       carSelect.innerHTML = '';
       const option = document.createElement('option');
       option.value = '';

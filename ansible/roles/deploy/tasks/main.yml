@@ -56,6 +56,14 @@
       - web
     state: present
 
+- name: Schedule stale staged attachment cleanup
+  ansible.builtin.cron:
+    name: Open Car Fleet - staged attachment cleanup
+    minute: "17"
+    hour: "*"
+    user: root
+    job: "cd {{ app_dir }} && docker compose -f docker-compose.prod.yml exec -T web python /app/src/manage.py purge_staged_attachments >> /var/log/open-car-fleet-maintenance.log 2>&1"
+
 - name: Check for existing host media files
   ansible.builtin.find:
     paths: "{{ app_dir }}/src/media"

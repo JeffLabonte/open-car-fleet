@@ -71,15 +71,17 @@ class ReportAttachmentTests(TestCase):
         self.assertIn("https://drive.google.com/file/d/123/view", attachment_urls)
 
     def test_report_form_rejects_unsafe_links_and_upload_types(self):
-        unsafe_link_form = ReportForm(
-            data={
-                "job_name": "Unsafe link",
-                "date_done": "2026-08-10",
-                "external_links": "javascript:alert(1)",
-            }
-        )
-        self.assertFalse(unsafe_link_form.is_valid())
-        self.assertIn("external_links", unsafe_link_form.errors)
+        for link in ("javascript:alert(1)", "ftp://example.com/file.pdf", "https:///missing-host.pdf"):
+            with self.subTest(link=link):
+                unsafe_link_form = ReportForm(
+                    data={
+                        "job_name": "Unsafe link",
+                        "date_done": "2026-08-10",
+                        "external_links": link,
+                    }
+                )
+                self.assertFalse(unsafe_link_form.is_valid())
+                self.assertIn("external_links", unsafe_link_form.errors)
 
         unsafe_file_form = ReportForm(
             data={

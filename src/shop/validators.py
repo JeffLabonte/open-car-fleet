@@ -1,5 +1,6 @@
 import re
 from typing import Any
+from urllib.parse import urlparse
 
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
@@ -64,3 +65,18 @@ def validate_license_plate(value: str | None) -> str:
         raise ValidationError(_("License plate contains invalid characters."))
 
     return plate
+
+
+def validate_external_link(value: str) -> str:
+    """Require a well-formed HTTP(S) URL with a host."""
+    link = value.strip()
+    try:
+        parsed = urlparse(link)
+        hostname = parsed.hostname
+        parsed.port
+    except ValueError as exc:
+        raise ValidationError(_("External links must use HTTP or HTTPS.")) from exc
+
+    if parsed.scheme.lower() not in {"http", "https"} or not hostname:
+        raise ValidationError(_("External links must use HTTP or HTTPS."))
+    return link

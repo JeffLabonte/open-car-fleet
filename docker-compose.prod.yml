@@ -14,6 +14,19 @@ services:
       retries: 20
       start_period: 5s
 
+  cache:
+    image: docker.io/library/redis:7-alpine
+    command: ['redis-server', '--appendonly', 'yes']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks:
+      - open-car-fleet-network
+    volumes:
+      - cache_data:/data
+
   web:
     build:
       context: .
@@ -23,10 +36,14 @@ services:
     environment:
       - PYTHONPATH=/app/src
       - DJANGO_STATIC_ROOT=/staticfiles
+      - RATELIMIT_CACHE_URL=redis://cache:6379/0
     env_file:
       - ./src/.env
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
     ports:
       - '8000:8000'
     volumes:
@@ -38,6 +55,7 @@ services:
 volumes:
   postgres_data:
   media_volume:
+  cache_data:
 
 networks:
   # No explicit driver so this works with Docker (defaults to bridge)

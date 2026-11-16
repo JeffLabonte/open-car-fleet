@@ -39,7 +39,6 @@
 
   const storageKey = [STORAGE_KEY_PREFIX, userPk, carPk, inspectionPk].join(":");
   let saveTimeout = null;
-  let hasPendingChanges = false;
   let isRestoring = false;
 
   function getCsrfToken() {
@@ -189,7 +188,6 @@
     window.setTimeout(() => {
       isRestoring = false;
       writeLocalDraft();
-      hasPendingChanges = false;
       setStatus("Restored from this device", false);
     }, 0);
   }
@@ -231,7 +229,6 @@
     if (!isFormDifferentFromEntry(entry)) {
       // Already matches the server-rendered form; mark clean but keep the
       // backup in case the user refreshes later.
-      hasPendingChanges = false;
       return;
     }
     showRestoreBanner(entry);
@@ -239,7 +236,6 @@
 
   function performAutosave() {
     if (!form) return;
-    hasPendingChanges = false;
 
     const data = new FormData(form);
     data.append("action", "save_draft");
@@ -292,7 +288,6 @@
 
   function scheduleAutosave() {
     if (isRestoring) return;
-    hasPendingChanges = true;
     writeLocalDraft();
 
     if (saveTimeout) {

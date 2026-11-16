@@ -1,15 +1,17 @@
 # Branding colors
 
-The UI uses logo-inspired accent colors defined in the base template.
+The app uses the logo-inspired red palette for links, primary actions, focus
+indicators, and selected states. Theme tokens are defined in
+`src/shop/static/shop/css/tokens.css`:
 
-- Light theme primary logo color: `#b72a3c`
-- Light theme strong logo color: `#8f1f2f`
-- Dark theme primary logo color: `#de4a5c`
-- Dark theme strong logo color: `#f06a79`
+| Token | Light | Dark |
+| --- | --- | --- |
+| `--accent` | `#b72a3c` | `#ff7d8a` |
+| `--accent-hover` | `#8f1f2f` | `#ff9aa3` |
+| `--accent-active` | `#711725` | `#ffadb6` |
+| `--on-accent` | `#ffffff` | `#000000` |
+| `--focus-ring` | `#b72a3c` | `#ff7d8a` |
 
-These values are configured as CSS variables in `src/shop/templates/shop/index.html`:
-- `--logo-color`
-- `--logo-color-strong`
-- `--logo-color-soft`
-
-The app accent variables (`--accent-color`, `--accent-strong`, `--accent-soft`) map to those logo variables so links, buttons, and highlights follow the same brand palette.
+The darker light-theme reds and brighter dark-theme reds preserve contrast on
+their respective surfaces. Focused checks verify WCAG AA text contrast for
+accents and primary-button text, plus 3:1 contrast for focus indicators.
