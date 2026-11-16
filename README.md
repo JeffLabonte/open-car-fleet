@@ -29,6 +29,7 @@ Then install project dependencies and run the app:
 make install   # poetry install --no-root --with test
 make run       # starts Postgres (docker compose), migrates, runs the dev server
 make test      # unit suite (SQLite, no Docker needed)
+make js-check  # lint first-party JavaScript and run focused Node tests
 ```
 
 The dev server listens on `127.0.0.1:8000`; override with `make run HOST=0.0.0.0 PORT=8080`.
