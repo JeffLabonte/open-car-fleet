@@ -79,6 +79,7 @@ def test_car_list_actions_fit_phone_viewports(firefox_driver: webdriver.Firefox,
         )
         WebDriverWait(firefox_driver, 10).until(EC.frame_to_be_available_and_switch_to_it((By.ID, "phone-viewport")))
         WebDriverWait(firefox_driver, 10).until(EC.presence_of_element_located((By.ID, "car-search")))
+        assert firefox_driver.find_element(By.ID, "car-search").accessible_name == "Search cars"
         metrics = firefox_driver.execute_script(
             """
             const form = document.querySelector('.page-actions--car-list .car-search-form');
@@ -93,6 +94,8 @@ def test_car_list_actions_fit_phone_viewports(firefox_driver: webdriver.Firefox,
               viewportWidth: document.documentElement.clientWidth,
               documentWidth: document.documentElement.scrollWidth,
               inputWidth: inputRect.width,
+              inputLeft: inputRect.left,
+              formLeft: form.getBoundingClientRect().left,
               inputTop: inputRect.top,
               inputRight: inputRect.right,
               buttonTop: buttonRect.top,
@@ -111,7 +114,8 @@ def test_car_list_actions_fit_phone_viewports(firefox_driver: webdriver.Firefox,
 
         assert metrics["innerWidth"] == width
         assert metrics["documentWidth"] <= metrics["viewportWidth"]
-        assert metrics["inputWidth"] >= 120
+        assert metrics["inputWidth"] >= 160
+        assert abs(metrics["inputLeft"] - metrics["formLeft"]) < 2
         assert abs(metrics["inputTop"] - metrics["buttonTop"]) < 2
         assert metrics["inputRight"] <= metrics["buttonLeft"]
         assert metrics["buttonRight"] <= metrics["viewportWidth"]
