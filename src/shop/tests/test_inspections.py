@@ -66,6 +66,7 @@ class InspectionModelAndFormTests(ShopTestCase):
             "ftp://example.com/file.pdf",
             "https:///missing-host.pdf",
             "http://bad host/file.pdf",
+            "http://example.com/file.pdf",
         ):
             with self.subTest(link=link):
                 form = InspectionForm(
@@ -81,13 +82,13 @@ class InspectionModelAndFormTests(ShopTestCase):
                 self.assertFalse(form.is_valid())
                 self.assertIn("external_links", form.errors)
 
-    def test_inspection_form_accepts_http_and_https_external_links(self):
+    def test_inspection_form_accepts_https_external_links(self):
         form = InspectionForm(
             data={
                 "inspected_at": "2026-10-20T14:30",
                 "mileage": "12345",
                 "notes": "Notes",
-                "external_links": "http://example.com/report.pdf\nhttps://example.com/checklist.pdf",
+                "external_links": "https://example.com/report.pdf\nhttps://example.com/checklist.pdf",
             },
             user=self.owner,
         )
@@ -95,7 +96,7 @@ class InspectionModelAndFormTests(ShopTestCase):
         self.assertTrue(form.is_valid(), form.errors)
         self.assertEqual(
             form.cleaned_data["external_links"],
-            ["http://example.com/report.pdf", "https://example.com/checklist.pdf"],
+            ["https://example.com/report.pdf", "https://example.com/checklist.pdf"],
         )
 
     def test_unsaved_inspection_has_empty_status_counts(self):

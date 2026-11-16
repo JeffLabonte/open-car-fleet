@@ -69,16 +69,16 @@ def validate_license_plate(value: str | None) -> str:
 
 
 def validate_external_link(value: str) -> str:
-    """Require a well-formed HTTP(S) URL with a host."""
+    """Require a well-formed HTTPS URL with a host."""
     link = value.strip()
     try:
         parsed = urlparse(link)
         hostname = parsed.hostname
         parsed.port
-        URLValidator(schemes=["http", "https"])(link)
+        URLValidator(schemes=["https"])(link)
     except (ValidationError, ValueError) as exc:
-        raise ValidationError(_("External links must use HTTP or HTTPS.")) from exc
+        raise ValidationError(_("External links must use HTTPS.")) from exc
 
-    if parsed.scheme.lower() not in {"http", "https"} or not hostname:
-        raise ValidationError(_("External links must use HTTP or HTTPS."))
+    if parsed.scheme.lower() != "https" or not hostname:
+        raise ValidationError(_("External links must use HTTPS."))
     return link

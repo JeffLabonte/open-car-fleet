@@ -78,6 +78,7 @@ class ReportAttachmentTests(TestCase):
             "ftp://example.com/file.pdf",
             "https:///missing-host.pdf",
             "http://bad host/file.pdf",
+            "http://example.com/file.pdf",
         ):
             with self.subTest(link=link):
                 unsafe_link_form = ReportForm(
@@ -106,19 +107,19 @@ class ReportAttachmentTests(TestCase):
         self.assertFalse(unsafe_file_form.is_valid())
         self.assertIn("attachments", unsafe_file_form.errors)
 
-    def test_report_form_accepts_http_and_https_external_links(self):
+    def test_report_form_accepts_https_external_links(self):
         form = ReportForm(
             data={
                 "job_name": "Valid links",
                 "date_done": "2026-08-10",
-                "external_links": "http://example.com/invoice.pdf\nhttps://example.com/checklist.pdf",
+                "external_links": "https://example.com/invoice.pdf\nhttps://example.com/checklist.pdf",
             }
         )
 
         self.assertTrue(form.is_valid(), form.errors)
         self.assertEqual(
             form.cleaned_data["external_links"],
-            ["http://example.com/invoice.pdf", "https://example.com/checklist.pdf"],
+            ["https://example.com/invoice.pdf", "https://example.com/checklist.pdf"],
         )
 
     def test_attachment_service_rejects_invalid_external_links_before_persisting(self):
@@ -129,7 +130,7 @@ class ReportAttachmentTests(TestCase):
         )
 
         with self.assertRaises(ValidationError):
-            save_attachments(report, [], ["https://example.com/valid", "http://bad host"])
+            save_attachments(report, [], ["https://example.com/valid", "http://example.com/invalid"])
 
         self.assertEqual(report.attachments.count(), 0)
 
