@@ -1,3 +1,5 @@
+import { buildFleetCarsUrl, isSafeCarPk } from './inspection_wizard_helpers.js';
+
 (() => {
   const form = document.getElementById('inspection-wizard-form');
   if (!form) return;
@@ -10,11 +12,6 @@
   const noCarsLabel = form.dataset.noCarsLabel || 'No vehicles available in this fleet';
   const selectFleetLabel = form.dataset.selectFleetLabel || 'Select a fleet first';
   const placeholderUuid = '00000000-0000-0000-0000-000000000000';
-
-  const isSafeCarPk = (value) => {
-    // Accept UUIDs (current template placeholder format) or numeric IDs.
-    return /^[0-9a-fA-F-]{36}$/.test(value) || /^\d+$/.test(value);
-  };
 
   const setCarOptions = (cars, selectedPk) => {
     carSelect.innerHTML = '';
@@ -74,7 +71,7 @@
     const selectedPk = preserveSelection ? carSelect.value : '';
 
     try {
-      const response = await fetch(`${carsUrl}?fleet=${encodeURIComponent(fleetPk)}`, {
+      const response = await fetch(buildFleetCarsUrl(carsUrl, fleetPk), {
         headers: { Accept: 'application/json' },
       });
       if (!response.ok) throw new Error('Failed to load vehicles');
