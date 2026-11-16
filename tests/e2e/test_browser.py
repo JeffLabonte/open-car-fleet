@@ -79,6 +79,9 @@ def test_car_list_actions_fit_phone_viewports(firefox_driver: webdriver.Firefox,
         )
         WebDriverWait(firefox_driver, 10).until(EC.frame_to_be_available_and_switch_to_it((By.ID, "phone-viewport")))
         WebDriverWait(firefox_driver, 10).until(EC.presence_of_element_located((By.ID, "car-search")))
+        WebDriverWait(firefox_driver, 10).until(
+            lambda driver: driver.execute_script("return document.readyState === 'complete'")
+        )
         assert firefox_driver.find_element(By.ID, "car-search").accessible_name == "Search cars"
         metrics = firefox_driver.execute_script(
             """
