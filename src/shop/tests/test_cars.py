@@ -1,11 +1,16 @@
+from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 from django.urls import reverse
 
+from car_docs.models import CarDoc
 from shop.forms import CarCreateForm
 from shop.importers import CSVImporter, ImportContext
+from shop.models.attachment import Attachment
 from shop.models.car import Car, CarPart
 from shop.models.fleet import Fleet, FleetMembership
+from shop.models.inspection import Inspection
 from shop.models.job import WorkJob
+from shop.models.report import Report
 from shop.models.user import ShopUser
 
 
@@ -197,3 +202,59 @@ class ColourFieldTests(TestCase):
         self.assertIn("Done job", content)
         self.assertIn("Cancelled job", content)
         self.assertIn("Hide done/cancelled", content)
+
+
+class CarActivityTimestampTests(TestCase):
+    def setUp(self) -> None:
+        self.fleet = Fleet.objects.create(name="Activity Fleet")
+        self.car = Car.objects.create(
+            fleet=self.fleet,
+            make="Toyota",
+            model="Yaris",
+            vin="JTDKB20U793512351",
+        )
+
+    def test_related_activity_updates_car_last_updated_timestamp(self):
+        initial_updated_at = self.car.updated_at
+
+        document = CarDoc.objects.create(car=self.car, title="Service history")
+        self.car.refresh_from_db()
+        self.assertGreaterEqual(self.car.updated_at, document.updated_at)
+        self.assertGreater(self.car.updated_at, initial_updated_at)
+
+        work_job = WorkJob.objects.create(car=self.car, title="Replace brake pads")
+        self.car.refresh_from_db()
+        self.assertGreaterEqual(self.car.updated_at, work_job.created_at)
+
+        report = Report.objects.create(
+            car=self.car,
+            job_name="Brake service",
+            date_done="2026-11-16",
+        )
+        self.car.refresh_from_db()
+        self.assertGreaterEqual(self.car.updated_at, report.created_at)
+
+        inspection = Inspection.objects.create(car=self.car, is_draft=False)
+        self.car.refresh_from_db()
+        self.assertGreaterEqual(self.car.updated_at, inspection.updated_at)
+
+    def test_file_activity_updates_car_last_updated_timestamp(self):
+        document = CarDoc.objects.create(car=self.car, title="Insurance")
+        self.car.refresh_from_db()
+        before_attachment = self.car.updated_at
+        attachment = Attachment.objects.create(
+            content_type=ContentType.objects.get_for_model(document),
+            object_id=str(document.pk),
+            source_type=Attachment.SOURCE_EXTERNAL,
+            kind=Attachment.KIND_LINK,
+            url="https://example.com/insurance",
+            display_name="Insurance policy",
+        )
+
+        self.car.refresh_from_db()
+        self.assertGreater(self.car.updated_at, before_attachment)
+
+        before_delete = self.car.updated_at
+        attachment.delete()
+        self.car.refresh_from_db()
+        self.assertGreater(self.car.updated_at, before_delete)
