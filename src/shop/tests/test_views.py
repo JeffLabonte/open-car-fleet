@@ -159,10 +159,12 @@ class AdditionalCoverageRegressionTests(TestCase):
                 "year": "2024",
                 "vin": "JM1NDAB77P0112345",
                 "license_plate": "ABC 123",
+                "mileage": "42000",
             },
         )
         self.assertEqual(create_response.status_code, 302)
         created_car = Car.objects.get(vin="JM1NDAB77P0112345")
+        self.assertEqual(created_car.mileage, 42000)
 
         update_response = self.client.post(
             reverse("shop-car-update", args=[created_car.pk]),
@@ -175,11 +177,13 @@ class AdditionalCoverageRegressionTests(TestCase):
                 "year": "2024",
                 "vin": "JM1NDAB77P0112345",
                 "license_plate": "XYZ 999",
+                "mileage": "43500",
             },
         )
         self.assertEqual(update_response.status_code, 302)
         created_car.refresh_from_db()
         self.assertEqual(created_car.usual_name, "Roadster Updated")
+        self.assertEqual(created_car.mileage, 43500)
 
         part_response = self.client.post(
             reverse("shop-part-create", args=[created_car.pk]),

@@ -161,6 +161,29 @@ class ColourFieldTests(TestCase):
         self.assertIn(b"<dt>Colour</dt>", response.content)
         self.assertIn(b"Noir", response.content)
 
+    def test_car_detail_prioritizes_summary_and_collapses_secondary_sections(self):
+        self.client.force_login(self.user)
+        car = Car.objects.create(
+            fleet=self.fleet,
+            make="Toyota",
+            model="Yaris",
+            vin="JTDKB20U793512350",
+        )
+
+        response = self.client.get(reverse("shop-car-detail", args=[car.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn('data-testid="car-summary"', content)
+        self.assertIn("Tracked parts", content)
+        self.assertIn('id="inspection-history-section"', content)
+        self.assertIn('id="parts-section"', content)
+        self.assertIn('id="work-jobs-section"', content)
+        self.assertIn('id="reports-section"', content)
+        self.assertIn('id="related-cars-section"', content)
+        self.assertNotIn('id="inspection-history-section" open', content)
+        self.assertNotIn('id="parts-section" open', content)
+
     def test_car_detail_hides_done_and_cancelled_work_jobs_by_default(self):
         self.client.force_login(self.user)
         car = Car.objects.create(

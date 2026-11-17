@@ -7,7 +7,7 @@
 
 {% block content %}
   {% include 'shop/partials/_breadcrumbs.html' with breadcrumbs=breadcrumbs %}
-  <nav class="section-nav mb-4" aria-label="{% translate 'Section navigation' %}">
+  <nav class="section-nav car-section-nav mb-4" aria-label="{% translate 'Section navigation' %}">
     <a href="#inspection-section">{% translate 'Inspection' %}</a>
     <a href="#inspection-history-section">{% translate 'History' %}</a>
     <a href="#parts-section">{% translate 'Parts' %}</a>
@@ -15,7 +15,7 @@
     <a href="#reports-section">{% translate 'Reports' %}</a>
     <a href="#related-cars-section">{% translate 'Related' %}</a>
   </nav>
-  <div class="box" data-testid="vehicle-header">
+  <div class="box vehicle-header" data-testid="vehicle-header">
     <div class="page-header mb-0">
       {% include 'shop/partials/_page_header.html' %}
       <div class="page-actions">
@@ -53,11 +53,34 @@
     </dl>
   </div>
 
+  <div class="car-summary-grid" data-testid="car-summary">
+    <div class="car-summary-card">
+      <span class="car-summary-card__label">{% translate 'Inspections' %}</span>
+      <strong class="car-summary-card__value">{{ inspection_count }}</strong>
+      <span class="car-summary-card__hint">{% translate 'completed records' %}</span>
+    </div>
+    <div class="car-summary-card">
+      <span class="car-summary-card__label">{% translate 'Tracked parts' %}</span>
+      <strong class="car-summary-card__value">{{ parts|length }}</strong>
+      <span class="car-summary-card__hint">{% translate 'items in the tracker' %}</span>
+    </div>
+    <div class="car-summary-card">
+      <span class="car-summary-card__label">{% translate 'Open work' %}</span>
+      <strong class="car-summary-card__value">{{ work_jobs|length }}</strong>
+      <span class="car-summary-card__hint">{% translate 'planned assignments' %}</span>
+    </div>
+    <div class="car-summary-card">
+      <span class="car-summary-card__label">{% translate 'Reports' %}</span>
+      <strong class="car-summary-card__value">{{ reports|length }}</strong>
+      <span class="car-summary-card__hint">{% translate 'maintenance records' %}</span>
+    </div>
+  </div>
+
   {% if can_manage_fleet %}
     {% include 'shop/partials/_confirm_delete_dialog.html' with dialog_id='dialog-car-delete' title=_('Delete this car?') message=_('This will permanently remove the vehicle and all of its parts, work jobs and reports. Vehicles with inspection history cannot be deleted.') %}
   {% endif %}
 
-  <section class="section-head" id="inspection-section" data-testid="inspection-section">
+  <section class="section-head car-section-head" id="inspection-section" data-testid="inspection-section">
     <h2 class="title is-4">{% translate 'Latest inspection' %}</h2>
     <div class="section-actions">
       {% if can_edit_fleet_data %}
@@ -144,12 +167,21 @@
     </article>
   {% endif %}
 
-  <section class="section-head" id="inspection-history-section" data-testid="inspection-history-section">
-    <h2 class="title is-4">{% translate 'Inspection history' %}</h2>
-    <div class="section-actions">
-      <a class="button is-light is-small" href="{% url 'shop-inspection-history' car.pk %}">{% translate 'View full history' %}</a>
-    </div>
-  </section>
+  <details class="car-section" id="inspection-history-section" data-expand-on-hash data-testid="inspection-history-section">
+    <summary class="car-section__summary">
+      <span>
+        <span class="car-section__eyebrow">{% translate 'Secondary records' %}</span>
+        <span class="title is-4">{% translate 'Inspection history' %}</span>
+      </span>
+      <span class="car-section__toggle">
+        <span class="car-section__toggle-closed">{% translate 'Show details' %}</span>
+        <span class="car-section__toggle-open">{% translate 'Hide details' %}</span>
+      </span>
+    </summary>
+    <div class="car-section__content">
+      <div class="section-actions">
+        <a class="button is-light is-small" href="{% url 'shop-inspection-history' car.pk %}">{% translate 'View full history' %}</a>
+      </div>
 
   {% if car_inspections %}
     <div class="table-container">
@@ -199,15 +231,26 @@
   {% else %}
     <div class="notification is-warning">{% translate 'No inspections recorded for this vehicle yet.' %}</div>
   {% endif %}
-
-  <section class="section-head" id="parts-section" data-testid="parts-section">
-    <h2 class="title is-4">{% translate 'Part status tracker' %}</h2>
-    <div class="section-actions">
-      {% if can_edit_fleet_data %}
-        <a class="button is-primary is-small" href="{% url 'shop-part-create' car.pk %}">{% translate 'Add part status' %}</a>
-      {% endif %}
     </div>
-  </section>
+  </details>
+
+  <details class="car-section" id="parts-section" data-expand-on-hash data-testid="parts-section">
+    <summary class="car-section__summary">
+      <span>
+        <span class="car-section__eyebrow">{% translate 'Inventory' %}</span>
+        <span class="title is-4">{% translate 'Part status tracker' %}</span>
+      </span>
+      <span class="car-section__toggle">
+        <span class="car-section__toggle-closed">{% translate 'Show details' %}</span>
+        <span class="car-section__toggle-open">{% translate 'Hide details' %}</span>
+      </span>
+    </summary>
+    <div class="car-section__content">
+      <div class="section-actions">
+        {% if can_edit_fleet_data %}
+          <a class="button is-primary is-small" href="{% url 'shop-part-create' car.pk %}">{% translate 'Add part status' %}</a>
+        {% endif %}
+      </div>
 
   {% if parts %}
     <div class="table-container">
@@ -259,10 +302,22 @@
   {% else %}
     <div class="notification is-warning">{% translate 'No parts tracked for this car yet.' %}</div>
   {% endif %}
+    </div>
+  </details>
 
-  <section class="section-head" id="work-jobs-section" data-testid="work-jobs-section">
-    <h2 class="title is-4">{% translate 'Planned work and assignments' %}</h2>
-    <div class="section-actions">
+  <details class="car-section" id="work-jobs-section" data-expand-on-hash data-testid="work-jobs-section">
+    <summary class="car-section__summary">
+      <span>
+        <span class="car-section__eyebrow">{% translate 'Maintenance' %}</span>
+        <span class="title is-4">{% translate 'Planned work and assignments' %}</span>
+      </span>
+      <span class="car-section__toggle">
+        <span class="car-section__toggle-closed">{% translate 'Show details' %}</span>
+        <span class="car-section__toggle-open">{% translate 'Hide details' %}</span>
+      </span>
+    </summary>
+    <div class="car-section__content">
+      <div class="section-actions">
       {% if show_done %}
         <a class="button is-light is-small" href="{% url 'shop-car-detail' car.pk %}">{% translate 'Hide done/cancelled' %}</a>
       {% else %}
@@ -277,8 +332,7 @@
           <span>{% translate 'Import work jobs' %}</span>
         </a>
       {% endif %}
-    </div>
-  </section>
+      </div>
 
   {% if work_jobs %}
     <div class="table-container">
@@ -369,10 +423,22 @@
       {% include 'shop/partials/_empty_state.html' with empty_message=_('No open planned jobs or assignments for this car. Done or cancelled items are hidden.') empty_action_url=workjob_create_url empty_action_label=_('Add planned work') %}
     {% endif %}
   {% endif %}
+    </div>
+  </details>
 
-  <section class="section-head" id="reports-section" data-testid="reports-section">
-    <h2 class="title is-4">{% translate 'Maintenance history' %}</h2>
-    <div class="section-actions">
+  <details class="car-section" id="reports-section" data-expand-on-hash data-testid="reports-section">
+    <summary class="car-section__summary">
+      <span>
+        <span class="car-section__eyebrow">{% translate 'Completed work' %}</span>
+        <span class="title is-4">{% translate 'Maintenance history' %}</span>
+      </span>
+      <span class="car-section__toggle">
+        <span class="car-section__toggle-closed">{% translate 'Show details' %}</span>
+        <span class="car-section__toggle-open">{% translate 'Hide details' %}</span>
+      </span>
+    </summary>
+    <div class="car-section__content">
+      <div class="section-actions">
       {% if can_edit_fleet_data %}
         <a class="button is-info is-small" href="{% url 'shop-car-import' car.pk %}?type=report">
           {% include 'shop/partials/_icon.html' with name='upload' %}
@@ -380,8 +446,7 @@
         </a>
         <a class="button is-primary is-small" href="{% url 'shop-report-create' car.pk %}">{% translate 'Add maintenance report' %}</a>
       {% endif %}
-    </div>
-  </section>
+      </div>
 
   {% if reports %}
     {% for report in reports %}
@@ -446,10 +511,21 @@
       {% translate 'No completed maintenance reports found for this car.' %}
     </div>
   {% endif %}
+    </div>
+  </details>
 
-  <section class="section-head" id="related-cars-section" data-testid="related-cars-section">
-    <h2 class="title is-4">{% translate 'Related cars' %}</h2>
-  </section>
+  <details class="car-section" id="related-cars-section" data-expand-on-hash data-testid="related-cars-section">
+    <summary class="car-section__summary">
+      <span>
+        <span class="car-section__eyebrow">{% translate 'Fleet context' %}</span>
+        <span class="title is-4">{% translate 'Related cars' %}</span>
+      </span>
+      <span class="car-section__toggle">
+        <span class="car-section__toggle-closed">{% translate 'Show details' %}</span>
+        <span class="car-section__toggle-open">{% translate 'Hide details' %}</span>
+      </span>
+    </summary>
+    <div class="car-section__content">
 
   {% if related_cars %}
     <div class="table-container">
@@ -479,4 +555,6 @@
       {% translate 'No related cars with the same make and model.' %}
     </div>
   {% endif %}
+    </div>
+  </details>
 {% endblock %}

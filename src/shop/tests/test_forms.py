@@ -18,11 +18,11 @@ class FormEditableFieldsCoverageTests(TestCase):
         }
 
     def test_car_create_form_covers_editable_car_fields(self):
-        expected = self._editable_model_field_names(Car, exclude={"mileage"})
+        expected = self._editable_model_field_names(Car)
         self.assertSetEqual(set(CarCreateForm.base_fields.keys()), expected)
 
     def test_car_update_form_covers_editable_car_fields(self):
-        expected = self._editable_model_field_names(Car, exclude={"mileage"})
+        expected = self._editable_model_field_names(Car)
         self.assertSetEqual(set(CarUpdateForm.base_fields.keys()), expected)
 
     def test_fleet_create_form_covers_user_editable_fleet_fields(self):

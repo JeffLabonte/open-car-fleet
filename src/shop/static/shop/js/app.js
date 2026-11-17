@@ -137,9 +137,32 @@
     });
   };
 
+  const expandDetailsFromHash = () => {
+    const expandTarget = () => {
+      const encodedId = window.location.hash.slice(1);
+      if (!encodedId) return;
+      let id;
+      try {
+        id = decodeURIComponent(encodedId);
+      } catch {
+        return;
+      }
+      const target = document.getElementById(id);
+      if (!(target instanceof HTMLDetailsElement) || !target.matches('[data-expand-on-hash]')) {
+        return;
+      }
+      target.open = true;
+      window.requestAnimationFrame(() => target.scrollIntoView({ block: 'start' }));
+    };
+
+    window.addEventListener('hashchange', expandTarget);
+    expandTarget();
+  };
+
   initDialogs();
   markCurrentNav();
   initAccountMenu();
+  expandDetailsFromHash();
   openErrorDialogs();
   collapseLargeTitle();
   initFlashMessages();

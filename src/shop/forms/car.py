@@ -41,7 +41,7 @@ class CarPartForm(forms.ModelForm):
 class CarForm(forms.ModelForm):
     class Meta:
         model = Car
-        fields = ["fleet", "usual_name", "make", "model", "colour", "year", "vin", "license_plate"]
+        fields = ["fleet", "usual_name", "make", "model", "colour", "year", "vin", "license_plate", "mileage"]
         labels = {
             "fleet": _("Fleet"),
             "usual_name": _("Usual name"),
@@ -51,6 +51,7 @@ class CarForm(forms.ModelForm):
             "year": _("Year"),
             "vin": _("VIN"),
             "license_plate": _("License plate"),
+            "mileage": _("Odometer (km)"),
         }
         widgets = {
             "fleet": forms.Select(attrs={"class": "input"}),
@@ -61,6 +62,7 @@ class CarForm(forms.ModelForm):
             "year": forms.NumberInput(attrs={"class": "input", "placeholder": _("Year")}),
             "vin": forms.TextInput(attrs={"class": "input", "placeholder": _("VIN")}),
             "license_plate": forms.TextInput(attrs={"class": "input", "placeholder": _("License plate")}),
+            "mileage": forms.NumberInput(attrs={"class": "input", "placeholder": _("Odometer (km)")}),
         }
 
     def __init__(self, *args: Any, user: Any = None, **kwargs: Any) -> None:

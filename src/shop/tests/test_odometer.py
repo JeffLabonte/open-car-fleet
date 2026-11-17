@@ -190,11 +190,13 @@ class OdometerUpdateTests(TestCase):
                 for expected_message in expected_messages:
                     self.assertIn(expected_message, rendered_messages)
 
-    def test_car_create_form_excludes_mileage_field(self):
-        self.assertNotIn("mileage", CarCreateForm.base_fields)
+    def test_car_create_form_includes_mileage_as_odometer(self):
+        self.assertIn("mileage", CarCreateForm.base_fields)
+        self.assertEqual(str(CarCreateForm.base_fields["mileage"].label), "Odometer (km)")
 
-    def test_car_update_form_excludes_mileage_field(self):
-        self.assertNotIn("mileage", CarUpdateForm.base_fields)
+    def test_car_update_form_includes_mileage_as_odometer(self):
+        self.assertIn("mileage", CarUpdateForm.base_fields)
+        self.assertEqual(str(CarUpdateForm.base_fields["mileage"].label), "Odometer (km)")
 
     def test_service_helper_updates_car_only_for_higher_mileage(self):
         report = Report.objects.create(car=self.car, job_name="Service", date_done="2026-08-20", mileage=10000)

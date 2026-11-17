@@ -3133,6 +3133,380 @@ msgstr "Bienvenue"
 msgid "Let’s finish setting up your account."
 msgstr "Terminons la configuration de votre compte."
 
+#: src/shop/templates/shop/index.html:12
+msgid "cars"
+msgstr "voitures"
+
+#: src/shop/forms/car.py:54 src/shop/forms/car.py:65
+#: src/shop/templates/shop/car_detail.html:49
+msgid "Odometer (km)"
+msgstr "Odomètre (km)"
+
+#: src/shop/forms/car.py:93
+#, fuzzy
+#| msgid "You can only select a fleet you are a member of."
+msgid "You can only select a fleet you can edit."
+msgstr "Vous pouvez seulement sélectionner un parc dont vous êtes membre."
+
+#: src/shop/importers.py:143
+msgid "The import file is empty or contains no data rows."
+msgstr ""
+
+#: src/shop/templates/403.html:6
+#, fuzzy
+#| msgid "You do not have permission to edit this car."
+msgid "You do not have permission to view this page."
+msgstr "Vous n'avez pas la permission de modifier cette voiture."
+
+#: src/shop/templates/403.html:8 src/shop/templates/404.html:8
+#: src/shop/templates/500.html:8 src/shop/templates/shop/index.html:8
+#, fuzzy
+#| msgid "My Fleets"
+msgid "My fleets"
+msgstr "Mes parcs"
+
+#: src/shop/templates/404.html:6
+msgid "The page you were looking for could not be found."
+msgstr ""
+
+#: src/shop/templates/500.html:6
+msgid "Something went wrong on our end. Please try again later."
+msgstr ""
+
+#: src/shop/templates/shop/car_detail.html:10
+#, fuzzy
+#| msgid "Main navigation"
+msgid "Section navigation"
+msgstr "Navigation principale"
+
+#: src/shop/templates/shop/car_detail.html:12
+msgid "History"
+msgstr ""
+
+#: src/shop/templates/shop/car_detail.html:13
+#, fuzzy
+#| msgid "Part"
+msgid "Parts"
+msgstr "Pièce"
+
+#: src/shop/templates/shop/car_detail.html:16
+#, fuzzy
+#| msgid "Related cars"
+msgid "Related"
+msgstr "Voitures connexes"
+
+#: src/shop/templates/shop/car_detail.html:60
+msgid "completed records"
+msgstr "dossiers terminés"
+
+#: src/shop/templates/shop/car_detail.html:63
+msgid "Tracked parts"
+msgstr "Pièces suivies"
+
+#: src/shop/templates/shop/car_detail.html:65
+msgid "items in the tracker"
+msgstr "éléments suivis"
+
+#: src/shop/templates/shop/car_detail.html:68
+msgid "Open work"
+msgstr "Travaux ouverts"
+
+#: src/shop/templates/shop/car_detail.html:70
+msgid "planned assignments"
+msgstr "travaux planifiés"
+
+#: src/shop/templates/shop/car_detail.html:75
+msgid "maintenance records"
+msgstr "dossiers d'entretien"
+
+#: src/shop/templates/shop/car_detail.html:173
+msgid "Secondary records"
+msgstr "Dossiers secondaires"
+
+#: src/shop/templates/shop/car_detail.html:177
+#: src/shop/templates/shop/car_detail.html:244
+#: src/shop/templates/shop/car_detail.html:315
+#: src/shop/templates/shop/car_detail.html:436
+#: src/shop/templates/shop/car_detail.html:524
+msgid "Show details"
+msgstr "Afficher les détails"
+
+#: src/shop/templates/shop/car_detail.html:178
+#: src/shop/templates/shop/car_detail.html:245
+#: src/shop/templates/shop/car_detail.html:316
+#: src/shop/templates/shop/car_detail.html:437
+#: src/shop/templates/shop/car_detail.html:525
+msgid "Hide details"
+msgstr "Masquer les détails"
+
+#: src/shop/templates/shop/car_detail.html:222
+#: src/shop/templates/shop/inspection_list.html:93
+#, fuzzy
+#| msgid "Validate only"
+msgid "View only"
+msgstr "Validation seulement"
+
+#: src/shop/templates/shop/car_detail.html:240
+msgid "Inventory"
+msgstr "Inventaire"
+
+#: src/shop/templates/shop/car_detail.html:311
+msgid "Maintenance"
+msgstr "Entretien"
+
+#: src/shop/templates/shop/car_detail.html:399
+#, fuzzy
+#| msgid "Dark mode"
+msgid "Mark done"
+msgstr "Mode sombre"
+
+#: src/shop/templates/shop/car_detail.html:408
+#, fuzzy
+#| msgid "Create Fleet"
+msgid "Create report"
+msgstr "Créer un parc"
+
+#: src/shop/templates/shop/car_detail.html:432
+msgid "Completed work"
+msgstr "Travaux terminés"
+
+#: src/shop/templates/shop/car_detail.html:520
+msgid "Fleet context"
+msgstr "Contexte de la flotte"
+
+#: src/shop/templates/shop/car_import.html:33
+#: src/shop/templates/shop/fleet_import.html:33
+#, fuzzy
+#| msgid "Validate only"
+msgid "Validate"
+msgstr "Validation seulement"
+
+#: src/shop/templates/shop/car_import.html:36
+#: src/shop/templates/shop/fleet_import.html:36
+#, fuzzy
+#| msgid "Import type"
+msgid "Import"
+msgstr "Type d'importation"
+
+#: src/shop/templates/shop/car_list.html:9
+#, fuzzy
+#| msgid "Related cars"
+msgid "Search cars"
+msgstr "Voitures connexes"
+
+#: src/shop/templates/shop/car_list.html:10
+msgid "Search"
+msgstr ""
+
+#: src/shop/templates/shop/fleet_invitation_accept.html:13
+#, fuzzy
+#| msgid "Invited email"
+msgid "Invited by"
+msgstr "Courriel de l'invité"
+
+#: src/shop/templates/shop/fleet_members.html:47
+#, fuzzy, python-format
+#| msgid "Add proof for %(name)s"
+msgid "Change role for %(name)s"
+msgstr "Ajouter une preuve pour %(name)s"
+
+#: src/shop/templates/shop/fleet_members.html:60
+msgid "Role cannot be changed"
+msgstr ""
+
+#: src/shop/templates/shop/fleet_members.html:63
+#: src/shop/templates/shop/fleet_members.html:65
+#, python-format
+msgid "Remove %(name)s from this fleet?"
+msgstr ""
+
+#: src/shop/templates/shop/index.html:5 src/shop/views/fleet.py:71
+#, fuzzy
+#| msgid "Dashboard & controls"
+msgid "Dashboard"
+msgstr "Tableau de bord et commandes"
+
+#: src/shop/templates/shop/index.html:6 src/shop/views/fleet.py:72
+msgid "Your fleets, open work, and recent activity"
+msgstr ""
+
+#: src/shop/templates/shop/index.html:19
+#, fuzzy
+#| msgid "Create fleet"
+msgid "Create your first fleet."
+msgstr "Créer un parc"
+
+#: src/shop/templates/shop/index.html:20
+#, fuzzy
+#| msgid "Browse the vehicles in your shared fleets."
+msgid "Add a vehicle to the fleet."
+msgstr "Consultez les véhicules de vos parcs partagés."
+
+#: src/shop/templates/shop/index.html:21
+#, fuzzy
+#| msgid "Add maintenance report"
+msgid "Record an inspection or maintenance report."
+msgstr "Ajouter un rapport d'entretien"
+
+#: src/shop/templates/shop/index.html:22
+msgid "Invite a collaborator."
+msgstr ""
+
+#: src/shop/templates/shop/index.html:28
+#, fuzzy
+#| msgid "Open work"
+msgid "Open work jobs"
+msgstr "Travaux ouverts"
+
+#: src/shop/templates/shop/index.html:36
+#, fuzzy
+#| msgid "Import work jobs"
+msgid "No open work jobs."
+msgstr "Importer des travaux"
+
+#: src/shop/templates/shop/index.html:39
+#, fuzzy
+#| msgid "Latest inspection"
+msgid "Draft inspections"
+msgstr "Dernière inspection"
+
+#: src/shop/templates/shop/index.html:47
+#, fuzzy
+#| msgid "Latest inspection"
+msgid "No draft inspections."
+msgstr "Dernière inspection"
+
+#: src/shop/templates/shop/index.html:50
+#, fuzzy
+#| msgid "Reports"
+msgid "Recent reports"
+msgstr "Rapports"
+
+#: src/shop/templates/shop/index.html:58
+#, fuzzy
+#| msgid "Import reports"
+msgid "No recent reports."
+msgstr "Importer des rapports"
+
+#: src/shop/templates/shop/inspection_form.html:11
+msgid "Unsaved changes were found on this device."
+msgstr ""
+
+#: src/shop/templates/shop/inspection_form.html:14
+msgid "Restore"
+msgstr ""
+
+#: src/shop/templates/shop/inspection_form.html:17
+#, fuzzy
+#| msgid "Disc wear"
+msgid "Discard"
+msgstr "Usure des disques"
+
+#: src/shop/templates/shop/inspection_form.html:103
+#, python-format
+msgid "%(item)s measurement"
+msgstr ""
+
+#: src/shop/templates/shop/inspection_form.html:138
+#, fuzzy, python-format
+#| msgid "Expires"
+msgid "%(item)s notes"
+msgstr "Expire le"
+
+#: src/shop/templates/shop/login.html:27
+msgid "Authentication is not configured. Contact your administrator."
+msgstr ""
+
+#: src/shop/templates/shop/login.html:31
+msgid "Sign-in could not be completed. Please try again."
+msgstr ""
+
+#: src/shop/templates/shop/login.html:32
+#: src/shop/templates/shop/partials/_attachments_section.html:36
+msgid "Retry"
+msgstr ""
+
+#: src/shop/templates/shop/partials/_attachments_section.html:34
+msgid "Waiting"
+msgstr ""
+
+#: src/shop/templates/shop/partials/_attachments_section.html:35
+msgid "Uploaded"
+msgstr ""
+
+#: src/shop/templates/shop/partials/_breadcrumbs.html:2
+msgid "Breadcrumb"
+msgstr ""
+
+#: src/shop/templates/shop/partials/_data_table.html:21
+#, fuzzy
+#| msgid "completed records"
+msgid "No records."
+msgstr "dossiers terminés"
+
+#: src/shop/templates/shop/partials/_form_field.html:7
+#, fuzzy
+#| msgid "Repaired"
+msgid "Required"
+msgstr "Réparée"
+
+#: src/shop/templates/shop/partials/_messages.html:8
+msgid "Dismiss message"
+msgstr ""
+
+#: src/shop/templates/shop/partials/_model_form.html:32
+msgid "Please correct the highlighted fields and try again."
+msgstr ""
+
+#: src/shop/templates/shop/partials/_model_form.html:40
+msgid "Form-level errors are listed above."
+msgstr ""
+
+#: src/shop/templates/shop/partials/_nav.html:19
+#: src/shop/templates/shop/partials/_nav.html:71
+msgid "Inspections require mechanic mode (profile) and fleet edit permission."
+msgstr ""
+
+#: src/shop/templates/shop/shop_detail.html:13
+#, fuzzy
+#| msgid "Add shop"
+msgid "Edit shop"
+msgstr "Ajouter un atelier"
+
+#: src/shop/views/car.py:363
+msgid "Invalid status."
+msgstr ""
+
+#: src/shop/views/car.py:367
+#, fuzzy
+#| msgid "Planned work updated successfully."
+msgid "Planned work status updated."
+msgstr "Travail planifié mis à jour avec succès."
+
+#: src/shop/views/known_shops.py:85
+#, fuzzy
+#| msgid "You do not have permission to edit this car."
+msgid "You do not have permission to edit this shop."
+msgstr "Vous n'avez pas la permission de modifier cette voiture."
+
+#: src/shop/views/known_shops.py:93
+#, fuzzy
+#| msgid "Role updated successfully."
+msgid "Shop updated successfully."
+msgstr "Rôle mis à jour avec succès."
+
+#: src/shop/views/known_shops.py:95
+#, fuzzy
+#| msgid "Add known shop"
+msgid "Edit known shop"
+msgstr "Ajouter un atelier connu"
+
+#: src/shop/views/known_shops.py:96
+#, fuzzy
+#| msgid "Contact details"
+msgid "Update the shop contact details"
+msgstr "Coordonnées"
+
 #~ msgid "Enabled categories must be valid JSON."
 #~ msgstr "Les catégories activées doivent être un JSON valide."
 
@@ -3466,9 +3840,6 @@ msgstr "Terminons la configuration de votre compte."
 
 #~ msgid "Last updated:"
 #~ msgstr "Dernière mise à jour :"
-
-#~ msgid "cars"
-#~ msgstr "voitures"
 
 #~ msgid "Light mode"
 #~ msgstr "Mode clair"

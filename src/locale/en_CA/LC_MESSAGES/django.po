@@ -2876,3 +2876,315 @@ msgstr ""
 #: src/shop/views/onboarding.py:53
 msgid "Let’s finish setting up your account."
 msgstr ""
+
+#: src/shop/forms/car.py:54 src/shop/forms/car.py:65
+#: src/shop/templates/shop/car_detail.html:49
+msgid "Odometer (km)"
+msgstr "Odometer (km)"
+
+#: src/shop/forms/car.py:93
+msgid "You can only select a fleet you can edit."
+msgstr ""
+
+#: src/shop/importers.py:143
+msgid "The import file is empty or contains no data rows."
+msgstr ""
+
+#: src/shop/templates/403.html:6
+#, fuzzy
+#| msgid "You do not have permission to manage fleet invitations."
+msgid "You do not have permission to view this page."
+msgstr "You do not have permission to manage fleet invitations."
+
+#: src/shop/templates/403.html:8 src/shop/templates/404.html:8
+#: src/shop/templates/500.html:8 src/shop/templates/shop/index.html:8
+msgid "My fleets"
+msgstr ""
+
+#: src/shop/templates/404.html:6
+msgid "The page you were looking for could not be found."
+msgstr ""
+
+#: src/shop/templates/500.html:6
+msgid "Something went wrong on our end. Please try again later."
+msgstr ""
+
+#: src/shop/templates/shop/car_detail.html:10
+msgid "Section navigation"
+msgstr ""
+
+#: src/shop/templates/shop/car_detail.html:12
+msgid "History"
+msgstr ""
+
+#: src/shop/templates/shop/car_detail.html:13
+msgid "Parts"
+msgstr ""
+
+#: src/shop/templates/shop/car_detail.html:16
+msgid "Related"
+msgstr ""
+
+#: src/shop/templates/shop/car_detail.html:60
+msgid "completed records"
+msgstr ""
+
+#: src/shop/templates/shop/car_detail.html:63
+msgid "Tracked parts"
+msgstr ""
+
+#: src/shop/templates/shop/car_detail.html:65
+msgid "items in the tracker"
+msgstr ""
+
+#: src/shop/templates/shop/car_detail.html:68
+msgid "Open work"
+msgstr ""
+
+#: src/shop/templates/shop/car_detail.html:70
+msgid "planned assignments"
+msgstr ""
+
+#: src/shop/templates/shop/car_detail.html:75
+msgid "maintenance records"
+msgstr ""
+
+#: src/shop/templates/shop/car_detail.html:173
+msgid "Secondary records"
+msgstr ""
+
+#: src/shop/templates/shop/car_detail.html:177
+#: src/shop/templates/shop/car_detail.html:244
+#: src/shop/templates/shop/car_detail.html:315
+#: src/shop/templates/shop/car_detail.html:436
+#: src/shop/templates/shop/car_detail.html:524
+msgid "Show details"
+msgstr ""
+
+#: src/shop/templates/shop/car_detail.html:178
+#: src/shop/templates/shop/car_detail.html:245
+#: src/shop/templates/shop/car_detail.html:316
+#: src/shop/templates/shop/car_detail.html:437
+#: src/shop/templates/shop/car_detail.html:525
+msgid "Hide details"
+msgstr ""
+
+#: src/shop/templates/shop/car_detail.html:222
+#: src/shop/templates/shop/inspection_list.html:93
+msgid "View only"
+msgstr ""
+
+#: src/shop/templates/shop/car_detail.html:240
+msgid "Inventory"
+msgstr ""
+
+#: src/shop/templates/shop/car_detail.html:311
+msgid "Maintenance"
+msgstr ""
+
+#: src/shop/templates/shop/car_detail.html:399
+msgid "Mark done"
+msgstr ""
+
+#: src/shop/templates/shop/car_detail.html:408
+msgid "Create report"
+msgstr ""
+
+#: src/shop/templates/shop/car_detail.html:432
+msgid "Completed work"
+msgstr ""
+
+#: src/shop/templates/shop/car_detail.html:520
+msgid "Fleet context"
+msgstr ""
+
+#: src/shop/templates/shop/car_import.html:33
+#: src/shop/templates/shop/fleet_import.html:33
+msgid "Validate"
+msgstr ""
+
+#: src/shop/templates/shop/car_import.html:36
+#: src/shop/templates/shop/fleet_import.html:36
+msgid "Import"
+msgstr ""
+
+#: src/shop/templates/shop/car_list.html:9
+msgid "Search cars"
+msgstr ""
+
+#: src/shop/templates/shop/car_list.html:10
+msgid "Search"
+msgstr ""
+
+#: src/shop/templates/shop/fleet_invitation_accept.html:13
+msgid "Invited by"
+msgstr ""
+
+#: src/shop/templates/shop/fleet_members.html:47
+#, python-format
+msgid "Change role for %(name)s"
+msgstr ""
+
+#: src/shop/templates/shop/fleet_members.html:60
+msgid "Role cannot be changed"
+msgstr ""
+
+#: src/shop/templates/shop/fleet_members.html:63
+#: src/shop/templates/shop/fleet_members.html:65
+#, python-format
+msgid "Remove %(name)s from this fleet?"
+msgstr ""
+
+#: src/shop/templates/shop/index.html:5 src/shop/views/fleet.py:71
+msgid "Dashboard"
+msgstr ""
+
+#: src/shop/templates/shop/index.html:6 src/shop/views/fleet.py:72
+msgid "Your fleets, open work, and recent activity"
+msgstr ""
+
+#: src/shop/templates/shop/index.html:12
+msgid "cars"
+msgstr ""
+
+#: src/shop/templates/shop/index.html:19
+msgid "Create your first fleet."
+msgstr ""
+
+#: src/shop/templates/shop/index.html:20
+msgid "Add a vehicle to the fleet."
+msgstr ""
+
+#: src/shop/templates/shop/index.html:21
+msgid "Record an inspection or maintenance report."
+msgstr ""
+
+#: src/shop/templates/shop/index.html:22
+msgid "Invite a collaborator."
+msgstr ""
+
+#: src/shop/templates/shop/index.html:28
+msgid "Open work jobs"
+msgstr ""
+
+#: src/shop/templates/shop/index.html:36
+msgid "No open work jobs."
+msgstr ""
+
+#: src/shop/templates/shop/index.html:39
+msgid "Draft inspections"
+msgstr ""
+
+#: src/shop/templates/shop/index.html:47
+msgid "No draft inspections."
+msgstr ""
+
+#: src/shop/templates/shop/index.html:50
+msgid "Recent reports"
+msgstr ""
+
+#: src/shop/templates/shop/index.html:58
+msgid "No recent reports."
+msgstr ""
+
+#: src/shop/templates/shop/inspection_form.html:11
+msgid "Unsaved changes were found on this device."
+msgstr ""
+
+#: src/shop/templates/shop/inspection_form.html:14
+msgid "Restore"
+msgstr ""
+
+#: src/shop/templates/shop/inspection_form.html:17
+msgid "Discard"
+msgstr ""
+
+#: src/shop/templates/shop/inspection_form.html:103
+#, python-format
+msgid "%(item)s measurement"
+msgstr ""
+
+#: src/shop/templates/shop/inspection_form.html:138
+#, python-format
+msgid "%(item)s notes"
+msgstr ""
+
+#: src/shop/templates/shop/login.html:27
+msgid "Authentication is not configured. Contact your administrator."
+msgstr ""
+
+#: src/shop/templates/shop/login.html:31
+msgid "Sign-in could not be completed. Please try again."
+msgstr ""
+
+#: src/shop/templates/shop/login.html:32
+#: src/shop/templates/shop/partials/_attachments_section.html:36
+msgid "Retry"
+msgstr ""
+
+#: src/shop/templates/shop/partials/_attachments_section.html:34
+msgid "Waiting"
+msgstr ""
+
+#: src/shop/templates/shop/partials/_attachments_section.html:35
+msgid "Uploaded"
+msgstr ""
+
+#: src/shop/templates/shop/partials/_breadcrumbs.html:2
+msgid "Breadcrumb"
+msgstr ""
+
+#: src/shop/templates/shop/partials/_data_table.html:21
+msgid "No records."
+msgstr ""
+
+#: src/shop/templates/shop/partials/_form_field.html:7
+msgid "Required"
+msgstr ""
+
+#: src/shop/templates/shop/partials/_messages.html:8
+msgid "Dismiss message"
+msgstr ""
+
+#: src/shop/templates/shop/partials/_model_form.html:32
+msgid "Please correct the highlighted fields and try again."
+msgstr ""
+
+#: src/shop/templates/shop/partials/_model_form.html:40
+msgid "Form-level errors are listed above."
+msgstr ""
+
+#: src/shop/templates/shop/partials/_nav.html:19
+#: src/shop/templates/shop/partials/_nav.html:71
+msgid "Inspections require mechanic mode (profile) and fleet edit permission."
+msgstr ""
+
+#: src/shop/templates/shop/shop_detail.html:13
+msgid "Edit shop"
+msgstr ""
+
+#: src/shop/views/car.py:363
+msgid "Invalid status."
+msgstr ""
+
+#: src/shop/views/car.py:367
+msgid "Planned work status updated."
+msgstr ""
+
+#: src/shop/views/known_shops.py:85
+#, fuzzy
+#| msgid "You do not have permission to manage fleet invitations."
+msgid "You do not have permission to edit this shop."
+msgstr "You do not have permission to manage fleet invitations."
+
+#: src/shop/views/known_shops.py:93
+msgid "Shop updated successfully."
+msgstr ""
+
+#: src/shop/views/known_shops.py:95
+msgid "Edit known shop"
+msgstr ""
+
+#: src/shop/views/known_shops.py:96
+msgid "Update the shop contact details"
+msgstr ""
