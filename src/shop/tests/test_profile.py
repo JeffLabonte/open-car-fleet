@@ -5,6 +5,36 @@ from shop.models.user import ShopUser
 
 
 class ProfileViewTests(TestCase):
+    def test_navigation_shows_display_name_above_account_actions(self):
+        user = ShopUser.objects.create_user(
+            username="profile-user",
+            email="profile@example.com",
+            password="pass1234",
+            display_name="Jane Doe",
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("shop-profile"))
+
+        content = response.content.decode()
+        self.assertContains(response, 'data-testid="user-name">Jane Doe</span>')
+        self.assertContains(response, '<p class="app-tab__username">Jane Doe</p>')
+        self.assertLess(content.index('data-testid="user-name"'), content.index('data-testid="nav-profile"'))
+        self.assertLess(content.index('class="app-tab__username"'), content.index('data-testid="nav-profile-mobile"'))
+
+    def test_navigation_falls_back_to_username(self):
+        user = ShopUser.objects.create_user(
+            username="profile-user",
+            email="profile@example.com",
+            password="pass1234",
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("shop-profile"))
+
+        self.assertContains(response, 'data-testid="user-name">profile-user</span>')
+        self.assertContains(response, '<p class="app-tab__username">profile-user</p>')
+
     def test_profile_view_requires_login(self):
         response = self.client.get(reverse("shop-profile"))
         self.assertEqual(response.status_code, 302)

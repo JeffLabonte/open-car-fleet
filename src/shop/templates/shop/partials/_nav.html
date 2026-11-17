@@ -83,7 +83,7 @@
       <span>{% translate 'Account' %}</span>
     </summary>
     <div class="app-tab__panel">
-      <p class="app-tab__username">{{ request.user.email|default:request.user.username }}</p>
+      <p class="app-tab__username">{{ request.user.display_name|default:request.user.username }}</p>
       <a class="button is-light is-fullwidth" href="{% url 'shop-profile' %}" data-testid="nav-profile-mobile">
         {% include 'shop/partials/_icon.html' with name='user' %}
         <span>{% translate 'Profile' %}</span>
