@@ -17,8 +17,8 @@ class ProfileViewTests(TestCase):
         response = self.client.get(reverse("shop-profile"))
 
         content = response.content.decode()
-        self.assertContains(response, 'data-testid="user-name">Jane Doe</span>')
-        self.assertContains(response, '<p class="app-tab__username">Jane Doe</p>')
+        self.assertContains(response, 'data-testid="user-name">Welcome, Jane Doe</span>')
+        self.assertContains(response, '<p class="app-tab__username">Welcome, Jane Doe</p>')
         self.assertLess(content.index('data-testid="user-name"'), content.index('data-testid="nav-profile"'))
         self.assertLess(content.index('class="app-tab__username"'), content.index('data-testid="nav-profile-mobile"'))
 
@@ -32,8 +32,8 @@ class ProfileViewTests(TestCase):
 
         response = self.client.get(reverse("shop-profile"))
 
-        self.assertContains(response, 'data-testid="user-name">profile-user</span>')
-        self.assertContains(response, '<p class="app-tab__username">profile-user</p>')
+        self.assertContains(response, 'data-testid="user-name">Welcome, profile-user</span>')
+        self.assertContains(response, '<p class="app-tab__username">Welcome, profile-user</p>')
 
     def test_profile_view_requires_login(self):
         response = self.client.get(reverse("shop-profile"))

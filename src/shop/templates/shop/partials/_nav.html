@@ -28,7 +28,7 @@
   </nav>
   <div class="app-sidebar__footer">
     <div class="app-user">
-      <span class="app-user__name" data-testid="user-name">{{ request.user.display_name|default:request.user.username }}</span>
+      <span class="app-user__name" data-testid="user-name">{% translate 'Welcome' %}, {{ request.user.display_name|default:request.user.username }}</span>
       <div class="app-user__actions">
         <a class="button is-light is-small" href="{% url 'shop-profile' %}" data-testid="nav-profile">
           {% include 'shop/partials/_icon.html' with name='user' %}
@@ -83,7 +83,7 @@
       <span>{% translate 'Account' %}</span>
     </summary>
     <div class="app-tab__panel">
-      <p class="app-tab__username">{{ request.user.display_name|default:request.user.username }}</p>
+      <p class="app-tab__username">{% translate 'Welcome' %}, {{ request.user.display_name|default:request.user.username }}</p>
       <a class="button is-light is-fullwidth" href="{% url 'shop-profile' %}" data-testid="nav-profile-mobile">
         {% include 'shop/partials/_icon.html' with name='user' %}
         <span>{% translate 'Profile' %}</span>
